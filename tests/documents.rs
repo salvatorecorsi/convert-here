@@ -75,12 +75,44 @@ fn pdf_reconstruction_preserves_text_pages_and_original_without_sidecars() {
     let original = fs::read(&input).unwrap();
     let existing = dir.path().join("città & mare.html");
     fs::write(&existing, "keep existing").unwrap();
+    #[cfg(windows)]
+    let mut saw_hidden_stage = false;
     let html = engine::convert(
         &input,
         &settings(OutputFormat::Html),
         &tools,
         &AtomicBool::new(false),
-        |_| {},
+        |_progress| {
+            #[cfg(windows)]
+            if _progress.message == "Estrazione del testo incorporato nel PDF…" {
+                use std::os::windows::fs::MetadataExt;
+                let stages: Vec<_> = fs::read_dir(dir.path())
+                    .unwrap()
+                    .map(|entry| entry.unwrap().path())
+                    .filter(|path| {
+                        path.file_name()
+                            .unwrap()
+                            .to_string_lossy()
+                            .starts_with(".the-converter-external-")
+                    })
+                    .collect();
+                assert_eq!(stages.len(), 1);
+                assert_ne!(fs::metadata(&stages[0]).unwrap().file_attributes() & 2, 0);
+                let files: Vec<_> = fs::read_dir(&stages[0]).unwrap().collect();
+                assert_eq!(files.len(), 1);
+                assert_eq!(
+                    files[0]
+                        .as_ref()
+                        .unwrap()
+                        .metadata()
+                        .unwrap()
+                        .file_attributes()
+                        & 2,
+                    0
+                );
+                saw_hidden_stage = true;
+            }
+        },
     )
     .unwrap();
     assert_ne!(html[0], existing);
@@ -107,6 +139,14 @@ fn pdf_reconstruction_preserves_text_pages_and_original_without_sidecars() {
     assert!(document.contains("Ciao &lt;script&gt; &amp; mare"));
     assert!(document.contains("Seconda pagina"));
     assert_eq!(document.matches("<w:pageBreakBefore/>").count(), 1);
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        assert!(saw_hidden_stage);
+        for output in [&html[0], &docx[0]] {
+            assert_eq!(fs::metadata(output).unwrap().file_attributes() & 2, 0);
+        }
+    }
     assert_eq!(fs::read(input).unwrap(), original);
     assert_eq!(fs::read_dir(dir.path()).unwrap().count(), 4);
 }

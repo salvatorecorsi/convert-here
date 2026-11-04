@@ -66,6 +66,11 @@ fn convert_one(input: &Path, conversion: &ConversionSettings, tools: &ToolPaths)
         },
     );
     assert_eq!(output.len(), 1);
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        assert_eq!(fs::metadata(&output[0]).unwrap().file_attributes() & 2, 0);
+    }
     output.into_iter().next().unwrap()
 }
 

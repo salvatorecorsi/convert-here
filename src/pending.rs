@@ -4,6 +4,7 @@
 //! Explorer hides the shortcut suffix; opening it asks the app for this job's status.
 //! No incomplete media is exposed as a playable file.
 
+use crate::platform::display_path;
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -82,6 +83,12 @@ impl PendingLink {
     }
     pub fn output(&self) -> &Path {
         &self.output
+    }
+
+    pub(crate) fn matches_job_output(&self, job_id: &str, output: &Path) -> bool {
+        self.job_id == job_id
+            && same_path(&self.output, output)
+            && same_path(&self.path, &Self::path_for(output))
     }
 
     /// Updates the native tooltip. Callers should throttle this to meaningful state changes.
@@ -169,15 +176,6 @@ fn validate_job_id(job_id: &str) -> Result<()> {
 
 fn same_path(left: &Path, right: &Path) -> bool {
     crate::package::same_path(left, right)
-}
-
-fn display_path(path: &Path) -> String {
-    let value = path.to_string_lossy();
-    if let Some(unc) = value.strip_prefix(r"\\?\UNC\") {
-        format!(r"\\{unc}")
-    } else {
-        value.trim_start_matches(r"\\?\").to_owned()
-    }
 }
 
 #[cfg(windows)]

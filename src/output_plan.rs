@@ -2,6 +2,7 @@
 use super::{Progress, cancelled, convert, stem, validate_for_input};
 use crate::{
     model::{ConversionSettings, MediaKind, OutputFormat, PdfAction, supported_formats},
+    platform::set_hidden,
     tools::ToolPaths,
 };
 use anyhow::{Context, Result, bail};
@@ -202,30 +203,6 @@ fn remove_empty_reservation_directory(output_dir: &Path) -> Result<()> {
         }
         result => result,
     }
-}
-
-#[cfg(windows)]
-fn set_hidden(path: &Path) -> Result<()> {
-    use std::os::windows::ffi::OsStrExt;
-    #[link(name = "kernel32")]
-    unsafe extern "system" {
-        fn GetFileAttributesW(path: *const u16) -> u32;
-        fn SetFileAttributesW(path: *const u16, attributes: u32) -> i32;
-    }
-    let wide: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
-    unsafe {
-        let attributes = GetFileAttributesW(wide.as_ptr());
-        if attributes == u32::MAX || SetFileAttributesW(wide.as_ptr(), attributes | 0x2) == 0 {
-            return Err(std::io::Error::last_os_error())
-                .context("Impossibile nascondere i file di lavoro");
-        }
-    }
-    Ok(())
-}
-
-#[cfg(not(windows))]
-fn set_hidden(_: &Path) -> Result<()> {
-    Ok(())
 }
 
 /// Allocate all names now, including one name per PDF page, without creating invalid media files.

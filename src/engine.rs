@@ -2,6 +2,7 @@
 use crate::model::{
     ConversionSettings, MediaKind, OutputFormat, PdfAction, VideoCodec, supported_formats,
 };
+use crate::platform::set_hidden;
 use crate::tools::ToolPaths;
 use anyhow::{Context, Result, bail};
 use image::{DynamicImage, GenericImageView, ImageDecoder, ImageFormat};
@@ -18,7 +19,7 @@ use std::{
     thread,
     time::Duration,
 };
-use tempfile::NamedTempFile;
+use tempfile::{NamedTempFile, TempDir};
 
 #[path = "output_plan.rs"]
 mod output_plan;
@@ -291,10 +292,26 @@ fn validate_for_input(input: &Path, settings: &ConversionSettings) -> Result<()>
 }
 
 pub(crate) fn temporary(dir: &Path, ext: &str) -> Result<NamedTempFile> {
-    Ok(tempfile::Builder::new()
+    let file = tempfile::Builder::new()
         .prefix(".the-converter-")
         .suffix(&format!(".{ext}"))
-        .tempfile_in(dir)?)
+        .tempfile_in(dir)?;
+    set_hidden(file.path())?;
+    Ok(file)
+}
+
+/// Path-based writers can reject an existing Hidden file on Windows. Hide the
+/// enclosing directory instead, keeping its guard alive until publication.
+pub(crate) fn external_temporary(dir: &Path, ext: &str) -> Result<(TempDir, NamedTempFile)> {
+    let stage = tempfile::Builder::new()
+        .prefix(".the-converter-external-")
+        .tempdir_in(dir)?;
+    set_hidden(stage.path())?;
+    let file = tempfile::Builder::new()
+        .prefix("output-")
+        .suffix(&format!(".{ext}"))
+        .tempfile_in(stage.path())?;
+    Ok((stage, file))
 }
 
 /// Adopt a completed file from a caller-owned staging directory without copying.
@@ -395,11 +412,11 @@ fn convert_image(
     progress: &mut impl FnMut(Progress),
 ) -> Result<PathBuf> {
     let modern_workspace = if crate::modern_images::is_modern_input(input) {
-        Some(
-            tempfile::Builder::new()
-                .prefix(".the-converter-heif-")
-                .tempdir_in(dir)?,
-        )
+        let workspace = tempfile::Builder::new()
+            .prefix(".the-converter-heif-")
+            .tempdir_in(dir)?;
+        set_hidden(workspace.path())?;
+        Some(workspace)
     } else {
         None
     };
@@ -446,7 +463,7 @@ fn convert_image(
     }
     let mut temp = temporary(dir, s.format.extension())?;
     match s.format {
-        OutputFormat::Pdf => image_pdf(&image, s.image.quality, temp.path())?,
+        OutputFormat::Pdf => image_pdf(&image, s.image.quality, temp.as_file_mut())?,
         OutputFormat::Jpg => {
             image::codecs::jpeg::JpegEncoder::new_with_quality(temp.as_file_mut(), s.image.quality)
                 .encode_image(&flatten(&image))?
@@ -520,7 +537,7 @@ fn convert_image(
     commit(temp, dir, &stem(input), s.format.extension())
 }
 
-fn image_pdf(image: &DynamicImage, quality: u8, path: &Path) -> Result<()> {
+fn image_pdf(image: &DynamicImage, quality: u8, output: &mut impl Write) -> Result<()> {
     let image = flatten(image);
     let (w, h) = image.dimensions();
     let mut jpeg = Vec::new();
@@ -553,7 +570,7 @@ fn image_pdf(image: &DynamicImage, quality: u8, path: &Path) -> Result<()> {
     let catalog = doc.add_object(dictionary! {"Type"=>"Catalog","Pages"=>pages});
     doc.trailer.set("Root", catalog);
     doc.compress();
-    doc.save(path)?;
+    doc.save_to(output)?;
     Ok(())
 }
 
@@ -859,7 +876,7 @@ fn convert_media(
     if audio_stream == Some(false) {
         bail!("{VIDEO_WITHOUT_AUDIO_ERROR}");
     }
-    let temp = temporary(dir, s.format.extension())?;
+    let (_stage, temp) = external_temporary(dir, s.format.extension())?;
     // Do not launch the same failing/timed-out optional probe a second time.
     let mut duration = if extracting_audio && audio_stream.is_none() {
         None
@@ -1212,6 +1229,7 @@ fn convert_pdf(
     let stage = tempfile::Builder::new()
         .prefix(".the-converter-pages-")
         .tempdir_in(dir)?;
+    set_hidden(stage.path())?;
     progress(Progress {
         fraction: 0.05,
         message: format!("Rendering di {page_count} pagine PDF…"),
@@ -1302,6 +1320,57 @@ fn convert_pdf(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(windows)]
+    #[test]
+    fn hidden_handle_temporary_publishes_visible_without_copying_or_overwriting() {
+        use std::os::windows::fs::MetadataExt;
+        let directory = tempfile::tempdir().unwrap();
+        let existing = directory.path().join("result.txt");
+        fs::write(&existing, b"original data").unwrap();
+        let mut temporary = temporary(directory.path(), "txt").unwrap();
+        assert_ne!(
+            temporary.as_file().metadata().unwrap().file_attributes() & 2,
+            0
+        );
+        temporary.write_all(b"completed conversion").unwrap();
+        let identity = file_identity(temporary.as_file()).unwrap();
+        let output = commit(temporary, directory.path(), "result", "txt").unwrap();
+        assert_eq!(output, directory.path().join("result (1).txt"));
+        let published = fs::File::open(&output).unwrap();
+        assert_eq!(file_identity(&published).unwrap(), identity);
+        assert_eq!(published.metadata().unwrap().file_attributes() & 2, 0);
+        assert_eq!(fs::read(existing).unwrap(), b"original data");
+        assert_eq!(fs::read(output).unwrap(), b"completed conversion");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn external_temporary_hides_its_directory_and_cleans_it_after_publication_or_failure() {
+        use std::os::windows::fs::MetadataExt;
+        let directory = tempfile::tempdir().unwrap();
+        let (stage, temporary) = external_temporary(directory.path(), "txt").unwrap();
+        let stage_path = stage.path().to_owned();
+        assert_ne!(stage.path().metadata().unwrap().file_attributes() & 2, 0);
+        assert_eq!(
+            temporary.as_file().metadata().unwrap().file_attributes() & 2,
+            0
+        );
+        fs::write(temporary.path(), b"external writer result").unwrap();
+        let identity = file_identity(temporary.as_file()).unwrap();
+        let output = commit(temporary, directory.path(), "result", "txt").unwrap();
+        let published = fs::File::open(output).unwrap();
+        assert_eq!(file_identity(&published).unwrap(), identity);
+        assert_eq!(published.metadata().unwrap().file_attributes() & 2, 0);
+        drop(stage);
+        assert!(!stage_path.exists());
+
+        let (stage, temporary) = external_temporary(directory.path(), "tmp").unwrap();
+        let stage_path = stage.path().to_owned();
+        drop(temporary);
+        drop(stage);
+        assert!(!stage_path.exists());
+    }
 
     #[test]
     fn audio_probe_presence_distinguishes_confirmed_absence_from_unknown_results() {

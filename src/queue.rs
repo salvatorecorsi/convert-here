@@ -453,6 +453,40 @@ pub fn get_job(id: &str) -> Result<QueueJob> {
     Ok(load(&queue_root()?, id)?.view)
 }
 
+/// Remove owned Explorer previews without deleting the failed job or its outputs.
+pub fn remove_failed_placeholders(id: &str) -> Result<()> {
+    remove_failed_placeholders_at(&queue_root()?, id)
+}
+
+fn remove_failed_placeholders_at(root: &Path, id: &str) -> Result<()> {
+    let _dispatch = dispatch_lock(root)?;
+    let job = load(root, id)?;
+    if job.view.state != JobState::Failed {
+        bail!("Puoi rimuovere i segnaposto soltanto per i lavori falliti");
+    }
+    if job.previews.iter().any(|preview| {
+        !job.plan
+            .outputs
+            .iter()
+            .any(|output| preview.matches_job_output(id, &output.path))
+    }) {
+        bail!("I segnaposto non corrispondono ai risultati prenotati del lavoro");
+    }
+    let mut errors = Vec::new();
+    for preview in &job.previews {
+        if let Err(error) = preview.remove() {
+            errors.push(format!("{}: {error:#}", preview.path().display()));
+        }
+    }
+    if !errors.is_empty() {
+        bail!(
+            "Alcuni segnaposto non sono stati rimossi:\n{}",
+            errors.join("\n")
+        );
+    }
+    Ok(())
+}
+
 pub fn enqueue(
     files: &[PathBuf],
     settings: &ConversionSettings,
@@ -1539,6 +1573,151 @@ mod tests {
             fs::read(foreign_link).unwrap(),
             b"replaced by another program"
         );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn failed_placeholder_removal_is_idempotent_and_preserves_job_source_and_output() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("queue");
+        let queued = queued_image(&root, &directory.path().join("source.png"));
+        let mut job = load(&root, &queued.id).unwrap();
+        job.view.state = JobState::Failed;
+        store(&root, &job).unwrap();
+        fs::write(&queued.outputs[0], b"result created by another program").unwrap();
+        let source = fs::read(&queued.input).unwrap();
+        let record = fs::read(root.join(&queued.id).join("job.json")).unwrap();
+        let reservation = fs::read(&job.plan.outputs[0].marker).unwrap();
+
+        remove_failed_placeholders_at(&root, &queued.id).unwrap();
+        remove_failed_placeholders_at(&root, &queued.id).unwrap();
+
+        assert!(!PendingLink::path_for(&queued.outputs[0]).exists());
+        assert_eq!(fs::read(&queued.input).unwrap(), source);
+        assert_eq!(
+            fs::read(&queued.outputs[0]).unwrap(),
+            b"result created by another program"
+        );
+        assert_eq!(
+            fs::read(root.join(&queued.id).join("job.json")).unwrap(),
+            record
+        );
+        assert_eq!(fs::read(&job.plan.outputs[0].marker).unwrap(), reservation);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn placeholder_removal_rejects_every_state_other_than_failed() {
+        for state in [
+            JobState::Queued,
+            JobState::Running,
+            JobState::Completed,
+            JobState::Cancelled,
+        ] {
+            let directory = tempfile::tempdir().unwrap();
+            let root = directory.path().join("queue");
+            let queued = queued_image(&root, &directory.path().join("source.png"));
+            let mut job = load(&root, &queued.id).unwrap();
+            job.view.state = state;
+            store(&root, &job).unwrap();
+            let record = fs::read(root.join(&queued.id).join("job.json")).unwrap();
+            let preview = fs::read(job.previews[0].path()).unwrap();
+
+            let error = remove_failed_placeholders_at(&root, &queued.id).unwrap_err();
+
+            assert!(error.to_string().contains("soltanto per i lavori falliti"));
+            assert_eq!(fs::read(job.previews[0].path()).unwrap(), preview);
+            assert_eq!(
+                fs::read(root.join(&queued.id).join("job.json")).unwrap(),
+                record
+            );
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn failed_placeholder_removal_keeps_replacements_and_cleans_other_owned_links() {
+        for valid_foreign_link in [true, false] {
+            let directory = tempfile::tempdir().unwrap();
+            let root = directory.path().join("queue");
+            let queued = queued_image(&root, &directory.path().join("source.png"));
+            let mut job = load(&root, &queued.id).unwrap();
+            let second_output = directory.path().join("second.jpg");
+            let mut second_reserved = job.plan.outputs[0].clone();
+            second_reserved.path = second_output.clone();
+            job.plan.outputs.push(second_reserved);
+            job.view.outputs.push(second_output.clone());
+            job.previews.push(
+                PendingLink::create(
+                    &second_output,
+                    &std::env::current_exe().unwrap(),
+                    &queued.id,
+                    "Errore",
+                )
+                .unwrap(),
+            );
+            job.view.state = JobState::Failed;
+            store(&root, &job).unwrap();
+            let record = fs::read(root.join(&queued.id).join("job.json")).unwrap();
+            job.previews[0].remove().unwrap();
+            if valid_foreign_link {
+                PendingLink::create(
+                    &queued.outputs[0],
+                    &std::env::current_exe().unwrap(),
+                    "job-foreign",
+                    "Collegamento di un altro lavoro",
+                )
+                .unwrap();
+            } else {
+                fs::write(job.previews[0].path(), b"foreign non-link content").unwrap();
+            }
+            let replacement = fs::read(job.previews[0].path()).unwrap();
+            let source = fs::read(&queued.input).unwrap();
+
+            let error = remove_failed_placeholders_at(&root, &queued.id).unwrap_err();
+
+            assert!(error.to_string().contains("non sono stati rimossi"));
+            assert_eq!(fs::read(job.previews[0].path()).unwrap(), replacement);
+            assert!(!job.previews[1].path().exists());
+            assert_eq!(fs::read(&queued.input).unwrap(), source);
+            assert_eq!(
+                fs::read(root.join(&queued.id).join("job.json")).unwrap(),
+                record
+            );
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn failed_placeholder_removal_rejects_inconsistent_job_path_and_output() {
+        for field in ["job_id", "path", "output"] {
+            let directory = tempfile::tempdir().unwrap();
+            let root = directory.path().join("queue");
+            let queued = queued_image(&root, &directory.path().join("source.png"));
+            let mut job = load(&root, &queued.id).unwrap();
+            job.view.state = JobState::Failed;
+            let mut value = serde_json::to_value(&job).unwrap();
+            value["previews"][0][field] = if field == "job_id" {
+                serde_json::json!("job-foreign")
+            } else {
+                serde_json::json!(&queued.input)
+            };
+            let changed: StoredJob = serde_json::from_value(value).unwrap();
+            store(&root, &changed).unwrap();
+            let record = fs::read(root.join(&queued.id).join("job.json")).unwrap();
+            let source = fs::read(&queued.input).unwrap();
+            let preview = fs::read(job.previews[0].path()).unwrap();
+
+            let error = remove_failed_placeholders_at(&root, &queued.id).unwrap_err();
+
+            assert!(error.to_string().contains("risultati prenotati"));
+            assert_eq!(fs::read(&queued.input).unwrap(), source);
+            assert_eq!(fs::read(job.previews[0].path()).unwrap(), preview);
+            assert_eq!(
+                fs::read(root.join(&queued.id).join("job.json")).unwrap(),
+                record
+            );
+        }
     }
 
     #[test]

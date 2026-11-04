@@ -94,17 +94,43 @@ fn native_pdf_is_valid_and_has_a_page() {
     let dir = tempfile::tempdir().unwrap();
     let input = dir.path().join("foto.png");
     fixture(&input);
+    #[cfg(windows)]
+    let mut saw_hidden_work_file = false;
     let output = convert(
         &input,
         &settings(OutputFormat::Pdf),
         &ToolPaths::default(),
         &AtomicBool::new(false),
-        |_| {},
+        |_progress| {
+            #[cfg(windows)]
+            if _progress.fraction == 0.9 {
+                use std::os::windows::fs::MetadataExt;
+                let files: Vec<_> = fs::read_dir(dir.path())
+                    .unwrap()
+                    .map(|entry| entry.unwrap().path())
+                    .filter(|path| {
+                        path.file_name()
+                            .unwrap()
+                            .to_string_lossy()
+                            .starts_with(".the-converter-")
+                    })
+                    .collect();
+                assert_eq!(files.len(), 1);
+                assert_ne!(fs::metadata(&files[0]).unwrap().file_attributes() & 2, 0);
+                saw_hidden_work_file = true;
+            }
+        },
     )
     .unwrap();
     let doc = lopdf::Document::load(&output[0]).unwrap();
     assert_eq!(doc.get_pages().len(), 1);
     assert!(doc.objects.values().any(|o| o.as_stream().is_ok()));
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        assert!(saw_hidden_work_file);
+        assert_eq!(fs::metadata(&output[0]).unwrap().file_attributes() & 2, 0);
+    }
 }
 
 #[test]

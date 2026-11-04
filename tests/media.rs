@@ -27,6 +27,11 @@ fn convert_one(input: &Path, format: OutputFormat, tools: &ToolPaths) -> PathBuf
     )
     .unwrap_or_else(|error| panic!("{} -> {}: {error:#}", input.display(), format.label()));
     assert_eq!(outputs.len(), 1);
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        assert_eq!(fs::metadata(&outputs[0]).unwrap().file_attributes() & 2, 0);
+    }
     outputs.into_iter().next().unwrap()
 }
 

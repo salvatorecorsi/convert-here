@@ -1,7 +1,8 @@
 //! HEIC/AVIF support through the optional local libheif command-line tools.
 use crate::{
-    engine::{Progress, cancelled, commit, run_process, stem, temporary},
+    engine::{Progress, cancelled, commit, external_temporary, run_process, stem},
     model::{ConversionSettings, OutputFormat},
+    platform::set_hidden,
     tools::ToolPaths,
 };
 use anyhow::{Context, Result, bail};
@@ -83,6 +84,7 @@ pub(crate) fn encode(
     let stage = tempfile::Builder::new()
         .prefix(".the-converter-heif-")
         .tempdir_in(dir)?;
+    set_hidden(stage.path())?;
     let source = stage.path().join("source.png");
     let mut source_file = fs::File::create(&source)?;
     // PNG does not accept floating-point EXR/HDR pixels. Integer pixels keep
@@ -95,7 +97,7 @@ pub(crate) fn encode(
     }
     drop(source_file);
     cancelled(cancel)?;
-    let output = temporary(dir, format.extension())?;
+    let (_output_stage, output) = external_temporary(dir, format.extension())?;
     let mut command = Command::new(executable);
     command.args(["-q", &settings.image.quality.to_string()]);
     if format == OutputFormat::Avif {

@@ -91,14 +91,20 @@ enum CsvSeparator {
 }
 
 fn parse_format(value: &str) -> std::result::Result<OutputFormat, String> {
+    let extension = value.trim_start_matches('.');
+    let extension = if extension.eq_ignore_ascii_case("jpeg") {
+        "jpg"
+    } else if extension.eq_ignore_ascii_case("tif") {
+        "tiff"
+    } else if extension.eq_ignore_ascii_case("aif") {
+        "aiff"
+    } else {
+        extension
+    };
     OutputFormat::ALL
         .iter()
         .copied()
-        .find(|format| {
-            format
-                .extension()
-                .eq_ignore_ascii_case(value.trim_start_matches('.'))
-        })
+        .find(|format| format.extension().eq_ignore_ascii_case(extension))
         .ok_or_else(|| format!("Formato non supportato: {value}"))
 }
 
@@ -335,6 +341,24 @@ mod tests {
         assert!(parse_format("exe").is_err());
         assert_eq!(parse_format(".MP3").unwrap(), OutputFormat::Mp3);
         assert!(Args::try_parse_from(["the-converter", "--convert", "--target", "exe"]).is_err());
+    }
+
+    #[test]
+    fn target_aliases_parse_like_their_canonical_formats() {
+        for (alias, expected) in [
+            ("jpeg", OutputFormat::Jpg),
+            ("tif", OutputFormat::Tiff),
+            ("aif", OutputFormat::Aiff),
+        ] {
+            for value in [alias.to_owned(), alias.to_uppercase(), format!(".{alias}")] {
+                let args =
+                    Args::try_parse_from(["converter", "--convert", "--target", &value]).unwrap();
+                assert_eq!(args.target, Some(expected));
+            }
+        }
+        for format in OutputFormat::ALL {
+            assert_eq!(parse_format(format.extension()).unwrap(), format);
+        }
     }
 
     #[test]

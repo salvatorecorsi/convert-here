@@ -3,8 +3,11 @@
 //! PDF reconstruction deliberately uses embedded text only: it does not infer
 //! tables, retain images or reproduce the source typography.
 use crate::{
-    engine::{Progress, cancelled, commit, copy_commit, run_process, stem, temporary},
+    engine::{
+        Progress, cancelled, commit, copy_commit, external_temporary, run_process, stem, temporary,
+    },
     model::{ConversionSettings, CsvDelimiter, OutputFormat},
+    platform::set_hidden,
     tools::ToolPaths,
 };
 use anyhow::{Context, Result, bail};
@@ -59,6 +62,7 @@ pub(crate) fn convert_office(
     let stage = tempfile::Builder::new()
         .prefix(".the-converter-office-")
         .tempdir_in(dir)?;
+    set_hidden(stage.path())?;
     let profile = stage.path().join("profile");
     prepare_profile(&profile)?;
     let profile_uri = profile_uri(&profile)?;
@@ -188,7 +192,7 @@ fn embedded_pdf_text(
     cancel: &AtomicBool,
     progress: &mut impl FnMut(Progress),
 ) -> Result<String> {
-    let text = temporary(dir, "txt")?;
+    let (_stage, text) = external_temporary(dir, "txt")?;
     let mut cmd = Command::new(tools.pdftotext.as_ref().context("pdftotext non trovato")?);
     // The default reading-order extraction avoids baking in column spacing.
     // Keep form feeds so source page boundaries survive reconstruction.

@@ -2,6 +2,7 @@
 use crate::{
     engine::{Progress, cancelled, commit, run_process, stem, temporary},
     model::{ConversionSettings, MediaKind},
+    platform::set_hidden,
     tools::ToolPaths,
 };
 use anyhow::{Context, Result, bail};
@@ -69,6 +70,7 @@ pub(crate) fn extract_text(
     let stage = tempfile::Builder::new()
         .prefix(".convert-here-ocr-")
         .tempdir_in(dir)?;
+    set_hidden(stage.path())?;
     let mut text = String::new();
     match MediaKind::from_path(input) {
         MediaKind::Pdf => {

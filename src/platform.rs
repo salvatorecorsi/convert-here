@@ -3,6 +3,41 @@
 use anyhow::{Context, Result, bail};
 use std::path::{Path, PathBuf};
 
+/// A readable Windows path for labels and native shortcut descriptions.
+pub fn display_path(path: &Path) -> String {
+    let value = path.to_string_lossy();
+    if let Some(unc) = value.strip_prefix(r"\\?\UNC\") {
+        format!(r"\\{unc}")
+    } else {
+        value.trim_start_matches(r"\\?\").to_owned()
+    }
+}
+
+/// Keep conversion work files out of Explorer's normal folder view.
+#[cfg(windows)]
+pub fn set_hidden(path: &Path) -> Result<()> {
+    use std::os::windows::ffi::OsStrExt;
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn GetFileAttributesW(path: *const u16) -> u32;
+        fn SetFileAttributesW(path: *const u16, attributes: u32) -> i32;
+    }
+    let wide: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+    unsafe {
+        let attributes = GetFileAttributesW(wide.as_ptr());
+        if attributes == u32::MAX || SetFileAttributesW(wide.as_ptr(), attributes | 0x2) == 0 {
+            return Err(std::io::Error::last_os_error())
+                .context("Impossibile nascondere i file di lavoro");
+        }
+    }
+    Ok(())
+}
+
+#[cfg(not(windows))]
+pub fn set_hidden(_: &Path) -> Result<()> {
+    Ok(())
+}
+
 pub fn open_folder(path: &Path) -> Result<()> {
     let folder = validated_folder(path)?;
     #[cfg(windows)]
@@ -211,6 +246,42 @@ mod windows {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn readable_paths_normalize_verbatim_local_and_unc_prefixes() {
+        for (input, expected) in [
+            (r"C:\Users\città & mare", r"C:\Users\città & mare"),
+            (r"\\?\C:\Users\città & mare", r"C:\Users\città & mare"),
+            (r"\\?\UNC\server\share\città", r"\\server\share\città"),
+            (r"\\server\share\città", r"\\server\share\città"),
+            ("foto è speciale.png", "foto è speciale.png"),
+        ] {
+            assert_eq!(display_path(Path::new(input)), expected);
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn hiding_work_files_and_directories_preserves_existing_attributes() {
+        use std::os::windows::fs::MetadataExt;
+        let directory = tempfile::tempdir().unwrap();
+        let file = directory.path().join("work.txt");
+        std::fs::write(&file, b"work").unwrap();
+        let original_permissions = std::fs::metadata(&file).unwrap().permissions();
+        let mut permissions = original_permissions.clone();
+        permissions.set_readonly(true);
+        std::fs::set_permissions(&file, permissions).unwrap();
+        for path in [directory.path(), file.as_path()] {
+            let before = std::fs::metadata(path).unwrap().file_attributes();
+            set_hidden(path).unwrap();
+            assert_eq!(
+                std::fs::metadata(path).unwrap().file_attributes(),
+                before | 2
+            );
+        }
+        assert!(set_hidden(&directory.path().join("missing")).is_err());
+        std::fs::set_permissions(file, original_permissions).unwrap();
+    }
 
     #[test]
     fn website_validation_rejects_non_web_handlers_without_launching_them() {

@@ -7,6 +7,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     mpsc,
 };
+use the_converter::platform::display_path;
 use the_converter::{
     engine,
     model::{
@@ -22,6 +23,7 @@ use zeroize::Zeroize;
 
 const ACCENT: Color32 = Color32::from_rgb(0, 103, 192);
 const GREEN: Color32 = Color32::from_rgb(28, 135, 86);
+const PREFERENCES_SAVE_INTERVAL: std::time::Duration = std::time::Duration::from_millis(500);
 
 pub fn launch(
     files: Vec<PathBuf>,
@@ -90,7 +92,9 @@ fn app_icon() -> egui::IconData {
 }
 
 fn configure_style(ctx: &egui::Context) {
-    if let Ok(bytes) = std::fs::read(r"C:\Windows\Fonts\segoeui.ttf") {
+    if let Some(bytes) = std::env::var_os("WINDIR")
+        .and_then(|root| std::fs::read(PathBuf::from(root).join("Fonts").join("segoeui.ttf")).ok())
+    {
         let mut fonts = egui::FontDefinitions::default();
         fonts
             .font_data
@@ -147,6 +151,33 @@ fn load_saved() -> SavedState {
         .and_then(|path| std::fs::read(path).ok())
         .and_then(|bytes| serde_json::from_slice(&bytes).ok())
         .unwrap_or_default()
+}
+
+fn persist_preferences(
+    path: &Path,
+    saved: &SavedState,
+    last_persist: &mut Option<std::time::Instant>,
+    now: std::time::Instant,
+    force: bool,
+) -> std::io::Result<bool> {
+    if !force
+        && last_persist.is_some_and(|last| now.duration_since(last) < PREFERENCES_SAVE_INTERVAL)
+    {
+        return Ok(false);
+    }
+    // Failed writes are throttled too, while the dirty state remains pending.
+    *last_persist = Some(now);
+    let parent = path
+        .parent()
+        .ok_or_else(|| std::io::Error::other("Cartella delle preferenze non disponibile"))?;
+    std::fs::create_dir_all(parent)?;
+    use std::io::Write;
+    let bytes = serde_json::to_vec_pretty(saved).map_err(std::io::Error::other)?;
+    let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
+    temporary.write_all(&bytes)?;
+    temporary.flush()?;
+    temporary.persist(path).map_err(|error| error.error)?;
+    Ok(true)
 }
 
 pub fn quick_configuration() -> (ConversionSettings, ToolPaths) {
@@ -210,6 +241,7 @@ pub struct ConverterApp {
     advanced: bool,
     notice: Option<String>,
     settings_dirty: bool,
+    last_persist: Option<std::time::Instant>,
     quick_report: Option<SavedReport>,
     quick_queue: QuickQueueView,
     api_key_input: String,
@@ -235,6 +267,7 @@ impl ConverterApp {
             advanced: false,
             notice: None,
             settings_dirty: false,
+            last_persist: None,
             quick_report: load_report(),
             quick_queue: QuickQueueView::default(),
             api_key_input: String::new(),
@@ -246,24 +279,25 @@ impl ConverterApp {
     }
 
     fn persist(&mut self) {
-        if let Some(path) = settings_path()
-            && let Some(parent) = path.parent()
-        {
-            let result = std::fs::create_dir_all(parent).and_then(|_| {
-                use std::io::Write;
-                let bytes =
-                    serde_json::to_vec_pretty(&self.saved).map_err(std::io::Error::other)?;
-                let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
-                temporary.write_all(&bytes)?;
-                temporary.flush()?;
-                temporary.persist(&path).map_err(|error| error.error)?;
-                Ok(())
-            });
-            if let Err(err) = result {
-                self.notice = Some(format!("Impossibile salvare le preferenze: {err}"));
+        self.persist_with_force(false);
+    }
+
+    fn persist_with_force(&mut self, force: bool) {
+        if let Some(path) = settings_path() {
+            match persist_preferences(
+                &path,
+                &self.saved,
+                &mut self.last_persist,
+                std::time::Instant::now(),
+                force,
+            ) {
+                Ok(true) => self.settings_dirty = false,
+                Ok(false) => {}
+                Err(err) => {
+                    self.notice = Some(format!("Impossibile salvare le preferenze: {err}"));
+                }
             }
         }
-        self.settings_dirty = false;
     }
 
     fn add_files(&mut self, paths: Vec<PathBuf>) {
@@ -1704,6 +1738,12 @@ impl ConverterApp {
 }
 
 impl eframe::App for ConverterApp {
+    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        if self.settings_dirty {
+            self.persist_with_force(true);
+        }
+    }
+
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.receive_events();
         self.quick_queue.refresh();
@@ -2089,6 +2129,8 @@ struct QueueStatusApp {
     error: Option<String>,
     action_error: Option<String>,
     cancel_sent: bool,
+    previews_removed: bool,
+    removal_result: Option<mpsc::Receiver<Result<(), String>>>,
     requests: mpsc::SyncSender<()>,
     snapshots: mpsc::Receiver<Result<QueueJob, String>>,
 }
@@ -2104,6 +2146,8 @@ impl QueueStatusApp {
             error: None,
             action_error: None,
             cancel_sent: false,
+            previews_removed: false,
+            removal_result: None,
             requests,
             snapshots,
         }
@@ -2128,7 +2172,28 @@ impl QueueStatusApp {
 impl eframe::App for QueueStatusApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.refresh();
+        if let Some(receiver) = &self.removal_result {
+            let result = match receiver.try_recv() {
+                Ok(result) => Some(result),
+                Err(mpsc::TryRecvError::Empty) => None,
+                Err(mpsc::TryRecvError::Disconnected) => Some(Err("Rimozione interrotta".into())),
+            };
+            if let Some(result) = result {
+                self.removal_result = None;
+                match result {
+                    Ok(()) => {
+                        self.previews_removed = true;
+                        self.action_error = None;
+                    }
+                    Err(error) => {
+                        self.action_error =
+                            Some(format!("Impossibile rimuovere i segnaposto: {error}"))
+                    }
+                }
+            }
+        }
         let mut cancel_requested = false;
+        let mut remove_requested = false;
         egui::TopBottomPanel::bottom("queue_status_actions")
             .frame(
                 egui::Frame::new()
@@ -2140,6 +2205,25 @@ impl eframe::App for QueueStatusApp {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.button("Chiudi").clicked() {
                             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                        }
+                        if self
+                            .job
+                            .as_ref()
+                            .is_some_and(|job| job.state == QuickJobState::Failed)
+                            && ui
+                                .add_enabled(
+                                    !self.previews_removed && self.removal_result.is_none(),
+                                    egui::Button::new(if self.previews_removed {
+                                        "Segnaposto rimossi"
+                                    } else if self.removal_result.is_some() {
+                                        "Rimozione…"
+                                    } else {
+                                        "Rimuovi segnaposto"
+                                    }),
+                                )
+                                .clicked()
+                        {
+                            remove_requested = true;
                         }
                         if let Some(job) = &self.job
                             && quick_job_active(job)
@@ -2222,6 +2306,22 @@ impl eframe::App for QueueStatusApp {
             }
             self.last_refresh = None;
         }
+        if remove_requested {
+            let id = self.id.clone();
+            let (sender, receiver) = mpsc::channel();
+            match std::thread::Builder::new()
+                .name("remove-queue-previews".into())
+                .spawn(move || {
+                    let result = queue::remove_failed_placeholders(&id)
+                        .map_err(|error| format!("{error:#}"));
+                    let _ = sender.send(result);
+                }) {
+                Ok(_) => self.removal_result = Some(receiver),
+                Err(error) => {
+                    self.action_error = Some(format!("Impossibile rimuovere i segnaposto: {error}"))
+                }
+            }
+        }
         ctx.request_repaint_after(QUEUE_REFRESH);
     }
 }
@@ -2303,13 +2403,6 @@ fn kind_label(kind: MediaKind) -> &'static str {
         MediaKind::Html => "Pagina HTML",
         MediaKind::Unknown => "File",
     }
-}
-
-fn display_path(path: &Path) -> String {
-    path.display()
-        .to_string()
-        .trim_start_matches(r"\\?\")
-        .to_string()
 }
 
 fn width_setting(ui: &mut egui::Ui, id: &str, width: &mut Option<u32>) {
@@ -2431,6 +2524,50 @@ fn transcription_language_label(language: Option<&str>) -> &str {
 #[cfg(test)]
 mod queue_reader_tests {
     use super::*;
+
+    #[test]
+    fn preference_drag_updates_are_throttled_and_close_flushes_latest_values() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("preferences.json");
+        let mut saved = SavedState::default();
+        let mut last = None;
+        let now = std::time::Instant::now();
+        assert!(persist_preferences(&path, &saved, &mut last, now, false).unwrap());
+        let original = std::fs::read(&path).unwrap();
+        saved.settings.image.quality = 42;
+        for milliseconds in [0, 1, 25, 100, 250, 499] {
+            let next_frame = now + std::time::Duration::from_millis(milliseconds);
+            assert!(!persist_preferences(&path, &saved, &mut last, next_frame, false).unwrap());
+        }
+        assert_eq!(std::fs::read(&path).unwrap(), original);
+
+        let next_save = now + PREFERENCES_SAVE_INTERVAL;
+        assert!(persist_preferences(&path, &saved, &mut last, next_save, false).unwrap());
+        let stored: SavedState = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        assert_eq!(stored.settings.image.quality, 42);
+
+        saved.settings.image.quality = 73;
+        assert!(persist_preferences(&path, &saved, &mut last, next_save, true).unwrap());
+        let stored: SavedState = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        assert_eq!(stored.settings.image.quality, 73);
+    }
+
+    #[test]
+    fn failed_preference_writes_are_throttled_and_can_be_flushed_again() {
+        let directory = tempfile::tempdir().unwrap();
+        let parent = directory.path().join("settings");
+        let path = parent.join("preferences.json");
+        std::fs::write(&parent, b"blocked").unwrap();
+        let saved = SavedState::default();
+        let mut last = None;
+        let now = std::time::Instant::now();
+        assert!(persist_preferences(&path, &saved, &mut last, now, false).is_err());
+        std::fs::remove_file(&parent).unwrap();
+        assert!(!persist_preferences(&path, &saved, &mut last, now, false).unwrap());
+        assert!(!path.exists());
+        assert!(persist_preferences(&path, &saved, &mut last, now, true).unwrap());
+        assert!(path.is_file());
+    }
 
     #[test]
     fn slow_queue_io_runs_off_the_ui_thread_and_polling_remains_nonblocking() {
