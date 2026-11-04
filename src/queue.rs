@@ -22,6 +22,7 @@ const COMPLETED_RETENTION_MS: u64 = 7 * 24 * 60 * 60 * 1_000;
 const CANCELLED_RETENTION_MS: u64 = COMPLETED_RETENTION_MS;
 const FAILED_RETENTION_MS: u64 = 30 * 24 * 60 * 60 * 1_000;
 const MAX_TERMINAL_JOBS: usize = 300;
+const PROGRESS_PREVIEW_INTERVAL: Duration = Duration::from_secs(5);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum JobState {
@@ -724,6 +725,7 @@ fn run_worker_with_store(
         let finished = AtomicBool::new(false);
         let mut last_snapshot = Instant::now();
         let mut last_preview = Instant::now();
+        let mut last_preview_text = "Conversione in corso…".to_owned();
         let plan = job.plan.clone();
         let tools = job.tools.clone();
         let conversion = thread::scope(|scope| {
@@ -748,17 +750,12 @@ fn run_worker_with_store(
                     let _ = persist(root, &job);
                     last_snapshot = Instant::now();
                 }
-                if last_preview.elapsed() >= Duration::from_secs(1) {
-                    let status = if job.view.progress > 0.0 {
-                        format!("Conversione in corso — {:.0}%", job.view.progress * 100.0)
-                    } else {
-                        job.view.message.clone()
-                    };
-                    for preview in &job.previews {
-                        let _ = preview.update(&status);
-                    }
-                    last_preview = Instant::now();
-                }
+                let _ = update_progress_preview(
+                    &job,
+                    &mut last_preview,
+                    &mut last_preview_text,
+                    Instant::now(),
+                );
             });
             finished.store(true, Ordering::Relaxed);
             result
@@ -808,6 +805,34 @@ fn run_worker_with_store(
             let _ = update_report(root, &job.batch_id, path);
         }
     }
+}
+
+fn update_progress_preview(
+    job: &StoredJob,
+    last_update: &mut Instant,
+    last_text: &mut String,
+    at: Instant,
+) -> Result<bool> {
+    if at.saturating_duration_since(*last_update) < PROGRESS_PREVIEW_INTERVAL {
+        return Ok(false);
+    }
+    let Some(preview) = job.previews.first() else {
+        return Ok(false);
+    };
+    let status = if job.view.progress > 0.0 {
+        format!("Conversione in corso — {:.0}%", job.view.progress * 100.0)
+    } else {
+        job.view.message.clone()
+    };
+    if status == *last_text {
+        return Ok(false);
+    }
+    // Failed COM/ownership checks must also be throttled; otherwise every
+    // progress callback retries the same locked or replaced shortcut.
+    *last_update = at;
+    preview.update(&status)?;
+    *last_text = status;
+    Ok(true)
 }
 
 fn clean_previews(job: &StoredJob) {
@@ -1577,5 +1602,170 @@ mod tests {
             b"outside queue"
         );
         fs::remove_dir(link).unwrap();
+    }
+
+    #[cfg(windows)]
+    fn progress_job(root: &Path, source: &Path) -> StoredJob {
+        let queued = queued_image(root, source);
+        let mut job = load(root, &queued.id).unwrap();
+        for index in 2..=3 {
+            let output = source.with_file_name(format!("progress-{index}.jpg"));
+            job.previews.push(
+                PendingLink::create(
+                    &output,
+                    &std::env::current_exe().unwrap(),
+                    &queued.id,
+                    "Conversione in corso…",
+                )
+                .unwrap(),
+            );
+        }
+        for preview in &job.previews {
+            preview.update("Conversione in corso…").unwrap();
+        }
+        job
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn progress_updates_only_the_first_real_preview_after_five_seconds_and_changed_text() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("queue");
+        let mut job = progress_job(&root, &directory.path().join("source.png"));
+        let identities: Vec<_> = job
+            .previews
+            .iter()
+            .map(|preview| engine::file_identity(&File::open(preview.path()).unwrap()).unwrap())
+            .collect();
+        let before: Vec<_> = job
+            .previews
+            .iter()
+            .map(|preview| fs::read(preview.path()).unwrap())
+            .collect();
+        let at = Instant::now();
+        let mut last_update = at - Duration::from_secs(6);
+        let mut last_text = "Conversione in corso…".to_owned();
+        job.view.progress = 0.1;
+        assert!(update_progress_preview(&job, &mut last_update, &mut last_text, at).unwrap());
+        assert_eq!(last_text, "Conversione in corso — 10%");
+        assert_ne!(fs::read(job.previews[0].path()).unwrap(), before[0]);
+        let current = engine::file_identity(&File::open(job.previews[0].path()).unwrap()).unwrap();
+        assert_ne!(identities[0], current);
+        let first_update = fs::read(job.previews[0].path()).unwrap();
+        job.view.progress = 0.2;
+        assert!(
+            !update_progress_preview(
+                &job,
+                &mut last_update,
+                &mut last_text,
+                at + Duration::from_secs(4)
+            )
+            .unwrap()
+        );
+        job.view.progress = 0.1;
+        assert!(
+            !update_progress_preview(
+                &job,
+                &mut last_update,
+                &mut last_text,
+                at + Duration::from_secs(6)
+            )
+            .unwrap()
+        );
+        assert_eq!(last_update, at);
+        assert_eq!(fs::read(job.previews[0].path()).unwrap(), first_update);
+        assert_eq!(
+            engine::file_identity(&File::open(job.previews[0].path()).unwrap()).unwrap(),
+            current
+        );
+        job.view.progress = 0.2;
+        assert!(
+            update_progress_preview(
+                &job,
+                &mut last_update,
+                &mut last_text,
+                at + Duration::from_secs(6)
+            )
+            .unwrap()
+        );
+        assert_eq!(last_text, "Conversione in corso — 20%");
+        for index in 1..=2 {
+            assert_eq!(fs::read(job.previews[index].path()).unwrap(), before[index]);
+            assert_eq!(
+                engine::file_identity(&File::open(job.previews[index].path()).unwrap()).unwrap(),
+                identities[index]
+            );
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn failed_progress_preview_attempts_are_also_throttled_without_accepting_the_text() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("queue");
+        let mut job = progress_job(&root, &directory.path().join("source.png"));
+        fs::write(job.previews[0].path(), b"foreign replacement").unwrap();
+        let at = Instant::now();
+        let mut last_update = at - Duration::from_secs(6);
+        let mut last_text = "Conversione in corso…".to_owned();
+        job.view.progress = 0.2;
+        assert!(update_progress_preview(&job, &mut last_update, &mut last_text, at).is_err());
+        assert_eq!(last_update, at);
+        assert_eq!(last_text, "Conversione in corso…");
+        assert!(
+            !update_progress_preview(
+                &job,
+                &mut last_update,
+                &mut last_text,
+                at + Duration::from_secs(1)
+            )
+            .unwrap()
+        );
+        assert!(
+            update_progress_preview(
+                &job,
+                &mut last_update,
+                &mut last_text,
+                at + Duration::from_secs(5)
+            )
+            .is_err()
+        );
+        assert_eq!(
+            fs::read(job.previews[0].path()).unwrap(),
+            b"foreign replacement"
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn worker_failure_still_changes_every_preview_to_the_red_error_state() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("queue");
+        let source = directory.path().join("source.png");
+        let job = progress_job(&root, &source);
+        store(&root, &job).unwrap();
+        fs::write(source, b"invalid image").unwrap();
+        run_worker_at(&root, None).unwrap();
+        assert_eq!(
+            load(&root, &job.view.id).unwrap().view.state,
+            JobState::Failed
+        );
+        let error_text: Vec<_> = "Errore —"
+            .encode_utf16()
+            .flat_map(u16::to_le_bytes)
+            .collect();
+        for preview in &job.previews {
+            let bytes = fs::read(preview.path()).unwrap();
+            assert!(
+                bytes
+                    .windows(error_text.len())
+                    .any(|window| window == error_text)
+            );
+            // MS-SHLLINK ShellLinkHeader stores IconIndex at byte 0x38.
+            assert_eq!(
+                i32::from_le_bytes(bytes[0x38..0x3c].try_into().unwrap()),
+                -3
+            );
+        }
     }
 }
