@@ -1207,38 +1207,64 @@ fn convert_pdf(
             input, dir, s, tools, cancel, progress,
         )?]);
     }
+    const PAGES_PER_BLOCK: usize = 10;
+    let page_count = pdf_page_count(input, tools, cancel)?;
     let stage = tempfile::Builder::new()
         .prefix(".the-converter-pages-")
         .tempdir_in(dir)?;
-    let mut cmd = Command::new(tools.pdftoppm.as_ref().context("pdftoppm non trovato")?);
-    cmd.arg(if s.format == OutputFormat::Jpg {
-        "-jpeg"
-    } else {
-        "-png"
-    })
-    .args(["-r", &s.pdf.dpi.to_string()]);
-    if s.format == OutputFormat::Jpg {
-        cmd.args(["-jpegopt", &format!("quality={}", s.image.quality)]);
-    }
-    cmd.arg(input).arg(stage.path().join("page"));
     progress(Progress {
         fraction: 0.05,
-        message: "Rendering di tutte le pagine PDF…".into(),
+        message: format!("Rendering di {page_count} pagine PDF…"),
     });
-    run_process(cmd, cancel, None, progress).map_err(pdf_error)?;
+    for first in (1..=page_count).step_by(PAGES_PER_BLOCK) {
+        cancelled(cancel)?;
+        let last = (first + PAGES_PER_BLOCK - 1).min(page_count);
+        let mut cmd = Command::new(tools.pdftoppm.as_ref().context("pdftoppm non trovato")?);
+        cmd.arg(if s.format == OutputFormat::Jpg {
+            "-jpeg"
+        } else {
+            "-png"
+        })
+        .args([
+            "-r",
+            &s.pdf.dpi.to_string(),
+            "-f",
+            &first.to_string(),
+            "-l",
+            &last.to_string(),
+        ]);
+        if s.format == OutputFormat::Jpg {
+            cmd.args(["-jpegopt", &format!("quality={}", s.image.quality)]);
+        }
+        cmd.arg(input).arg(stage.path().join("page"));
+        run_process(cmd, cancel, None, progress).map_err(pdf_error)?;
+        cancelled(cancel)?;
+        progress(Progress {
+            fraction: 0.05 + 0.45 * last as f32 / page_count as f32,
+            message: format!("Renderizzate pagine {first}–{last} di {page_count}"),
+        });
+    }
+    cancelled(cancel)?;
     let mut pages: Vec<PathBuf> = fs::read_dir(stage.path())?
         .filter_map(|e| e.ok().map(|e| e.path()))
         .filter(|p| p.extension().and_then(|e| e.to_str()) == Some(s.format.extension()))
         .collect();
-    pages.sort_by_key(|p| {
-        p.file_stem()
+    let page_number = |path: &Path| {
+        path.file_stem()
             .and_then(|n| n.to_str())
             .and_then(|n| n.rsplit('-').next())
-            .and_then(|n| n.parse::<u32>().ok())
-            .unwrap_or(0)
-    });
-    if pages.is_empty() {
-        bail!("Nessuna pagina esportata dal PDF");
+            .and_then(|n| n.parse::<usize>().ok())
+    };
+    pages.sort_by_key(|path| page_number(path));
+    if pages.len() != page_count
+        || pages
+            .iter()
+            .enumerate()
+            .any(|(index, path)| page_number(path) != Some(index + 1))
+    {
+        bail!(
+            "Il numero o l'ordine delle pagine esportate da Poppler non corrisponde al PDF: nessun file è stato pubblicato"
+        );
     }
     let mut outputs = Vec::new();
     let result = (|| -> Result<()> {
