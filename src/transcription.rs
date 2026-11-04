@@ -28,6 +28,7 @@ const MAX_UPLOAD_BYTES: u64 = 24_000_000;
 const MAX_RESPONSE_BYTES: usize = 8 * 1024 * 1024;
 const MAX_ERROR_BYTES: usize = 64 * 1024;
 const CHUNK_SECONDS: u32 = 1200;
+const TRANSCRIPTION_CONTEXT_CHARS: usize = 200;
 
 pub fn has_api_key() -> bool {
     credentials::has(CREDENTIAL_TARGET)
@@ -405,6 +406,7 @@ async fn transcribe_parts(
 ) -> Result<PathBuf> {
     let mut output = engine::temporary(dir, "txt")?;
     let mut wrote_text = false;
+    let mut previous_context = String::new();
     for (index, path) in parts.iter().enumerate() {
         engine::cancelled(cancel)?;
         progress(Progress {
@@ -440,6 +442,9 @@ async fn transcribe_parts(
             // Keep persisted single-language settings compatible, using the model's array field.
             form = form.text("languages[]", language.to_ascii_lowercase());
         }
+        if index > 0 && !previous_context.is_empty() {
+            form = form.text("prompt", previous_context.clone());
+        }
         let bearer = Zeroizing::new(format!("Bearer {key}"));
         let mut authorization = HeaderValue::from_bytes(bearer.as_bytes())
             .map_err(|_| anyhow::anyhow!("La chiave API salvata non è valida."))?;
@@ -470,6 +475,7 @@ async fn transcribe_parts(
             }
             output.as_file_mut().write_all(text.as_bytes())?;
             wrote_text = true;
+            previous_context = transcription_context(&previous_context, &text);
         }
         progress(Progress {
             fraction: 0.1 + 0.85 * (index + 1) as f32 / parts.len() as f32,
@@ -490,6 +496,29 @@ async fn transcribe_parts(
     output.as_file_mut().sync_all()?;
     engine::cancelled(cancel)?;
     engine::commit(output, dir, &engine::stem(input), "txt")
+}
+
+fn transcription_context(previous: &str, current: &str) -> String {
+    let boundary = |character: char| character.is_whitespace() || character.is_control();
+    let mut words = Vec::new();
+    let mut characters = 0;
+    // Walk backward through the full transcript's retained tail. Normalization applies
+    // only to this request context; the saved transcript keeps the original text.
+    for word in current
+        .rsplit(boundary)
+        .chain(previous.rsplit(boundary))
+        .filter(|word| !word.is_empty())
+    {
+        let length = word.chars().take(TRANSCRIPTION_CONTEXT_CHARS + 1).count();
+        let separator = usize::from(!words.is_empty());
+        if characters + separator + length > TRANSCRIPTION_CONTEXT_CHARS {
+            break;
+        }
+        characters += separator + length;
+        words.push(word);
+    }
+    words.reverse();
+    words.join(" ")
 }
 
 fn parse_transcript(body: &[u8]) -> Result<String> {
@@ -731,6 +760,44 @@ mod tests {
     const TEST_KEY: &str = "sk-local-http-test-not-a-real-key";
 
     #[test]
+    fn context_normalizes_controls_and_keeps_unicode_words() {
+        assert_eq!(
+            transcription_context("città\n naïve", "\0mañana\t東京 🚀\u{85}fine"),
+            "città naïve mañana 東京 🚀 fine"
+        );
+        assert_eq!(
+            transcription_context("Prima parte", "breve"),
+            "Prima parte breve"
+        );
+        assert_eq!(
+            transcription_context("Prima parte", "\0\n\t"),
+            "Prima parte"
+        );
+    }
+
+    #[test]
+    fn context_is_a_whole_word_suffix_with_a_unicode_character_limit() {
+        let suffix = format!("{} 終点", "è".repeat(197));
+        let context = transcription_context("da scartare", &suffix);
+        assert_eq!(context, suffix);
+        assert_eq!(context.chars().count(), TRANSCRIPTION_CONTEXT_CHARS);
+        assert!(context.len() > TRANSCRIPTION_CONTEXT_CHARS);
+
+        let suffix = format!("{} ultima", "a".repeat(190));
+        assert_eq!(
+            transcription_context("", &format!("prima {suffix}")),
+            suffix
+        );
+
+        let long_word = "è".repeat(TRANSCRIPTION_CONTEXT_CHARS + 1);
+        assert!(transcription_context("precedente", &long_word).is_empty());
+        assert_eq!(
+            transcription_context("precedente", &format!("{long_word} finale")),
+            "finale"
+        );
+    }
+
+    #[test]
     fn flac_and_ogg_upload_original_bytes_and_mime_without_ffmpeg() {
         for (extension, expected_mime, bytes) in [
             (
@@ -779,6 +846,7 @@ mod tests {
             let request = &requests[0];
             let text = String::from_utf8_lossy(request);
             assert!(text.contains("name=\"model\"\r\n\r\ngpt-transcribe"));
+            assert!(!text.contains("name=\"prompt\""));
             assert!(text.contains(&format!("filename=\"audio.{extension}\"")));
             assert!(
                 text.to_ascii_lowercase()
@@ -807,6 +875,89 @@ mod tests {
                 .unwrap();
             assert_eq!(&request[file_start..file_start + file_length], bytes);
         }
+    }
+
+    #[test]
+    fn later_part_sends_only_the_normalized_whole_word_transcript_tail() {
+        let folder = tempfile::tempdir().unwrap();
+        let source = input(folder.path(), "source.wav");
+        let parts = vec![
+            input(folder.path(), "part-000.mp3"),
+            input(folder.path(), "part-001.mp3"),
+        ];
+        let first_text = format!("da scartare {} città\0\nfinale", "è".repeat(185));
+        let expected_context = format!("{} città finale", "è".repeat(185));
+        let (endpoint, server) = server(vec![
+            Reply::transcript(&first_text),
+            Reply::transcript("Seconda parte"),
+        ]);
+        let output = runtime()
+            .block_on(transcribe_parts(
+                &client(),
+                &endpoint,
+                TEST_KEY,
+                &parts,
+                &source,
+                folder.path(),
+                &settings(),
+                &AtomicBool::new(false),
+                &mut |_| {},
+            ))
+            .unwrap();
+        assert_eq!(
+            fs::read_to_string(output).unwrap(),
+            format!("{first_text}\n\nSeconda parte\n")
+        );
+        let requests = server.join().unwrap();
+        assert_eq!(requests.len(), 2);
+        assert!(!String::from_utf8_lossy(&requests[0]).contains("name=\"prompt\""));
+        let second_request = String::from_utf8_lossy(&requests[1]);
+        assert!(second_request.contains(&format!("name=\"prompt\"\r\n\r\n{expected_context}\r\n")));
+        assert!(!second_request.contains("da scartare"));
+    }
+
+    #[test]
+    fn short_parts_retain_context_from_all_prior_transcribed_text() {
+        let folder = tempfile::tempdir().unwrap();
+        let source = input(folder.path(), "source.wav");
+        let parts = vec![
+            input(folder.path(), "part-000.mp3"),
+            input(folder.path(), "part-001.mp3"),
+            input(folder.path(), "part-002.mp3"),
+        ];
+        let (endpoint, server) = server(vec![
+            Reply::transcript("Prima parte"),
+            Reply::transcript("breve"),
+            Reply::transcript("Ultima parte"),
+        ]);
+        let output = runtime()
+            .block_on(transcribe_parts(
+                &client(),
+                &endpoint,
+                TEST_KEY,
+                &parts,
+                &source,
+                folder.path(),
+                &settings(),
+                &AtomicBool::new(false),
+                &mut |_| {},
+            ))
+            .unwrap();
+        assert_eq!(
+            fs::read_to_string(output).unwrap(),
+            "Prima parte\n\nbreve\n\nUltima parte\n"
+        );
+        let requests = server.join().unwrap();
+        assert_eq!(requests.len(), 3);
+        assert!(!String::from_utf8_lossy(&requests[0]).contains("name=\"prompt\""));
+        assert!(
+            String::from_utf8_lossy(&requests[1])
+                .contains("name=\"prompt\"\r\n\r\nPrima parte\r\n")
+        );
+        assert!(
+            String::from_utf8_lossy(&requests[2])
+                .contains("name=\"prompt\"\r\n\r\nPrima parte breve\r\n")
+        );
     }
 
     #[test]
@@ -989,7 +1140,14 @@ mod tests {
             fs::read_to_string(output).unwrap(),
             "Prima parte\n\nUltima parte\n"
         );
-        assert_eq!(server.join().unwrap().len(), 3);
+        let requests = server.join().unwrap();
+        assert_eq!(requests.len(), 3);
+        assert!(!String::from_utf8_lossy(&requests[0]).contains("name=\"prompt\""));
+        for request in &requests[1..] {
+            assert!(
+                String::from_utf8_lossy(request).contains("name=\"prompt\"\r\n\r\nPrima parte\r\n")
+            );
+        }
         assert_eq!(fs::read_dir(&out).unwrap().count(), 1);
     }
 

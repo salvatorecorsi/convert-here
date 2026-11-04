@@ -105,6 +105,8 @@ Gli audio in un formato accettato direttamente e fino alla soglia prudenziale di
 
 Il contratto di caricamento dell'API accetta FLAC, MP3, MP4, MPEG, MPGA, M4A, OGG, WAV e WebM. Per gli audio compatibili con l'app, FLAC e OGG restano fra i formati inviati direttamente: fino a 24 MB mantengono i byte originali e non richiedono FFmpeg. [Formati del caricamento nell'API](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create).
 
+Per una registrazione suddivisa in segmenti, le richieste successive possono reinviare come `prompt` fino a 200 caratteri di parole intere gia trascritte della stessa registrazione, con spazi e caratteri di controllo normalizzati. La prima richiesta e gli invii singoli non includono questo contesto.
+
 Il backend richiede una risposta JSON da GPT-Transcribe ed estrae il campo `text` per creare il normale file TXT UTF-8: il risultato per l'utente resta un documento di testo. La preferenza salvata `transcription.language` rimane compatibile; quando impostata viene inviata come una sola voce `languages[]`, mentre il riconoscimento automatico non invia un suggerimento di lingua. [Contratto di migrazione OpenAI](https://developers.openai.com/cookbook/examples/migrating_from_whisper_to_gpt_transcribe).
 
 Il testo mantiene la lingua parlata, senza traduzione, timestamp o riconoscimento dei parlanti. La trascrizione puo contenere errori e va riletta. Dettagli sul trattamento dei dati: [privacy](docs/privacy.md).
