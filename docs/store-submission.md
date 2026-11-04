@@ -1,6 +1,24 @@
 # Microsoft Store: preparazione della submission
 
-Stato al 4 novembre 2026: la verifica diretta in Partner Center conferma il prodotto **Convert Here**, `Name` **SalvatoreCorsi.ConvertHere**, `Publisher` **CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17** e `PublisherDisplayName` **Corsivo**. Lo Store ID attuale e **9NPKPPCBNBM8**, con URL [apps.microsoft.com/detail/9NPKPPCBNBM8](https://apps.microsoft.com/detail/9NPKPPCBNBM8). L'applicazione e alla versione **0.3.0**; la versione del pacchetto Store e indipendente. Titolare, autore e sviluppatore: **Salvatore Corsi**; contatto pubblico: **salvo@salvatorecorsi.com**, riportato nella [pagina contatti](https://www.salvatorecorsi.com/contatti/). La configurazione locale `packaging/store/identity.partner-center.json`, esclusa da Git, deve usare i valori effettivi del prodotto. Invio, certificazione, WACK e collaudo dell'installazione del candidato finale restano da completare; una preview con certificato di sviluppo e un artefatto distinto.
+Stato al 4 novembre 2026: la verifica diretta in Partner Center conferma il prodotto **Convert Here**, `Name` **SalvatoreCorsi.ConvertHere**, `Publisher` **CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17** e `PublisherDisplayName` **Corsivo**. Lo Store ID attuale e **9NPKPPCBNBM8**, con URL [apps.microsoft.com/detail/9NPKPPCBNBM8](https://apps.microsoft.com/detail/9NPKPPCBNBM8). L'applicazione e alla versione **0.3.0**; la versione del pacchetto Store e **1.0.0.0**. Titolare, autore e sviluppatore: **Salvatore Corsi**; contatto pubblico: **salvo@salvatorecorsi.com**, riportato nella [pagina contatti](https://www.salvatorecorsi.com/contatti/). Il candidato e stato caricato e validato dal portale, ma **non e ancora stato inviato per certificazione**. Installazione e WACK del candidato finale non sono stati eseguiti; le precedenti preview sono artefatti distinti.
+
+## Stato della submission corrente
+
+Verifica diretta della submission **1152921505702314630** del prodotto **9NPKPPCBNBM8**:
+
+| Sezione | Evidenza osservata |
+| --- | --- |
+| Packages | **Complete**; `ConvertHere-1.0.0.0-x64-store.msix` risulta **Validated**. Famiglia Desktop selezionata, minimo `10.0.22000.0`, architettura x64. |
+| Scheda italiana, lingua 59 | **Complete**; due schermate PNG della 0.3.0 con didascalie e logo 300 x 300. |
+| Scheda inglese, lingua 4 | **Complete**; due schermate PNG della 0.3.0 con didascalie e logo 300 x 300. La UI resta italiana. |
+| Pricing and availability | **Complete**; gratuita, tutti i 240 mercati disponibili, pubblicazione appena approvata. |
+| Properties | **Complete**. |
+| Submission options | **Complete**; motivazione `runFullTrust` di 469 caratteri e pubblicazione appena approvata. |
+| Additional Testing Information | Istruzioni di 2306 caratteri salvate; persistenza verificata nel portale. |
+| Age ratings / IARC | **In Progress**; anteprima 3+, non ancora finalizzata. La conferma del proprietario per l'accettazione IARC e stata richiesta e resta in attesa. |
+| Invio e certificazione | **Non eseguiti**. Nessuna approvazione o pubblicazione attestata. |
+
+Il file caricato conserva SHA-256 `e130564d34e88b3e9f60ba6de76b06536adaa109957e1673a0043886ad2fe1de`. Il report di build e i relativi checksum restano immutati: descrivono lo stato al momento della creazione, prima dell'upload. La validazione del portale non equivale alla certificazione o a una prova d'installazione.
 
 ## Percorso scelto
 
@@ -20,9 +38,9 @@ Il menu moderno usa la DLL `IExplorerCommand`, COM surrogate e `windows.fileExpl
 | Publisher display name | **Corsivo**, confermato nel prodotto in Partner Center. |
 | Store ID | `9NPKPPCBNBM8`; l'identificativo non attesta la pubblicazione dell'app. |
 | Titolare e contatto | **Salvatore Corsi**, **salvo@salvatorecorsi.com**. |
-| Informativa privacy | [URL pubblico](https://github.com/salvatorecorsi/convert-here/blob/master/docs/privacy.md); verificare il contenuto aggiornato dopo il push prima di inserirlo nella submission. |
+| Informativa privacy | [URL pubblico](https://github.com/salvatorecorsi/convert-here/blob/master/docs/privacy.md), con titolare e contatto reali nell'informativa IT/EN. |
 | Supporto | **salvo@salvatorecorsi.com** oppure [pagina contatti](https://www.salvatorecorsi.com/contatti/), gia pubblici. Per PC il campo e facoltativo, ma consigliato. |
-| Prezzo, mercati e calendario | Scelte confermate dal proprietario: **Gratuita**, **tutti i mercati**, **pubblicazione appena approvata**. |
+| Prezzo, mercati e calendario | Scelte confermate dal proprietario e salvate: **Gratuita**, **tutti i 240 mercati disponibili**, **pubblicazione appena approvata**. |
 | Licenza applicazione Store | Il campo Additional license terms puo rimanere vuoto per usare gli Standard Application License Terms; termini diversi vanno inseriti esplicitamente. Questo non assegna una licenza open source al repository. |
 
 Riferimenti Microsoft: [privacy e supporto](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/support-info), [termini di licenza aggiuntivi](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-additional-information#additional-license-terms).
@@ -70,35 +88,39 @@ La dipendenza va dichiarata all'inizio delle descrizioni: la policy 10.2.4 ammet
 
 ## Capability e motivazione per la certificazione
 
-`runFullTrust` e necessario per l'app desktop `mediumIL` e il COM packaged. Motivazione proposta, da confrontare con il manifest finale:
+`runFullTrust` e dichiarato per l'app desktop `mediumIL` e il COM packaged. La motivazione della capability e stata salvata nelle Submission options (469 caratteri). Scopo tecnico:
 
 > Convert Here is a native Rust desktop file conversion application. It reads files explicitly selected by the user, writes converted outputs to the selected folder, and provides an IExplorerCommand shell extension through packaged COM. Optional conversion engines already installed or explicitly selected by the user run as child processes with the user's permissions. The app does not require administrator privileges, a service, a driver, or elevation.
 
 Non aggiungere `unvirtualizedResources` per abitudine ereditandolo dal pacchetto sparse. Serve a disabilitare la virtualizzazione di AppData/HKCU: conservarlo solo se un requisito verificato lo rende indispensabile, documentandone lo scope e chiedendo l'approvazione necessaria. Le capability ristrette richiedono una spiegazione nella submission. [Dichiarazioni delle capability](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/app-capability-declarations#restricted-capabilities), [virtualizzazione flessibile](https://learn.microsoft.com/en-us/windows/msix/desktop/flexible-virtualization).
 
-## Materiali e verifiche prima dell'invio
+## Stato dei materiali e delle verifiche
 
-Consultare lo [stato delle verifiche](store-validation.md): le prove su una preview precedente non certificano la build con trascrizione online.
+Consultare lo [stato delle verifiche](store-validation.md): le prove su una preview precedente non certificano la build con trascrizione online. Nel portale resta **In Progress** soltanto IARC; le caselle non selezionate relative al collaudo documentano prove non eseguite sul candidato finale.
 
-- [ ] Identita reale Partner Center configurata; nessun placeholder e nessuna firma di sviluppo presentata come firma pubblica.
-- [ ] Privacy completata con identita legale e contatto reali, pubblicata a un URL HTTPS accessibile. La policy 10.5.1 la richiede anche alle app Win32 senza telemetria. [Requisiti privacy](https://learn.microsoft.com/en-us/windows/apps/publish/store-policies#105-personal-information).
-- [ ] Schede [italiana](store-listing-it.md) e [inglese](store-listing-en.md) ricontrollate sul pacchetto finale; licenza, disponibilita, categorie e questionario IARC completati in Partner Center.
-- [ ] Asset del pacchetto inclusi e risolti dal manifest: Square44x44Logo, Square150x150Logo e StoreLogo con varianti di scala; verificare le varianti richieste e l'aspetto su temi chiaro/scuro. [Icone e risorse](https://learn.microsoft.com/en-us/windows/apps/design/iconography/app-icon-construction).
-- [ ] Schermate aggiornate con il nome Convert Here sul pacchetto finale; lo screenshot precedente non documenta il nuovo nome. Almeno una schermata PNG reale per scheda, desktop almeno 1366 x 768, massimo 50 MB; consigliate quattro. Preparare separatamente l'icona Store 300 x 300. [Screenshot e immagini](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/screenshots-and-images).
-- [ ] Windows App Certification Kit eseguito sul MSIX completo; conservare il report. Controllare installazione, aggiornamento, disinstallazione e avvio da Start su ambiente pulito.
+- [x] Identita reale Partner Center configurata; candidato unsigned caricato e validato, senza presentare una firma di sviluppo come firma pubblica.
+- [x] Informativa privacy IT/EN completata con titolare, contatto reale e URL HTTPS pubblico riportato sopra. [Requisiti privacy](https://learn.microsoft.com/en-us/windows/apps/publish/store-policies#105-personal-information).
+- [x] Schede [italiana](store-listing-it.md) e [inglese](store-listing-en.md) salvate come **Complete**; Pricing, Properties e Submission options anch'esse **Complete**.
+- [ ] Questionario IARC finalizzato dopo la conferma del proprietario; l'anteprima 3+ non e ancora una classificazione completata.
+- [x] Asset del pacchetto inclusi e risolti dal manifest: Square44x44Logo, Square150x150Logo e StoreLogo con varianti di scala; validazione MakeAppx e del portale completate. [Icone e risorse](https://learn.microsoft.com/en-us/windows/apps/design/iconography/app-icon-construction).
+- [x] Due schermate PNG aggiornate della 0.3.0 con didascalie e logo Store 300 x 300 salvati in ciascuna scheda linguistica. [Screenshot e immagini](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/screenshots-and-images).
+- [x] Istruzioni operative Additional Testing Information e motivazione `runFullTrust` salvate; persistenza verificata nel portale.
+- [ ] Installazione, aggiornamento, disinstallazione e avvio da Start del candidato finale controllati su ambiente pulito; non ancora eseguiti.
 - [ ] Verificati menu moderno, selezione multipla, conversione rapida senza finestra opzioni, segnaposto, annullamento, nomi duplicati e percorsi con spazi/accenti.
 - [ ] Provate le funzioni native senza motori; separatamente provati i motori opzionali e il selettore di eseguibili. Verificati percorsi di dati realmente usati sotto MSIX e comportamento della disinstallazione.
 - [ ] Verificati consenso e informativa per l'invio audio a OpenAI, salvataggio/rimozione della chiave, selezioni compatibili, errori API e assenza della chiave da preferenze/coda/resoconti. Non incorporare credenziali del proprietario per i certificatori.
 - [ ] Per la trascrizione: distinguere test con server simulato da richieste reali autorizzate. Non presentare test simulati come prova di disponibilita del servizio. Verificare il contratto GPT-Transcribe: risposta JSON, estrazione di `text`, suggerimento lingua con `languages[]` e continuita delle preferenze salvate. [Guida ufficiale OpenAI](https://developers.openai.com/api/docs/guides/speech-to-text).
 - [ ] Associare ogni report al pacchetto e al commit verificati. Le prove locali o WACK precedenti all'integrazione OpenAI non attestano il funzionamento della nuova trascrizione.
-- [ ] Nessun motore scaricato automaticamente, certificato di sviluppo, chiave privata o script di installazione esterno nell'artefatto Store.
+- [x] Report del candidato: nessun motore o downloader incluso, pacchetto unsigned e nessuna modifica agli archivi dei certificati.
 - [ ] Submission completa inviata per certificazione, con pubblicazione automatica appena approvata secondo l'autorizzazione del proprietario.
+
+Il Windows App Certification Kit non e stato eseguito sul candidato finale. Microsoft descrive il WACK come controllo locale deprecato e facoltativo; non e un requisito locale da presentare come completato per l'upload. Il suo eventuale esito non garantisce l'approvazione Store. Il precedente report riguarda una preview diversa, come indicato nello [stato delle verifiche](store-validation.md). [Validazione locale MSIX](https://learn.microsoft.com/en-us/windows/msix/package/packaging-uwp-apps#validate-your-app-package-locally).
 
 Per il CSV attendere l'esportazione del prodotto reale da Partner Center: preservare colonne Field, ID e Type; trasferire i testi preparati nei campi della lingua corretta. Non inventare un template con ID presunti. [Importazione/esportazione delle schede](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/import-and-export-store-listings).
 
-## Note per il certificatore: bozza inglese
+## Note per il certificatore: riferimento esteso
 
-Usare il testo seguente dopo il collaudo del pacchetto completo e adattare i passi solo se la UI cambia:
+Nel portale sono state salvate istruzioni operative sintetiche di 2306 caratteri. Il testo seguente e un riferimento esteso sul comportamento previsto da sorgenti e manifest, non un'attestazione di collaudo del MSIX finale.
 
 > The publisher brand is Corsivo; the application is developed by Salvatore Corsi. The application UI is currently Italian. Local conversions do not require an account or login. Optional online transcription requires the user's own OpenAI API key and separately billed API access; it does not use a ChatGPT subscription.
 >
