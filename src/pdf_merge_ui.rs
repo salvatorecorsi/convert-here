@@ -229,18 +229,47 @@ impl PageOrderEditor {
                             }
                         }
                         row.allocate_ui_with_layout(
-                            egui::vec2(30.0, 40.0),
+                            egui::vec2(68.0, 40.0),
                             egui::Layout::left_to_right(egui::Align::Center),
                             |ui| {
-                                ui.label(theme::heading((index + 1).to_string(), theme::BODY))
-                                    .on_hover_text("Posizione nel PDF finale");
+                                ui.set_width(68.0);
+                                ui.spacing_mut().item_spacing.x = 4.0;
+                                ui.spacing_mut().button_padding = egui::vec2(4.0, 4.0);
+                                for (icon, possible, gap, tooltip) in [
+                                    (
+                                        FluentIcon::ChevronUp,
+                                        index > 0,
+                                        index.saturating_sub(1),
+                                        "Sposta prima",
+                                    ),
+                                    (
+                                        FluentIcon::ChevronDown,
+                                        index + 1 < total_pages,
+                                        index + 2,
+                                        "Sposta dopo",
+                                    ),
+                                ] {
+                                    if ui
+                                        .add_enabled(
+                                            possible,
+                                            egui::Button::new(theme::icon(icon, 16.0))
+                                                .frame(false)
+                                                .min_size(egui::vec2(28.0, 32.0)),
+                                        )
+                                        .on_hover_text(tooltip)
+                                        .clicked()
+                                    {
+                                        movement = Some((index, gap));
+                                    }
+                                }
                             },
                         );
-                        let text_width = (row.available_width() - 88.0).max(40.0);
+                        let text_width = row.available_width().max(40.0);
                         row.allocate_ui_with_layout(
                             egui::vec2(text_width, 40.0),
                             egui::Layout::top_down(egui::Align::Min),
                             |ui| {
+                                ui.set_width(text_width);
                                 if let Some(source) = self.sources.get(page.source) {
                                     ui.add(
                                         egui::Label::new(theme::heading(&source.name, theme::BODY))
@@ -258,33 +287,6 @@ impl PageOrderEditor {
                                 }
                             },
                         );
-                        for (icon, possible, gap, tooltip) in [
-                            (
-                                FluentIcon::ChevronUp,
-                                index > 0,
-                                index.saturating_sub(1),
-                                "Sposta prima",
-                            ),
-                            (
-                                FluentIcon::ChevronDown,
-                                index + 1 < total_pages,
-                                index + 2,
-                                "Sposta dopo",
-                            ),
-                        ] {
-                            if row
-                                .add_enabled(
-                                    possible,
-                                    egui::Button::new(theme::icon(icon, 16.0))
-                                        .frame(false)
-                                        .min_size(egui::vec2(28.0, 32.0)),
-                                )
-                                .on_hover_text(tooltip)
-                                .clicked()
-                            {
-                                movement = Some((index, gap));
-                            }
-                        }
                     });
                     if response.clicked() && enabled {
                         self.selected = Some(page);
