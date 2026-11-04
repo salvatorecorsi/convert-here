@@ -1163,6 +1163,35 @@ pub(crate) fn run_process(
     }
 }
 
+fn formatted_media_time(seconds: f64) -> String {
+    let seconds = if seconds.is_finite() && seconds >= 0.0 {
+        seconds as u64
+    } else {
+        0
+    };
+    if seconds >= 3600 {
+        format!(
+            "{}:{:02}:{:02}",
+            seconds / 3600,
+            (seconds % 3600) / 60,
+            seconds % 60
+        )
+    } else {
+        format!("{}:{:02}", seconds / 60, seconds % 60)
+    }
+}
+
+fn conversion_progress_message(processed: f64, duration: Option<f64>) -> String {
+    let processed = formatted_media_time(processed);
+    match duration.filter(|duration| duration.is_finite() && *duration >= 0.0) {
+        Some(duration) => format!(
+            "Conversione… {processed} di {}",
+            formatted_media_time(duration)
+        ),
+        None => format!("Conversione… {processed}"),
+    }
+}
+
 fn wait_child(
     child: &mut Child,
     job: &ProcessJob,
@@ -1184,7 +1213,7 @@ fn wait_child(
                     .filter(|d| *d > 0.)
                     .map(|d| (time / d).clamp(0., 0.99) as f32)
                     .unwrap_or(0.),
-                message: format!("Conversione… {:.0} s", time),
+                message: conversion_progress_message(time, duration),
             });
         }
         match child.try_wait() {
@@ -1599,5 +1628,50 @@ mod tests {
             "Cancellation took {:?}",
             start.elapsed()
         );
+    }
+}
+
+#[cfg(test)]
+mod progress_message_tests {
+    use super::*;
+
+    #[test]
+    fn progress_reports_processed_media_and_known_trimmed_duration() {
+        assert_eq!(
+            conversion_progress_message(316.9, Some(751.9)),
+            "Conversione… 5:16 di 12:31"
+        );
+        assert_eq!(
+            conversion_progress_message(3796.0, Some(7500.0)),
+            "Conversione… 1:03:16 di 2:05:00"
+        );
+        assert_eq!(
+            conversion_progress_message(2.4, Some(5.0)),
+            "Conversione… 0:02 di 0:05"
+        );
+        assert_eq!(
+            conversion_progress_message(0.0, Some(0.0)),
+            "Conversione… 0:00 di 0:00"
+        );
+    }
+
+    #[test]
+    fn unknown_or_invalid_total_durations_do_not_display_a_misleading_total() {
+        for duration in [None, Some(-1.0), Some(f64::NAN), Some(f64::INFINITY)] {
+            assert_eq!(
+                conversion_progress_message(316.0, duration),
+                "Conversione… 5:16"
+            );
+        }
+    }
+
+    #[test]
+    fn invalid_encoder_timestamps_are_safe_and_do_not_wrap_the_clock() {
+        for seconds in [-0.5, f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            assert_eq!(formatted_media_time(seconds), "0:00");
+        }
+        assert_eq!(formatted_media_time(59.999), "0:59");
+        assert_eq!(formatted_media_time(60.0), "1:00");
+        assert_eq!(formatted_media_time(3600.0), "1:00:00");
     }
 }

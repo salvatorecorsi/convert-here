@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>Convert Here</title>
+  <desc>Two opposing blue arrows, with gently curved strokes and a transparent background.</desc>
+  <g fill="none" stroke="#0078D4" stroke-width="20" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 40 84 C 96 76 160 76 216 84 M 184 52 L 216 84 L 184 116" />
+    <path d="M 216 172 C 160 180 96 180 40 172 M 72 140 L 40 172 L 72 204" />
+  </g>
+</svg>

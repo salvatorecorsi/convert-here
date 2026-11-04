@@ -1,3 +1,7 @@
+use crate::{
+    file_icons::FileIcons,
+    theme::{self, FluentIcon},
+};
 use eframe::egui::{self, Color32, RichText};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -21,8 +25,6 @@ use the_converter::{
 };
 use zeroize::Zeroize;
 
-const ACCENT: Color32 = Color32::from_rgb(0, 103, 192);
-const GREEN: Color32 = Color32::from_rgb(28, 135, 86);
 const PREFERENCES_SAVE_INTERVAL: std::time::Duration = std::time::Duration::from_millis(500);
 
 pub fn launch(
@@ -92,42 +94,7 @@ fn app_icon() -> egui::IconData {
 }
 
 fn configure_style(ctx: &egui::Context) {
-    if let Some(bytes) = std::env::var_os("WINDIR")
-        .and_then(|root| std::fs::read(PathBuf::from(root).join("Fonts").join("segoeui.ttf")).ok())
-    {
-        let mut fonts = egui::FontDefinitions::default();
-        fonts
-            .font_data
-            .insert("segoe".into(), Arc::new(egui::FontData::from_owned(bytes)));
-        fonts
-            .families
-            .entry(egui::FontFamily::Proportional)
-            .or_default()
-            .insert(0, "segoe".into());
-        ctx.set_fonts(fonts);
-    }
-    let mut style = (*ctx.style()).clone();
-    style.spacing.item_spacing = egui::vec2(10.0, 10.0);
-    style.spacing.button_padding = egui::vec2(13.0, 8.0);
-    style.spacing.interact_size.y = 32.0;
-    style.visuals.selection.bg_fill = ACCENT;
-    style.visuals.selection.stroke = egui::Stroke::new(1.0_f32, Color32::WHITE);
-    style.visuals.widgets.inactive.corner_radius = egui::CornerRadius::same(6);
-    style.visuals.widgets.hovered.corner_radius = egui::CornerRadius::same(6);
-    style.visuals.widgets.active.corner_radius = egui::CornerRadius::same(6);
-    style
-        .text_styles
-        .insert(egui::TextStyle::Heading, egui::FontId::proportional(25.0));
-    style
-        .text_styles
-        .insert(egui::TextStyle::Body, egui::FontId::proportional(14.0));
-    style
-        .text_styles
-        .insert(egui::TextStyle::Button, egui::FontId::proportional(14.0));
-    style
-        .text_styles
-        .insert(egui::TextStyle::Small, egui::FontId::proportional(12.0));
-    ctx.set_style(style);
+    theme::configure(ctx);
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -230,7 +197,19 @@ enum Event {
     End,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+enum MainView {
+    #[default]
+    Files,
+    QuickQueue,
+    History,
+}
+
 pub struct ConverterApp {
+    view: MainView,
+    conversion_started: Option<std::time::Instant>,
+    conversion_elapsed: std::time::Duration,
+    file_icons: FileIcons,
     saved: SavedState,
     tools: ToolPaths,
     items: Vec<QueueItem>,
@@ -257,6 +236,10 @@ impl ConverterApp {
         }
         let tools = ToolPaths::configured(&saved.overrides);
         let mut app = Self {
+            view: MainView::Files,
+            conversion_started: None,
+            conversion_elapsed: std::time::Duration::ZERO,
+            file_icons: FileIcons::default(),
             saved,
             tools,
             items: Vec::new(),
@@ -437,6 +420,8 @@ impl ConverterApp {
         let (sender, receiver) = mpsc::channel();
         self.receiver = Some(receiver);
         self.running = true;
+        self.conversion_started = Some(std::time::Instant::now());
+        self.conversion_elapsed = std::time::Duration::ZERO;
         self.notice = None;
         let ctx = ctx.clone();
         std::thread::spawn(move || {
@@ -511,6 +496,9 @@ impl ConverterApp {
                 Event::Cancelled(index) => self.items[index].state = JobState::Cancelled,
                 Event::End => {
                     self.running = false;
+                    if let Some(started) = self.conversion_started.take() {
+                        self.conversion_elapsed = started.elapsed();
+                    }
                     self.receiver = None;
                     if self.cancel.load(Ordering::Relaxed) {
                         for item in &mut self.items {
@@ -538,92 +526,108 @@ impl ConverterApp {
     }
 
     fn header(&mut self, ui: &mut egui::Ui) {
+        let colors = theme::palette(ui.ctx());
         ui.horizontal(|ui| {
-            let (rect, _) = ui.allocate_exact_size(egui::vec2(46.0, 46.0), egui::Sense::hover());
-            let painter = ui.painter();
-            painter.rect_filled(rect, 12.0, ACCENT);
-            let c = rect.center();
-            let stroke = egui::Stroke::new(2.0_f32, Color32::WHITE);
-            painter.arrow(c + egui::vec2(-12.0, -6.0), egui::vec2(24.0, 0.0), stroke);
-            painter.arrow(c + egui::vec2(12.0, 6.0), egui::vec2(-24.0, 0.0), stroke);
-            ui.vertical(|ui| {
-                ui.add_space(1.0);
-                ui.label(RichText::new("Convert Here").size(24.0).strong());
-                ui.label(
-                    RichText::new("I tuoi file, nel formato giusto.")
-                        .size(13.0)
-                        .weak(),
-                );
-            });
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.button("Strumenti").clicked() {
-                    self.show_tools = true;
+            if self.show_tools {
+                if ui
+                    .add(
+                        egui::Button::new(theme::button_text(
+                            FluentIcon::Back,
+                            "Indietro",
+                            colors.text,
+                        ))
+                        .frame(false),
+                    )
+                    .clicked()
+                {
+                    self.show_tools = false;
+                    self.api_key_input.zeroize();
                 }
-                ui.label(RichText::new("Corsivo").size(12.0).weak());
-            });
+                ui.label(theme::heading("Strumenti", theme::SUBTITLE));
+            } else {
+                navigation_tabs(ui, &mut self.view);
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui
+                        .add(
+                            egui::Button::new(theme::button_text(
+                                FluentIcon::Settings,
+                                "Strumenti",
+                                colors.text,
+                            ))
+                            .frame(false),
+                        )
+                        .clicked()
+                    {
+                        self.show_tools = true;
+                    }
+                });
+            }
         });
     }
 
     fn settings_panel(&mut self, ui: &mut egui::Ui) {
-        ui.label(RichText::new("CONVERSIONE").size(11.0).strong().weak());
-        ui.add_space(3.0);
-        ui.label(RichText::new("Formato di uscita").strong());
+        let colors = theme::palette(ui.ctx());
+        ui.label(theme::heading("Opzioni", theme::SUBTITLE));
+        ui.add_space(8.0);
         let formats = self.common_formats();
         let before = self.saved.settings.format;
-        let selected = if self.items.is_empty() {
-            "Aggiungi un file"
-        } else if formats.is_empty() {
-            "Nessun formato comune"
-        } else {
-            self.saved.settings.format.label()
-        };
-        ui.add_enabled_ui(!formats.is_empty(), |ui| {
-            egui::ComboBox::from_id_salt("target_format")
-                .width(ui.available_width())
-                .selected_text(selected)
-                .show_ui(ui, |ui| {
-                    for format in formats {
-                        let label =
-                            if format == OutputFormat::Txt
+        setting_card(ui, "Formato", "Scegli il file da creare", |ui| {
+            ui.add_enabled_ui(!formats.is_empty(), |ui| {
+                egui::ComboBox::from_id_salt("target_format")
+                    .width(142.0)
+                    .selected_text(if self.items.is_empty() {
+                        "Aggiungi un file"
+                    } else if formats.is_empty() {
+                        "Nessun formato comune"
+                    } else {
+                        self.saved.settings.format.label()
+                    })
+                    .show_ui(ui, |ui| {
+                        for format in formats {
+                            let label = if format == OutputFormat::Txt
                                 && self.items.iter().any(|item| {
                                     MediaKind::from_path(&item.path) == MediaKind::Audio
+                                }) {
+                                "TXT con OpenAI"
+                            } else if format == OutputFormat::Txt
+                                && self.items.iter().any(|item| {
+                                    MediaKind::from_path(&item.path) == MediaKind::Image
                                 })
                             {
-                                "TXT con OpenAI"
+                                "TXT · OCR locale"
+                            } else if format == OutputFormat::Pdf
+                                && self
+                                    .items
+                                    .iter()
+                                    .all(|item| MediaKind::from_path(&item.path) == MediaKind::Pdf)
+                            {
+                                "PDF · operazioni"
                             } else {
-                                if format == OutputFormat::Txt
-                                    && self.items.iter().any(|item| {
-                                        MediaKind::from_path(&item.path) == MediaKind::Image
-                                    })
-                                {
-                                    "TXT · OCR locale"
-                                } else if format == OutputFormat::Pdf
-                                    && self.items.iter().all(|item| {
-                                        MediaKind::from_path(&item.path) == MediaKind::Pdf
-                                    })
-                                {
-                                    "PDF · comprimi / dividi / unisci"
-                                } else {
-                                    format.label()
-                                }
+                                format.label()
                             };
-                        ui.selectable_value(&mut self.saved.settings.format, format, label);
-                    }
-                });
+                            ui.selectable_value(&mut self.saved.settings.format, format, label);
+                        }
+                    });
+            });
         });
-        self.settings_dirty |= before != self.saved.settings.format;
-        if before != self.saved.settings.format
-            && self
+        if before != self.saved.settings.format {
+            self.settings_dirty = true;
+            if self
                 .saved
                 .settings
                 .format
                 .audio_sample_rates()
                 .is_some_and(|rates| !rates.contains(&self.saved.settings.audio.sample_rate))
-        {
-            self.saved.settings.audio.sample_rate = 0;
+            {
+                self.saved.settings.audio.sample_rate = 0;
+            }
         }
         if self.transcribes_audio() {
-            ui.label(RichText::new("L’audio verrà inviato a OpenAI con la tua chiave API. Si applicano i costi del tuo account OpenAI.").small());
+            info_bar(
+                ui,
+                "L’audio verrà inviato a OpenAI con la tua chiave API. I costi sono a carico del tuo account.",
+                InfoKind::Info,
+            );
         } else if !self.api_key_configured
             && self
                 .items
@@ -633,94 +637,96 @@ impl ConverterApp {
         {
             self.show_tools = true;
         }
-        ui.add_space(7.0);
-        ui.label(RichText::new("Qualità").strong());
-        if quality_applicable(self.saved.settings.format)
+        ui.add_space(6.0);
+        let quality = quality_applicable(self.saved.settings.format)
             && !(self.saved.settings.format == OutputFormat::Pdf
                 && !self.items.is_empty()
                 && self
                     .items
                     .iter()
-                    .all(|item| MediaKind::from_path(&item.path) == MediaKind::Pdf))
-        {
-            ui.horizontal_wrapped(|ui| {
-                for (index, name) in ["Leggero", "Bilanciato", "Alta qualità"]
-                    .into_iter()
-                    .enumerate()
-                {
-                    if ui
-                        .selectable_label(self.saved.preset == index, name)
-                        .clicked()
+                    .all(|item| MediaKind::from_path(&item.path) == MediaKind::Pdf));
+        if quality {
+            let detail = match self.saved.preset {
+                0 => "File più piccoli",
+                2 => "Più dettaglio",
+                3 => "Valori personalizzati",
+                _ => "Qualità e dimensioni bilanciate",
+            };
+            setting_card(ui, "Qualità", detail, |ui| {
+                ui.vertical(|ui| {
+                    for (index, title) in [(0, "Leggero"), (1, "Bilanciato"), (2, "Alta qualità")]
                     {
-                        self.apply_preset(index);
+                        if ui.radio(self.saved.preset == index, title).clicked() {
+                            self.apply_preset(index);
+                        }
                     }
-                }
+                });
             });
-            ui.label(
-                RichText::new(match self.saved.preset {
-                    0 => "File più piccoli, conversioni più veloci.",
-                    2 => "Più dettaglio, dimensioni maggiori.",
-                    3 => "Impostazioni personalizzate.",
-                    _ => "Il giusto equilibrio per l’uso quotidiano.",
-                })
-                .small()
-                .weak(),
-            );
-        } else {
-            ui.label(RichText::new("Il formato scelto non usa un livello di qualità. Puoi regolare le altre opzioni qui sotto.").small().weak());
+            ui.add_space(6.0);
         }
-        ui.add_space(8.0);
-        ui.separator();
-        ui.add_space(4.0);
-        ui.label(RichText::new("Salva in").strong());
-        let mut beside = self.saved.settings.output_dir.is_none();
-        if ui
-            .radio_value(&mut beside, true, "Accanto al file originale")
-            .changed()
-        {
-            self.saved.settings.output_dir = None;
-            self.settings_dirty = true;
-        }
-        if ui
-            .radio_value(&mut beside, false, "Una cartella a scelta")
-            .clicked()
-            && self.saved.settings.output_dir.is_none()
-            && let Some(path) = rfd::FileDialog::new()
-                .set_title("Cartella di destinazione")
-                .pick_folder()
-        {
-            self.saved.settings.output_dir = Some(path);
-            self.settings_dirty = true;
-        }
-        if let Some(path) = self.saved.settings.output_dir.clone() {
-            ui.label(RichText::new(display_path(&path)).small())
-                .on_hover_text(path.display().to_string());
-            if ui.small_button("Cambia cartella…").clicked()
-                && let Some(path) = rfd::FileDialog::new().set_directory(path).pick_folder()
+        theme::show_card(ui, |ui| {
+            ui.label(theme::heading("Destinazione", theme::BODY));
+            let mut beside = self.saved.settings.output_dir.is_none();
+            if ui
+                .radio_value(&mut beside, true, "Accanto all’originale")
+                .changed()
+            {
+                self.saved.settings.output_dir = None;
+                self.settings_dirty = true;
+            }
+            if ui
+                .radio_value(&mut beside, false, "Cartella a scelta")
+                .clicked()
+                && self.saved.settings.output_dir.is_none()
+                && let Some(path) = rfd::FileDialog::new()
+                    .set_title("Cartella di destinazione")
+                    .pick_folder()
             {
                 self.saved.settings.output_dir = Some(path);
                 self.settings_dirty = true;
             }
-        }
-        ui.label(
-            RichText::new(
-                "Gli originali restano al sicuro. I nomi già presenti ricevono un numero.",
-            )
-            .small()
-            .weak(),
-        );
-        ui.add_space(8.0);
-        ui.separator();
-        egui::CollapsingHeader::new("Impostazioni personalizzate")
-            .default_open(self.advanced)
-            .show(ui, |ui| {
-                let before = serde_json::to_vec(&self.saved.settings).unwrap_or_default();
-                self.advanced_settings(ui);
-                if serde_json::to_vec(&self.saved.settings).unwrap_or_default() != before {
-                    self.saved.preset = 3;
+            if let Some(path) = self.saved.settings.output_dir.clone() {
+                ui.add(
+                    egui::Label::new(
+                        RichText::new(display_path(&path))
+                            .size(theme::CAPTION)
+                            .color(colors.secondary),
+                    )
+                    .truncate(),
+                )
+                .on_hover_text(path.display().to_string());
+                if ui
+                    .add(egui::Button::new(theme::button_text(
+                        FluentIcon::Folder,
+                        "Cambia cartella…",
+                        colors.text,
+                    )))
+                    .clicked()
+                    && let Some(path) = rfd::FileDialog::new().set_directory(path).pick_folder()
+                {
+                    self.saved.settings.output_dir = Some(path);
                     self.settings_dirty = true;
                 }
-            });
+            }
+            ui.label(
+                RichText::new("Gli originali e i risultati già presenti restano al sicuro.")
+                    .size(theme::CAPTION)
+                    .color(colors.secondary),
+            );
+        });
+        ui.add_space(6.0);
+        theme::show_card(ui, |ui| {
+            egui::CollapsingHeader::new(theme::heading("Impostazioni personalizzate", theme::BODY))
+                .default_open(self.advanced)
+                .show(ui, |ui| {
+                    let before = serde_json::to_vec(&self.saved.settings).unwrap_or_default();
+                    self.advanced_settings(ui);
+                    if serde_json::to_vec(&self.saved.settings).unwrap_or_default() != before {
+                        self.saved.preset = 3;
+                        self.settings_dirty = true;
+                    }
+                });
+        });
         if self.items.iter().any(|item| {
             item.path.extension().is_some_and(|ext| {
                 ext.eq_ignore_ascii_case("gif")
@@ -728,16 +734,17 @@ impl ConverterApp {
                     || ext.eq_ignore_ascii_case("tiff")
             })
         }) {
-            ui.label(
-                RichText::new("GIF: primo fotogramma. TIFF: prima pagina.")
-                    .small()
-                    .weak(),
+            ui.add_space(6.0);
+            info_bar(
+                ui,
+                "GIF: primo fotogramma. TIFF: prima pagina.",
+                InfoKind::Info,
             );
         }
         if let Some(message) = self.prerequisite() {
-            ui.add_space(8.0);
-            ui.colored_label(Color32::from_rgb(180, 115, 20), &message);
-            if ui.small_button("Configura strumenti…").clicked() {
+            ui.add_space(6.0);
+            info_bar(ui, &message, InfoKind::Warning);
+            if ui.button("Configura strumenti…").clicked() {
                 self.show_tools = true;
             }
         }
@@ -947,7 +954,8 @@ impl ConverterApp {
                     ui.label("Qualità video · valori minori = più dettaglio");
                     let quality_label = if matches!(
                         self.saved.settings.format,
-                        OutputFormat::Avi
+                        OutputFormat::Webm
+                            | OutputFormat::Avi
                             | OutputFormat::Mpeg
                             | OutputFormat::Wmv
                             | OutputFormat::Flv
@@ -1162,266 +1170,248 @@ impl ConverterApp {
     }
 
     fn queue_panel(&mut self, ui: &mut egui::Ui) {
+        let colors = theme::palette(ui.ctx());
         ui.horizontal(|ui| {
-            ui.label(
-                RichText::new(format!(
+            ui.label(theme::heading(
+                format!(
                     "File da convertire{}",
                     if self.items.is_empty() {
                         String::new()
                     } else {
                         format!(" · {}", self.items.len())
                     }
-                ))
-                .size(18.0)
-                .strong(),
-            );
+                ),
+                theme::SUBTITLE,
+            ));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.add_enabled_ui(!self.running, |ui| {
-                    if ui.button("+ Aggiungi file").clicked()
-                        && let Some(paths) = rfd::FileDialog::new()
-                            .set_title("Scegli i file da convertire")
-                            .pick_files()
+                if ui
+                    .add_enabled(
+                        !self.running,
+                        egui::Button::new(theme::button_text(
+                            FluentIcon::Add,
+                            "Aggiungi file",
+                            colors.text,
+                        )),
+                    )
+                    .clicked()
+                    && let Some(paths) = rfd::FileDialog::new()
+                        .set_title("Scegli i file da convertire")
+                        .pick_files()
+                {
+                    self.add_files(paths);
+                }
+            });
+        });
+        ui.add_space(12.0);
+        if self.items.is_empty() {
+            theme::show_card(ui, |ui| {
+                ui.set_min_height((ui.available_height() - 40.0).max(260.0));
+                ui.vertical_centered(|ui| {
+                    ui.add_space(54.0);
+                    ui.label(theme::icon(FluentIcon::Document, 36.0).color(colors.secondary));
+                    ui.add_space(12.0);
+                    ui.label(theme::heading("Trascina qui i tuoi file", theme::SUBTITLE));
+                    ui.label(
+                        RichText::new("Audio, video, immagini e documenti.")
+                            .color(colors.secondary),
+                    );
+                    ui.add_space(16.0);
+                    if ui
+                        .add(
+                            egui::Button::new(theme::button_text(
+                                FluentIcon::Add,
+                                "Scegli file…",
+                                colors.accent_text,
+                            ))
+                            .fill(colors.accent),
+                        )
+                        .clicked()
+                        && let Some(paths) = rfd::FileDialog::new().pick_files()
                     {
                         self.add_files(paths);
                     }
+                    ui.add_space(18.0);
+                    ui.label(
+                        RichText::new("Puoi anche usare il tasto destro in Esplora file.")
+                            .size(theme::CAPTION)
+                            .color(colors.secondary),
+                    );
                 });
             });
-        });
-        ui.add_space(6.0);
-        if self.items.is_empty() {
-            let available = ui.available_size();
-            egui::Frame::new()
-                .fill(subtle_fill(ui))
-                .stroke(egui::Stroke::new(
-                    1.0_f32,
-                    ui.visuals().widgets.noninteractive.bg_stroke.color,
-                ))
-                .corner_radius(12)
-                .inner_margin(24)
-                .show(ui, |ui| {
-                    ui.set_min_size(egui::vec2(
-                        available.x - 50.0,
-                        (available.y - 50.0).max(230.0),
-                    ));
-                    ui.vertical_centered(|ui| {
-                        ui.add_space((available.y * 0.22).max(32.0));
-                        ui.label(
-                            RichText::new("Trascina qui i tuoi file")
-                                .size(23.0)
-                                .strong(),
-                        );
-                        ui.add_space(3.0);
-                        ui.label(
-                            RichText::new("Audio, video, immagini, documenti, Excel e HTML.")
-                                .weak(),
-                        );
-                        ui.add_space(12.0);
-                        if ui
-                            .add(
-                                egui::Button::new(
-                                    RichText::new("Scegli file…").color(Color32::WHITE),
-                                )
-                                .fill(ACCENT),
-                            )
-                            .clicked()
-                            && let Some(paths) = rfd::FileDialog::new().pick_files()
-                        {
-                            self.add_files(paths);
-                        }
-                        ui.add_space(20.0);
-                        ui.label(
-                            RichText::new("Funziona anche dal tasto destro di Esplora file.")
-                                .small()
-                                .weak(),
-                        );
-                    });
-                });
             return;
         }
         let mut remove = None;
         let mut reorder = None;
         let merging = self.saved.settings.format == OutputFormat::Pdf
             && self.saved.settings.pdf.action == PdfAction::Merge;
+        let icons = &mut self.file_icons;
+        let mut action_error = None;
         egui::ScrollArea::vertical()
             .id_salt("queue")
             .auto_shrink([false, false])
             .show(ui, |ui| {
                 for (index, item) in self.items.iter().enumerate() {
-                    egui::Frame::new()
-                        .fill(subtle_fill(ui))
-                        .corner_radius(9)
-                        .inner_margin(13)
-                        .show(ui, |ui| {
-                            ui.set_width(ui.available_width());
-                            ui.horizontal(|ui| {
-                                let extension = item
-                                    .path
-                                    .extension()
-                                    .and_then(|ext| ext.to_str())
-                                    .unwrap_or("FILE")
-                                    .to_ascii_uppercase();
-                                egui::Frame::new()
-                                    .fill(if ui.visuals().dark_mode {
-                                        Color32::from_rgb(28, 48, 68)
-                                    } else {
-                                        Color32::from_rgb(226, 239, 250)
-                                    })
-                                    .corner_radius(7)
-                                    .inner_margin(9)
-                                    .show(ui, |ui| {
-                                        ui.set_min_width(36.0);
-                                        ui.label(
-                                            RichText::new(extension)
-                                                .size(11.0)
-                                                .color(if ui.visuals().dark_mode {
-                                                    Color32::from_rgb(119, 190, 255)
-                                                } else {
-                                                    ACCENT
-                                                })
-                                                .strong(),
-                                        );
-                                    });
-                                ui.allocate_ui_with_layout(
-                                    egui::vec2((ui.available_width() - 94.0).max(80.0), 42.0),
-                                    egui::Layout::top_down(egui::Align::Min),
-                                    |ui| {
-                                        let name = item
-                                            .path
-                                            .file_name()
-                                            .unwrap_or_default()
-                                            .to_string_lossy();
-                                        ui.add(
-                                            egui::Label::new(RichText::new(name).strong())
-                                                .truncate(),
-                                        )
-                                        .on_hover_text(item.path.display().to_string());
-                                        ui.label(
-                                            RichText::new(format!(
-                                                "{}  ·  {}",
-                                                human_size(item.size),
-                                                kind_label(MediaKind::from_path(&item.path))
-                                            ))
-                                            .small()
-                                            .weak(),
-                                        );
-                                    },
-                                );
-                                ui.with_layout(
-                                    egui::Layout::right_to_left(egui::Align::Center),
-                                    |ui| {
-                                        if !self.running
-                                            && ui
-                                                .small_button("×")
-                                                .on_hover_text("Rimuovi dalla coda")
-                                                .clicked()
-                                        {
-                                            remove = Some(index);
-                                        }
-                                        if merging && !self.running {
-                                            if ui
-                                                .add_enabled(
-                                                    index > 0,
-                                                    egui::Button::new("↑").small(),
-                                                )
-                                                .on_hover_text("Sposta prima nell'unione")
-                                                .clicked()
-                                            {
-                                                reorder = Some((index, index - 1));
-                                            }
-                                            if ui
-                                                .add_enabled(
-                                                    index + 1 < self.items.len(),
-                                                    egui::Button::new("↓").small(),
-                                                )
-                                                .on_hover_text("Sposta dopo nell'unione")
-                                                .clicked()
-                                            {
-                                                reorder = Some((index, index + 1));
-                                            }
-                                        }
-                                        match &item.state {
-                                            JobState::Waiting => {
-                                                ui.label(RichText::new("Pronto").small().weak());
-                                            }
-                                            JobState::Running(..) => {
-                                                ui.spinner();
-                                            }
-                                            JobState::Complete(outputs) => {
-                                                if ui
-                                                    .small_button("Apri")
-                                                    .on_hover_text("Apri cartella di destinazione")
-                                                    .clicked()
-                                                    && let Some(parent) =
-                                                        outputs.first().and_then(|p| p.parent())
-                                                    && let Err(error) =
-                                                        platform::open_folder(parent)
-                                                {
-                                                    self.notice = Some(format!("{error:#}"));
-                                                }
-                                            }
-                                            JobState::Failed(_) => {
-                                                ui.colored_label(
-                                                    ui.visuals().error_fg_color,
-                                                    "Errore",
-                                                );
-                                            }
-                                            JobState::Cancelled => {
-                                                ui.label(RichText::new("Annullato").small().weak());
-                                            }
-                                        }
-                                    },
-                                );
-                            });
-                            match &item.state {
-                                JobState::Running(fraction, message) => {
-                                    ui.add_space(6.0);
+                    theme::show_card(ui, |ui| {
+                        ui.set_width(ui.available_width());
+                        ui.horizontal(|ui| {
+                            file_icon(ui, icons, &item.path);
+                            let name_width = (ui.available_width()
+                                - if merging { 150.0 } else { 105.0 })
+                            .max(80.0);
+                            ui.allocate_ui_with_layout(
+                                egui::vec2(name_width, 42.0),
+                                egui::Layout::top_down(egui::Align::Min),
+                                |ui| {
                                     ui.add(
-                                        egui::ProgressBar::new(*fraction)
-                                            .fill(ACCENT)
-                                            .animate(true)
-                                            .show_percentage(),
-                                    );
-                                    ui.label(RichText::new(message).small().weak());
-                                }
-                                JobState::Complete(outputs) => {
+                                        egui::Label::new(theme::heading(
+                                            item.path
+                                                .file_name()
+                                                .unwrap_or_default()
+                                                .to_string_lossy(),
+                                            theme::BODY,
+                                        ))
+                                        .truncate(),
+                                    )
+                                    .on_hover_text(display_path(&item.path));
                                     ui.label(
-                                        RichText::new(if outputs.len() == 1 {
-                                            format!(
-                                                "Completato · {}",
-                                                outputs[0]
-                                                    .file_name()
-                                                    .unwrap_or_default()
-                                                    .to_string_lossy()
-                                            )
-                                        } else {
-                                            format!("Completato · {} file creati", outputs.len())
-                                        })
-                                        .small()
-                                        .color(GREEN),
+                                        RichText::new(format!(
+                                            "{} · {}",
+                                            human_size(item.size),
+                                            kind_label(MediaKind::from_path(&item.path))
+                                        ))
+                                        .size(theme::CAPTION)
+                                        .color(colors.secondary),
                                     );
-                                }
-                                JobState::Failed(message) => {
-                                    egui::CollapsingHeader::new("Dettagli dell’errore")
-                                        .id_salt(index)
-                                        .show(ui, |ui| {
-                                            ui.add(
-                                                egui::Label::new(RichText::new(message).small())
-                                                    .wrap(),
-                                            );
-                                            if ui.small_button("Copia errore").clicked() {
-                                                ui.ctx().copy_text(message.clone());
+                                },
+                            );
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    if !self.running
+                                        && icon_button(
+                                            ui,
+                                            FluentIcon::Delete,
+                                            "Rimuovi dalla lista",
+                                        )
+                                        .clicked()
+                                    {
+                                        remove = Some(index);
+                                    }
+                                    if merging && !self.running {
+                                        if ui
+                                            .add_enabled(
+                                                index + 1 < self.items.len(),
+                                                egui::Button::new(theme::icon(
+                                                    FluentIcon::ChevronDown,
+                                                    16.0,
+                                                ))
+                                                .frame(false),
+                                            )
+                                            .on_hover_text("Sposta dopo nell’unione")
+                                            .clicked()
+                                        {
+                                            reorder = Some((index, index + 1));
+                                        }
+                                        if ui
+                                            .add_enabled(
+                                                index > 0,
+                                                egui::Button::new(theme::icon(
+                                                    FluentIcon::ChevronUp,
+                                                    16.0,
+                                                ))
+                                                .frame(false),
+                                            )
+                                            .on_hover_text("Sposta prima nell’unione")
+                                            .clicked()
+                                        {
+                                            reorder = Some((index, index - 1));
+                                        }
+                                    }
+                                    match &item.state {
+                                        JobState::Complete(outputs) => {
+                                            if icon_button(
+                                                ui,
+                                                FluentIcon::Folder,
+                                                "Apri cartella di destinazione",
+                                            )
+                                            .clicked()
+                                                && let Some(parent) =
+                                                    outputs.first().and_then(|p| p.parent())
+                                                && let Err(error) = platform::open_folder(parent)
+                                            {
+                                                action_error = Some(format!("{error:#}"));
                                             }
-                                        });
-                                }
-                                _ => {}
-                            }
+                                        }
+                                        JobState::Running(..) => {
+                                            ui.spinner();
+                                        }
+                                        JobState::Waiting => {
+                                            ui.label(
+                                                RichText::new("Pronto")
+                                                    .size(theme::CAPTION)
+                                                    .color(colors.secondary),
+                                            );
+                                        }
+                                        JobState::Cancelled => {
+                                            ui.label(
+                                                RichText::new("Annullato")
+                                                    .size(theme::CAPTION)
+                                                    .color(colors.secondary),
+                                            );
+                                        }
+                                        JobState::Failed(_) => {
+                                            ui.label(
+                                                theme::icon(FluentIcon::Info, 16.0)
+                                                    .color(colors.error),
+                                            );
+                                        }
+                                    }
+                                },
+                            );
                         });
-                    ui.add_space(1.0);
+                        match &item.state {
+                            JobState::Running(fraction, message) => {
+                                ui.add_space(8.0);
+                                progress_display(ui, *fraction, message);
+                            }
+                            JobState::Complete(outputs) => {
+                                ui.label(
+                                    RichText::new(format!(
+                                        "Completato · {} file creati",
+                                        outputs.len()
+                                    ))
+                                    .size(theme::CAPTION)
+                                    .color(colors.success),
+                                );
+                            }
+                            JobState::Failed(message) => {
+                                info_bar(ui, "Conversione non riuscita", InfoKind::Error);
+                                egui::CollapsingHeader::new("Dettagli e copia errore")
+                                    .id_salt(index)
+                                    .show(ui, |ui| {
+                                        ui.add(
+                                            egui::Label::new(
+                                                RichText::new(message).size(theme::CAPTION),
+                                            )
+                                            .wrap(),
+                                        );
+                                        if ui.button("Copia errore").clicked() {
+                                            ui.ctx().copy_text(message.clone());
+                                        }
+                                    });
+                            }
+                            _ => {}
+                        }
+                    });
+                    ui.add_space(6.0);
                 }
-                if !self.running && ui.small_button("Svuota coda").clicked() {
+                if !self.running && ui.button("Svuota lista").clicked() {
                     remove = Some(usize::MAX);
                 }
             });
+        if let Some(error) = action_error {
+            self.notice = Some(error);
+        }
         if let Some(index) = remove {
             if index == usize::MAX {
                 self.items.clear();
@@ -1431,6 +1421,70 @@ impl ConverterApp {
         } else if let Some((from, to)) = reorder {
             self.items.swap(from, to);
         }
+    }
+
+    fn session_history(&mut self, ui: &mut egui::Ui) {
+        let count = self
+            .items
+            .iter()
+            .filter(|item| {
+                matches!(
+                    item.state,
+                    JobState::Complete(_) | JobState::Failed(_) | JobState::Cancelled
+                )
+            })
+            .count();
+        if count == 0 {
+            return;
+        }
+        egui::CollapsingHeader::new(theme::heading(
+            format!("Questa sessione · {count} file"),
+            theme::BODY,
+        ))
+        .default_open(false)
+        .show(ui, |ui| {
+            egui::ScrollArea::vertical()
+                .id_salt("session_history")
+                .max_height(200.0)
+                .show(ui, |ui| {
+                    for item in self.items.iter().filter(|item| {
+                        matches!(
+                            item.state,
+                            JobState::Complete(_) | JobState::Failed(_) | JobState::Cancelled
+                        )
+                    }) {
+                        theme::show_card(ui, |ui| {
+                            ui.horizontal(|ui| {
+                                file_icon(ui, &mut self.file_icons, &item.path);
+                                ui.add(
+                                    egui::Label::new(theme::heading(
+                                        item.path.file_name().unwrap_or_default().to_string_lossy(),
+                                        theme::BODY,
+                                    ))
+                                    .truncate(),
+                                );
+                            });
+                            match &item.state {
+                                JobState::Complete(outputs) => {
+                                    ui.label(
+                                        RichText::new(format!(
+                                            "Completato · {} file creati",
+                                            outputs.len()
+                                        ))
+                                        .color(theme::palette(ui.ctx()).success),
+                                    );
+                                }
+                                JobState::Failed(error) => info_bar(ui, error, InfoKind::Error),
+                                JobState::Cancelled => {
+                                    ui.label("Annullato");
+                                }
+                                _ => {}
+                            }
+                        });
+                        ui.add_space(6.0);
+                    }
+                });
+        });
     }
 
     fn quick_report_panel(&mut self, ui: &mut egui::Ui) {
@@ -1491,82 +1545,81 @@ impl ConverterApp {
     }
 
     fn footer(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+        let colors = theme::palette(ctx);
+        let done = self
+            .items
+            .iter()
+            .filter(|item| matches!(item.state, JobState::Complete(_)))
+            .count();
+        let failed = self
+            .items
+            .iter()
+            .filter(|item| matches!(item.state, JobState::Failed(_)))
+            .count();
         ui.horizontal(|ui| {
             ui.vertical(|ui| {
-                let done = self
-                    .items
-                    .iter()
-                    .filter(|item| matches!(item.state, JobState::Complete(_)))
-                    .count();
-                let failed = self
-                    .items
-                    .iter()
-                    .filter(|item| matches!(item.state, JobState::Failed(_)))
-                    .count();
-                if self.running {
-                    ui.label(
-                        RichText::new(format!(
-                            "Conversione in corso · {done}/{} completati",
-                            self.items.len()
-                        ))
-                        .strong(),
-                    );
+                let summary = if self.running {
+                    format!(
+                        "Conversione in corso · {done}/{} completati",
+                        self.items.len()
+                    )
                 } else if done > 0 || failed > 0 {
-                    ui.label(
-                        RichText::new(format!(
-                            "{done} completati{}",
-                            if failed > 0 {
-                                format!(" · {failed} errori")
-                            } else {
-                                String::new()
-                            }
-                        ))
-                        .strong(),
-                    );
+                    format!("{done} completati · {failed} errori")
+                } else if self.items.is_empty() {
+                    "Pronto quando vuoi".into()
                 } else {
-                    ui.label(
-                        RichText::new(if self.items.is_empty() {
-                            "Pronto quando vuoi.".into()
-                        } else {
-                            format!(
-                                "{} file · {}",
-                                self.items.len(),
-                                human_size(self.items.iter().map(|item| item.size).sum())
-                            )
-                        })
-                        .strong(),
-                    );
-                }
+                    format!(
+                        "{} file · {}",
+                        self.items.len(),
+                        human_size(self.items.iter().map(|item| item.size).sum())
+                    )
+                };
+                ui.label(theme::heading(summary, theme::BODY));
                 ui.label(
                     RichText::new(if self.transcribes_audio() {
-                        "Trascrizione online con OpenAI. Nessuna sovrascrittura."
+                        "Trascrizione online con OpenAI"
                     } else {
-                        "Conversioni di formato locali. Nessuna sovrascrittura."
+                        "Conversioni locali · originali conservati"
                     })
-                    .small()
-                    .weak(),
+                    .size(theme::CAPTION)
+                    .color(colors.secondary),
                 );
             });
+            if self.running || !self.conversion_elapsed.is_zero() {
+                let elapsed = self
+                    .conversion_started
+                    .map(|started| started.elapsed())
+                    .unwrap_or(self.conversion_elapsed);
+                ui.label(
+                    RichText::new(format!("Tempo trascorso {}", duration_hms(elapsed)))
+                        .size(theme::CAPTION)
+                        .color(colors.secondary),
+                );
+            }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if self.running {
                     let cancelling = self.cancel.load(Ordering::Relaxed);
                     if ui
                         .add_enabled(
                             !cancelling,
-                            egui::Button::new(if cancelling {
-                                "Annullamento…"
-                            } else {
-                                "Annulla"
-                            })
-                            .min_size(egui::vec2(168.0, 42.0)),
+                            egui::Button::new(theme::button_text(
+                                FluentIcon::Cancel,
+                                if cancelling {
+                                    "Annullamento…"
+                                } else {
+                                    "Annulla"
+                                },
+                                colors.text,
+                            ))
+                            .min_size(egui::vec2(160.0, 36.0)),
                         )
                         .clicked()
                     {
                         self.cancel.store(true, Ordering::Relaxed);
                     }
                 } else {
-                    let enabled = !self.items.is_empty() && self.prerequisite().is_none();
                     let label = if self.saved.settings.format == OutputFormat::Pdf
+                        && !self.items.is_empty()
                         && self
                             .items
                             .iter()
@@ -1586,10 +1639,14 @@ impl ConverterApp {
                     };
                     if ui
                         .add_enabled(
-                            enabled,
-                            egui::Button::new(RichText::new(label).color(Color32::WHITE).strong())
-                                .fill(ACCENT)
-                                .min_size(egui::vec2(168.0, 42.0)),
+                            !self.items.is_empty() && self.prerequisite().is_none(),
+                            egui::Button::new(theme::button_text(
+                                FluentIcon::Convert,
+                                label,
+                                colors.accent_text,
+                            ))
+                            .fill(colors.accent)
+                            .min_size(egui::vec2(174.0, 36.0)),
                         )
                         .clicked()
                     {
@@ -1601,18 +1658,28 @@ impl ConverterApp {
     }
 
     fn tools_window(&mut self, ctx: &egui::Context) {
-        let mut opened = self.show_tools;
-        egui::Window::new("Strumenti di conversione")
-            .open(&mut opened)
-            .default_width(610.0)
-            .resizable(true)
-            .collapsible(false)
-            .show(ctx, |ui| {
-                ui.label(RichText::new("Immagini e PDF da immagini, subito disponibili.").strong());
+        egui::CentralPanel::default().frame(egui::Frame::new().fill(theme::palette(ctx).canvas).inner_margin(24)).show(ctx, |ui| {
+            if let Some(notice)=self.notice.clone() {
+                info_bar(ui,&notice,InfoKind::Warning);
+                if ui.small_button("Chiudi avviso").clicked() { self.notice=None; }
+            }
+            centered_column(ui, 1000.0, |ui| {
+                ui.label(RichText::new("Immagini e PDF da immagini, subito disponibili.").family(egui::FontFamily::Name(theme::SEMIBOLD_FAMILY.into())));
                 ui.label("Audio, video, pagine PDF e documenti Office usano strumenti opzionali. Se sono già installati, Convert Here li rileva o ti permette di selezionarli.");
                 ui.label(RichText::new("Le conversioni standard avvengono sul PC. La trascrizione OpenAI facoltativa invia l’audio al servizio. I siti ufficiali si aprono nel browser.").small().weak());
                 ui.add_space(5.0);
-                egui::ScrollArea::vertical().id_salt("tools_scroll").max_height(470.0).show(ui, |ui| {
+                egui::ScrollArea::vertical().id_salt("tools_scroll").max_height((ui.available_height()-60.0).max(120.0)).show(ui, |ui| {
+                    theme::show_card(ui, |ui| {
+                        ui.label(theme::heading("Aspetto",theme::SUBTITLE));
+                        ui.label(RichText::new("Segui Windows oppure prova un tema.").color(theme::palette(ui.ctx()).secondary));
+                        let mut preference=ui.ctx().options(|options| options.theme_preference);
+                        ui.horizontal(|ui| {
+                            for (value,label) in [(egui::ThemePreference::System,"Sistema"),(egui::ThemePreference::Light,"Chiaro"),(egui::ThemePreference::Dark,"Scuro")] {
+                                if ui.radio_value(&mut preference,value,label).changed() { ui.ctx().set_theme(preference); }
+                            }
+                        });
+                    });
+                    ui.add_space(8.0);
                     self.openai_settings(ui);
                     for (key, label, description, website) in [
                         ("ffmpeg", "FFmpeg", "Necessario per audio, video e GIF da video.", "https://ffmpeg.org/download.html"),
@@ -1625,16 +1692,16 @@ impl ConverterApp {
                         ("heif-enc", "libheif · HEIC/AVIF in uscita", "Crea HEIC e AVIF. Mantieni DLL e plugin accanto agli strumenti; la build deve includere gli encoder HEVC e AV1.", "https://github.com/strukturag/libheif"),
                         ("heif-dec", "libheif · HEIC/AVIF in ingresso", "Legge HEIC, HEIF e AVIF; viene convertita la prima immagine. Mantieni DLL e plugin accanto agli strumenti.", "https://github.com/strukturag/libheif"),
                     ] {
-                        egui::Frame::new().fill(subtle_fill(ui)).corner_radius(7).inner_margin(11).show(ui, |ui| {
+                        theme::show_card(ui, |ui| {
                             let path = self.saved.overrides.get(key).cloned().or_else(|| get_tool(&self.tools, key));
                             let valid = path.as_ref().is_some_and(|path| executable_available(path));
                             ui.horizontal_wrapped(|ui| {
-                                ui.label(RichText::new(label).strong());
-                                ui.label(RichText::new(if valid { "Disponibile" } else { "Non configurato" }).small().color(if valid { GREEN } else { ui.visuals().weak_text_color() }));
+                                ui.label(RichText::new(label).family(egui::FontFamily::Name(theme::SEMIBOLD_FAMILY.into())));
+                                ui.label(RichText::new(if valid { "Disponibile" } else { "Non configurato" }).small().color(if valid { theme::palette(ui.ctx()).success } else { ui.visuals().weak_text_color() }));
                             });
                             ui.add(egui::Label::new(RichText::new(description).small().weak()).wrap());
                             if let Some(path) = path {
-                                ui.add(egui::Label::new(RichText::new(display_path(&path)).small()).wrap());
+                                egui::CollapsingHeader::new("Percorso del programma").id_salt(("tool_path",key)).default_open(false).show(ui,|ui| { ui.add(egui::Label::new(RichText::new(display_path(&path)).small()).wrap()); });
                                 if !valid {
                                     ui.colored_label(ui.visuals().error_fg_color, "Il percorso salvato non è un programma .exe disponibile. Seleziona di nuovo lo strumento.");
                                 }
@@ -1662,7 +1729,7 @@ impl ConverterApp {
                                     self.tools = ToolPaths::configured(&self.saved.overrides);
                                     self.settings_dirty = true;
                                 }
-                                if ui.link("Sito ufficiale ↗").on_hover_text(website).clicked()
+                                if ui.link("Sito ufficiale").on_hover_text(website).clicked()
                                     && let Err(error) = platform::open_website(website)
                                 {
                                     self.notice = Some(format!("{error:#}"));
@@ -1685,18 +1752,22 @@ impl ConverterApp {
                     self.api_key_configured = transcription::has_api_key();
                 }
             });
-        self.show_tools = opened;
-        if !opened {
-            self.api_key_input.zeroize();
-        }
+        });
     }
 
     fn openai_settings(&mut self, ui: &mut egui::Ui) {
-        egui::Frame::new().fill(subtle_fill(ui)).corner_radius(7).inner_margin(11).show(ui, |ui| {
-            ui.label(RichText::new("OpenAI · audio in testo").strong());
+        theme::show_card(ui, |ui| {
+            ui.label(
+                RichText::new("OpenAI · audio in testo")
+                    .family(egui::FontFamily::Name(theme::SEMIBOLD_FAMILY.into())),
+            );
             ui.label(RichText::new("Facoltativo. L’audio viene inviato a OpenAI solo quando scegli TXT per una registrazione. I costi API sono a carico del tuo account; l’abbonamento ChatGPT non li include.").small());
             ui.label(RichText::new("La chiave viene protetta da Windows per il tuo utente e non viene inclusa nelle preferenze, nella coda o nei resoconti.").small().weak());
-            ui.label(if self.api_key_configured { "Chiave salvata · trascrizione disponibile" } else { "Nessuna chiave salvata" });
+            ui.label(if self.api_key_configured {
+                "Chiave salvata · trascrizione disponibile"
+            } else {
+                "Nessuna chiave salvata"
+            });
             ui.add_enabled_ui(!self.running, |ui| {
                 ui.add(egui::TextEdit::singleline(&mut self.api_key_input).password(true).hint_text(if self.api_key_configured { "Nuova chiave API per sostituire quella salvata" } else { "Incolla la tua chiave API OpenAI" }).desired_width(f32::INFINITY));
                 ui.horizontal_wrapped(|ui| {
@@ -1725,14 +1796,20 @@ impl ConverterApp {
                             Err(error) => self.api_key_status = Some(format!("{error:#}")),
                         }
                     }
-                    if ui.link("Crea una chiave API ↗").clicked()
+                    if ui.link("Crea una chiave API").clicked()
                         && let Err(error) = platform::open_website("https://platform.openai.com/api-keys") {
                         self.api_key_status = Some(format!("{error:#}"));
                     }
                 });
             });
-            if let Some(status) = &self.api_key_status { ui.label(RichText::new(status).small()); }
-            ui.label(RichText::new("Modello GPT-Transcribe · trascrizione nella lingua parlata.").small().weak());
+            if let Some(status) = &self.api_key_status {
+                ui.label(RichText::new(status).small());
+            }
+            ui.label(
+                RichText::new("Modello GPT-Transcribe · trascrizione nella lingua parlata.")
+                    .small()
+                    .weak(),
+            );
         });
     }
 }
@@ -1745,6 +1822,7 @@ impl eframe::App for ConverterApp {
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        theme::sync_window_theme(ctx);
         self.receive_events();
         self.quick_queue.refresh();
         if !self.running {
@@ -1758,64 +1836,80 @@ impl eframe::App for ConverterApp {
             });
             if !dropped.is_empty() {
                 self.add_files(dropped);
+                self.view = MainView::Files;
+                self.show_tools = false;
+                self.api_key_input.zeroize();
             }
         }
-        egui::TopBottomPanel::top("header")
+        let colors = theme::palette(ctx);
+        egui::TopBottomPanel::top("navigation")
             .frame(
                 egui::Frame::new()
-                    .fill(ctx.style().visuals.panel_fill)
-                    .inner_margin(egui::Margin::symmetric(24, 19)),
+                    .fill(colors.canvas)
+                    .inner_margin(egui::Margin::symmetric(20, 12)),
             )
             .show(ctx, |ui| self.header(ui));
-        egui::TopBottomPanel::bottom("footer")
-            .frame(
-                egui::Frame::new()
-                    .fill(ctx.style().visuals.panel_fill)
-                    .inner_margin(egui::Margin::symmetric(24, 17)),
-            )
-            .show(ctx, |ui| self.footer(ui, ctx));
-        egui::SidePanel::right("settings")
-            .exact_width(314.0)
-            .resizable(false)
-            .frame(
-                egui::Frame::new()
-                    .fill(ctx.style().visuals.panel_fill)
-                    .inner_margin(20),
-            )
-            .show(ctx, |ui| {
-                egui::ScrollArea::vertical()
-                    .id_salt("settings_scroll")
-                    .show(ui, |ui| {
-                        ui.add_enabled_ui(!self.running, |ui| self.settings_panel(ui));
-                    });
-            });
-        egui::CentralPanel::default()
-            .frame(
-                egui::Frame::new()
-                    .fill(ctx.style().visuals.extreme_bg_color)
-                    .inner_margin(22),
-            )
-            .show(ctx, |ui| {
-                if let Some(notice) = self.notice.clone() {
-                    egui::Frame::new()
-                        .fill(subtle_fill(ui))
-                        .corner_radius(7)
-                        .inner_margin(10)
-                        .show(ui, |ui| {
-                            ui.horizontal_wrapped(|ui| {
-                                ui.label(&notice);
-                                if ui.small_button("Chiudi").clicked() {
-                                    self.notice = None;
-                                }
+        if self.show_tools {
+            self.tools_window(ctx);
+        } else {
+            if self.view == MainView::Files || self.running {
+                egui::TopBottomPanel::bottom("footer")
+                    .frame(
+                        egui::Frame::new()
+                            .fill(colors.card)
+                            .stroke(egui::Stroke::new(1.0_f32, colors.stroke))
+                            .inner_margin(egui::Margin::symmetric(24, 16)),
+                    )
+                    .show(ctx, |ui| self.footer(ui, ctx));
+            }
+            if self.view == MainView::Files {
+                egui::SidePanel::right("settings")
+                    .exact_width(370.0)
+                    .resizable(false)
+                    .frame(
+                        egui::Frame::new()
+                            .fill(colors.canvas)
+                            .inner_margin(egui::Margin::symmetric(16, 20)),
+                    )
+                    .show(ctx, |ui| {
+                        egui::ScrollArea::vertical()
+                            .id_salt("settings_scroll")
+                            .show(ui, |ui| {
+                                ui.add_enabled_ui(!self.running, |ui| self.settings_panel(ui))
                             });
-                        });
-                    ui.add_space(5.0);
-                }
-                self.quick_queue.show(ui);
-                self.quick_report_panel(ui);
-                self.queue_panel(ui);
-            });
-        self.tools_window(ctx);
+                    });
+            }
+            egui::CentralPanel::default()
+                .frame(egui::Frame::new().fill(colors.canvas).inner_margin(20))
+                .show(ctx, |ui| {
+                    if let Some(notice) = self.notice.clone() {
+                        info_bar(ui, &notice, InfoKind::Warning);
+                        if ui.small_button("Chiudi avviso").clicked() {
+                            self.notice = None;
+                        }
+                        ui.add_space(8.0);
+                    }
+                    match self.view {
+                        MainView::Files => self.queue_panel(ui),
+                        MainView::QuickQueue => {
+                            self.quick_queue.show(ui, false, &mut self.file_icons)
+                        }
+                        MainView::History => {
+                            ui.label(theme::heading("Cronologia", theme::TITLE));
+                            ui.label(
+                                RichText::new(
+                                    "Risultati delle conversioni rapide e dell’ultima sessione.",
+                                )
+                                .color(colors.secondary),
+                            );
+                            ui.add_space(12.0);
+                            self.session_history(ui);
+                            self.quick_report_panel(ui);
+                            self.quick_queue.show(ui, true, &mut self.file_icons);
+                        }
+                    }
+                });
+        }
         if self.settings_dirty && !self.running {
             self.persist();
         }
@@ -1829,20 +1923,16 @@ impl eframe::App for ConverterApp {
                 egui::Order::Foreground,
                 egui::Id::new("drop_overlay"),
             ));
-            painter.rect_filled(
-                screen,
-                0.0,
-                Color32::from_rgba_unmultiplied(0, 55, 110, 220),
-            );
+            painter.rect_filled(screen, 0.0, Color32::from_rgba_unmultiplied(0, 45, 75, 235));
             painter.text(
                 screen.center(),
                 egui::Align2::CENTER_CENTER,
                 if self.running {
                     "Attendi il termine della conversione"
                 } else {
-                    "Rilascia per aggiungere alla coda"
+                    "Rilascia per aggiungere alla lista"
                 },
-                egui::FontId::proportional(27.0),
+                theme::semibold_font(theme::TITLE),
                 Color32::WHITE,
             );
         }
@@ -1952,165 +2042,147 @@ impl QuickQueueView {
         }
     }
 
-    fn show(&mut self, ui: &mut egui::Ui) {
-        if self.jobs.is_empty()
-            && self.error.is_none()
-            && self.action_error.is_none()
-            && self.warnings.is_empty()
-        {
-            return;
+    fn show(&mut self, ui: &mut egui::Ui, history: bool, icons: &mut FileIcons) {
+        let colors = theme::palette(ui.ctx());
+        if !history {
+            ui.label(theme::heading("Coda rapida", theme::TITLE));
+            ui.label(
+                RichText::new("I lavori proseguono anche chiudendo questa finestra.")
+                    .color(colors.secondary),
+            );
+            ui.add_space(12.0);
         }
-        let active = self.jobs.iter().filter(|job| quick_job_active(job)).count();
-        let title = if active == 0 {
-            "Coda conversioni rapide".to_string()
-        } else {
-            format!("Coda conversioni rapide · {active} in corso o in attesa")
-        };
+        for warning in &self.warnings {
+            info_bar(ui, warning, InfoKind::Warning);
+        }
+        for error in self.error.iter().chain(self.action_error.iter()) {
+            info_bar(ui, error, InfoKind::Error);
+        }
         let mut cancel = None;
-        if !self.warnings.is_empty() {
-            ui.colored_label(
-                Color32::from_rgb(180, 115, 20),
-                format!(
-                    "{} lavori della coda non sono leggibili e sono stati ignorati",
-                    self.warnings.len()
-                ),
-            )
-            .on_hover_text(
-                self.warnings
-                    .iter()
-                    .take(5)
-                    .cloned()
-                    .collect::<Vec<_>>()
-                    .join("\n"),
+        let jobs: Vec<_> = if history {
+            self.jobs
+                .iter()
+                .filter(|job| !quick_job_active(job))
+                .take(50)
+                .collect()
+        } else {
+            self.jobs
+                .iter()
+                .rev()
+                .filter(|job| quick_job_active(job))
+                .take(50)
+                .collect()
+        };
+        if jobs.is_empty() {
+            info_bar(
+                ui,
+                if history {
+                    "Nessuna conversione rapida conclusa."
+                } else {
+                    "Nessuna conversione rapida in attesa o in corso."
+                },
+                InfoKind::Info,
             );
         }
-        egui::CollapsingHeader::new(title)
-            .id_salt("persistent_quick_queue")
-            .default_open(active > 0)
+        egui::ScrollArea::vertical()
+            .id_salt(("quick_jobs", history))
+            .auto_shrink([false, false])
             .show(ui, |ui| {
-                for error in self.error.iter().chain(self.action_error.iter()) {
-                    ui.add(
-                        egui::Label::new(
-                            RichText::new(error)
-                                .small()
-                                .color(ui.visuals().error_fg_color),
-                        )
-                        .wrap(),
-                    );
-                }
-                ui.label(
-                    RichText::new("La conversione continua anche chiudendo questa finestra.")
-                        .small()
-                        .weak(),
-                );
-                egui::ScrollArea::vertical()
-                    .id_salt("persistent_quick_queue_jobs")
-                    .max_height(250.0)
-                    .show(ui, |ui| {
-                        // list_jobs returns newest first; show pending work in processing order.
-                        let active_jobs = self
-                            .jobs
-                            .iter()
-                            .rev()
-                            .filter(|job| quick_job_active(job))
-                            .take(50);
-                        let finished_jobs = self
-                            .jobs
-                            .iter()
-                            .filter(|job| !quick_job_active(job))
-                            .take(50);
-                        for job in active_jobs.chain(finished_jobs) {
-                            egui::Frame::new()
-                                .fill(subtle_fill(ui))
-                                .corner_radius(7)
-                                .inner_margin(10)
-                                .show(ui, |ui| {
-                                    ui.horizontal(|ui| {
-                                        ui.add(
-                                            egui::Label::new(
-                                                RichText::new(
-                                                    job.input
-                                                        .file_name()
-                                                        .unwrap_or_default()
-                                                        .to_string_lossy(),
-                                                )
-                                                .strong(),
-                                            )
-                                            .truncate(),
-                                        )
-                                        .on_hover_text(display_path(&job.input));
-                                        ui.label(
-                                            RichText::new(format!("→ {}", job.format))
-                                                .small()
-                                                .weak(),
-                                        );
-                                        ui.with_layout(
-                                            egui::Layout::right_to_left(egui::Align::Center),
-                                            |ui| {
-                                                if quick_job_active(job)
-                                                    && ui.small_button("Annulla").clicked()
-                                                {
-                                                    cancel = Some(job.id.clone());
-                                                }
-                                                if ui.small_button("Apri cartella").clicked() {
-                                                    self.action_error = open_job_folder(job)
-                                                        .err()
-                                                        .map(|error| format!("{error:#}"));
-                                                }
-                                            },
-                                        );
-                                    });
+                for job in jobs {
+                    theme::show_card(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            file_icon(ui, icons, &job.input);
+                            ui.allocate_ui_with_layout(
+                                egui::vec2((ui.available_width() - 160.0).max(100.0), 42.0),
+                                egui::Layout::top_down(egui::Align::Min),
+                                |ui| {
+                                    ui.add(
+                                        egui::Label::new(theme::heading(
+                                            job.input
+                                                .file_name()
+                                                .unwrap_or_default()
+                                                .to_string_lossy(),
+                                            theme::BODY,
+                                        ))
+                                        .truncate(),
+                                    )
+                                    .on_hover_text(display_path(&job.input));
                                     ui.label(
-                                        RichText::new(quick_state_label(&job.state))
-                                            .small()
-                                            .color(quick_state_color(&job.state, ui)),
+                                        RichText::new(format!(
+                                            "{} · {}",
+                                            job.format,
+                                            quick_state_label(&job.state)
+                                        ))
+                                        .size(theme::CAPTION)
+                                        .color(quick_state_color(&job.state, ui)),
                                     );
-                                    if matches!(job.state, QuickJobState::Running) {
-                                        ui.add(
-                                            egui::ProgressBar::new(quick_progress(job.progress))
-                                                .animate(true)
-                                                .show_percentage(),
-                                        );
-                                    }
-                                    if let Some(path) = job.outputs.first() {
-                                        let label = if job.outputs.len() > 1 {
-                                            format!(
-                                                "{} · {} file",
-                                                display_path(path),
-                                                job.outputs.len()
-                                            )
-                                        } else {
-                                            display_path(path)
-                                        };
-                                        ui.add(
-                                            egui::Label::new(RichText::new(label).small().weak())
-                                                .truncate(),
+                                },
+                            );
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    if quick_job_active(job)
+                                        && icon_button(
+                                            ui,
+                                            FluentIcon::Cancel,
+                                            "Annulla conversione",
                                         )
-                                        .on_hover_text(
-                                            job.outputs
-                                                .iter()
-                                                .map(|path| display_path(path))
-                                                .collect::<Vec<_>>()
-                                                .join("\n"),
-                                        );
+                                        .clicked()
+                                    {
+                                        cancel = Some(job.id.clone());
                                     }
-                                    if let Some(error) = &job.error {
-                                        egui::CollapsingHeader::new("Dettagli dell’errore")
-                                            .id_salt((&job.id, "error"))
-                                            .show(ui, |ui| {
-                                                ui.add(
-                                                    egui::Label::new(
-                                                        RichText::new(error)
-                                                            .small()
-                                                            .color(ui.visuals().error_fg_color),
-                                                    )
-                                                    .wrap(),
-                                                );
-                                            });
+                                    if icon_button(
+                                        ui,
+                                        FluentIcon::Folder,
+                                        "Apri cartella di destinazione",
+                                    )
+                                    .clicked()
+                                    {
+                                        self.action_error = open_job_folder(job)
+                                            .err()
+                                            .map(|error| format!("{error:#}"));
                                     }
-                                });
+                                },
+                            );
+                        });
+                        if matches!(job.state, QuickJobState::Running) {
+                            progress_display(ui, job.progress, &job.message);
+                        } else if !job.message.is_empty() {
+                            ui.add(
+                                egui::Label::new(
+                                    RichText::new(&job.message)
+                                        .size(theme::CAPTION)
+                                        .color(colors.secondary),
+                                )
+                                .wrap(),
+                            );
+                        }
+                        if let Some(path) = job.outputs.first() {
+                            ui.add(
+                                egui::Label::new(
+                                    RichText::new(display_path(path))
+                                        .size(theme::CAPTION)
+                                        .color(colors.secondary),
+                                )
+                                .truncate(),
+                            )
+                            .on_hover_text(
+                                job.outputs
+                                    .iter()
+                                    .map(|path| display_path(path))
+                                    .collect::<Vec<_>>()
+                                    .join("\n"),
+                            );
+                        }
+                        if let Some(error) = &job.error {
+                            info_bar(ui, error, InfoKind::Error);
+                            if ui.small_button("Copia errore").clicked() {
+                                ui.ctx().copy_text(error.clone());
+                            }
                         }
                     });
+                    ui.add_space(8.0);
+                }
             });
         if let Some(id) = cancel {
             self.action_error = queue::cancel_job(&id)
@@ -2118,7 +2190,6 @@ impl QuickQueueView {
                 .map(|error| format!("Impossibile annullare: {error:#}"));
             self.last_refresh = None;
         }
-        ui.add_space(4.0);
     }
 }
 
@@ -2131,6 +2202,7 @@ struct QueueStatusApp {
     cancel_sent: bool,
     previews_removed: bool,
     removal_result: Option<mpsc::Receiver<Result<(), String>>>,
+    file_icons: FileIcons,
     requests: mpsc::SyncSender<()>,
     snapshots: mpsc::Receiver<Result<QueueJob, String>>,
 }
@@ -2148,6 +2220,7 @@ impl QueueStatusApp {
             cancel_sent: false,
             previews_removed: false,
             removal_result: None,
+            file_icons: FileIcons::default(),
             requests,
             snapshots,
         }
@@ -2171,6 +2244,7 @@ impl QueueStatusApp {
 
 impl eframe::App for QueueStatusApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        theme::sync_window_theme(ctx);
         self.refresh();
         if let Some(receiver) = &self.removal_result {
             let result = match receiver.try_recv() {
@@ -2192,20 +2266,29 @@ impl eframe::App for QueueStatusApp {
                 }
             }
         }
+
+        let colors = theme::palette(ctx);
         let mut cancel_requested = false;
         let mut remove_requested = false;
         egui::TopBottomPanel::bottom("queue_status_actions")
             .frame(
                 egui::Frame::new()
-                    .fill(ctx.style().visuals.panel_fill)
+                    .fill(colors.card)
+                    .stroke(egui::Stroke::new(1.0_f32, colors.stroke))
                     .inner_margin(18),
             )
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("La coda continua anche chiudendo questa finestra.")
+                            .size(theme::CAPTION)
+                            .color(colors.secondary),
+                    );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.button("Chiudi").clicked() {
                             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                         }
+
                         if self
                             .job
                             .as_ref()
@@ -2225,16 +2308,20 @@ impl eframe::App for QueueStatusApp {
                         {
                             remove_requested = true;
                         }
-                        if let Some(job) = &self.job
-                            && quick_job_active(job)
+
+                        if self.job.as_ref().is_some_and(quick_job_active)
                             && ui
                                 .add_enabled(
                                     !self.cancel_sent,
-                                    egui::Button::new(if self.cancel_sent {
-                                        "Annullamento…"
-                                    } else {
-                                        "Annulla"
-                                    }),
+                                    egui::Button::new(theme::button_text(
+                                        FluentIcon::Cancel,
+                                        if self.cancel_sent {
+                                            "Annullamento…"
+                                        } else {
+                                            "Annulla"
+                                        },
+                                        colors.text,
+                                    )),
                                 )
                                 .clicked()
                         {
@@ -2242,60 +2329,38 @@ impl eframe::App for QueueStatusApp {
                         }
                     });
                 });
-                ui.add(
-                    egui::Label::new(
-                        RichText::new("Chiudere questa finestra lascia proseguire la coda.")
-                            .small()
-                            .weak(),
-                    )
-                    .wrap(),
-                );
             });
-        egui::CentralPanel::default()
-            .frame(egui::Frame::new().fill(ctx.style().visuals.extreme_bg_color).inner_margin(24))
-            .show(ctx, |ui| {
-                egui::ScrollArea::vertical().id_salt("queue_status_content").show(ui, |ui| {
-                    ui.label(RichText::new("Stato della conversione").size(23.0).strong());
-                    ui.add_space(6.0);
-                    for error in self.error.iter().chain(self.action_error.iter()) {
-                        ui.add(egui::Label::new(RichText::new(error).color(ui.visuals().error_fg_color)).wrap());
-                    }
-                    if let Some(job) = &self.job {
-                        ui.label(RichText::new(job.input.file_name().unwrap_or_default().to_string_lossy()).size(17.0).strong());
-                        ui.label(RichText::new(format!("Formato di destinazione: {}", job.format)).small().weak());
-                        ui.add_space(9.0);
+        egui::CentralPanel::default().frame(egui::Frame::new().fill(colors.canvas).inner_margin(24)).show(ctx,|ui| {
+            egui::ScrollArea::vertical().id_salt("queue_status_content").show(ui,|ui| {
+                ui.label(theme::heading("Stato della conversione",theme::SUBTITLE));
+                ui.add_space(14.0);
+                for error in self.error.iter().chain(self.action_error.iter()) { info_bar(ui,error,InfoKind::Error); }
+                if let Some(job)=&self.job {
+                    theme::show_card(ui, |ui| {
                         ui.horizontal(|ui| {
-                            if quick_job_active(job) { ui.spinner(); }
-                            ui.label(RichText::new(quick_state_label(&job.state)).strong().color(quick_state_color(&job.state, ui)));
+                            file_icon(ui,&mut self.file_icons,&job.input);
+                            ui.vertical(|ui| {
+                                ui.add(egui::Label::new(theme::heading(job.input.file_name().unwrap_or_default().to_string_lossy(),theme::BODY)).wrap());
+                                ui.label(RichText::new(format!("Destinazione: {}",job.format)).size(theme::CAPTION).color(colors.secondary));
+                            });
                         });
-                        if matches!(job.state, QuickJobState::Running) {
-                            ui.add(egui::ProgressBar::new(quick_progress(job.progress)).animate(true).show_percentage());
-                        }
-                        if !job.message.is_empty() { ui.add(egui::Label::new(&job.message).wrap()); }
-                        if self.cancel_sent && quick_job_active(job) {
-                            ui.label(RichText::new("Annullamento richiesto. Attendi la pulizia dei file temporanei.").small().weak());
-                        }
-                        ui.add_space(11.0);
-                        ui.separator();
-                        ui.label(RichText::new("Destinazione").strong());
-                        for output in &job.outputs {
-                            ui.add(egui::Label::new(RichText::new(display_path(output)).small()).wrap());
-                        }
-                        if ui.button("Apri cartella di destinazione").clicked() { self.action_error = open_job_folder(job).err().map(|error| format!("{error:#}")); }
-                        if matches!(job.state, QuickJobState::Queued | QuickJobState::Running) {
-                            ui.label(RichText::new("Il segnaposto con l’icona di lavorazione viene sostituito dal file pronto al termine.").small().weak());
-                        }
-                        if let Some(error) = &job.error {
-                            ui.add_space(7.0);
-                            ui.add(egui::Label::new(RichText::new(error).color(ui.visuals().error_fg_color)).wrap());
-                            if ui.small_button("Copia errore").clicked() { ctx.copy_text(error.clone()); }
-                        }
-                    } else if self.error.is_none() {
-                        ui.spinner();
-                        ui.label("Lettura della coda…");
-                    }
-                });
+                        ui.add_space(12.0);
+                        ui.label(theme::heading(quick_state_label(&job.state),theme::BODY).color(quick_state_color(&job.state,ui)));
+                        if matches!(job.state,QuickJobState::Running) { progress_display(ui,job.progress,&job.message); }
+                        else if !job.message.is_empty() { ui.add(egui::Label::new(RichText::new(&job.message).size(theme::CAPTION).color(colors.secondary)).wrap()); }
+                        if self.cancel_sent && quick_job_active(job) { info_bar(ui,"Annullamento richiesto. Attendi la pulizia dei file temporanei.",InfoKind::Info); }
+                        if let Some(error)=&job.error { info_bar(ui,error,InfoKind::Error); if ui.button("Copia errore").clicked() { ctx.copy_text(error.clone()); } }
+                    });
+                    ui.add_space(10.0);
+                    theme::show_card(ui, |ui| {
+                        ui.label(theme::heading("File di destinazione",theme::BODY));
+                        for output in &job.outputs { ui.add(egui::Label::new(RichText::new(display_path(output)).size(theme::CAPTION).color(colors.secondary)).wrap()); }
+                        if ui.add(egui::Button::new(theme::button_text(FluentIcon::Folder,"Apri cartella",colors.text))).clicked() { self.action_error=open_job_folder(job).err().map(|error|format!("{error:#}")); }
+                    });
+                    if quick_job_active(job) { ui.add_space(8.0); info_bar(ui,"Il segnaposto in Esplora file viene sostituito dal risultato al termine.",InfoKind::Info); }
+                } else if self.error.is_none() { ui.spinner(); ui.label("Lettura della coda…"); }
             });
+        });
         if cancel_requested {
             match queue::cancel_job(&self.id) {
                 Ok(()) => {
@@ -2342,9 +2407,9 @@ fn quick_state_label(state: &QuickJobState) -> &'static str {
 
 fn quick_state_color(state: &QuickJobState, ui: &egui::Ui) -> Color32 {
     match state {
-        QuickJobState::Completed => GREEN,
+        QuickJobState::Completed => theme::palette(ui.ctx()).success,
         QuickJobState::Failed => ui.visuals().error_fg_color,
-        QuickJobState::Running => ACCENT,
+        QuickJobState::Running => theme::palette(ui.ctx()).accent,
         _ => ui.visuals().weak_text_color(),
     }
 }
@@ -2372,11 +2437,175 @@ fn settings_path() -> Option<PathBuf> {
         .map(|dirs| dirs.config_dir().join("preferences.json"))
 }
 
-fn subtle_fill(ui: &egui::Ui) -> Color32 {
-    if ui.visuals().dark_mode {
-        Color32::from_rgb(35, 38, 43)
+fn centered_column<R>(
+    ui: &mut egui::Ui,
+    maximum: f32,
+    contents: impl FnOnce(&mut egui::Ui) -> R,
+) -> egui::InnerResponse<R> {
+    let width = ui.available_width().min(maximum);
+    let inset = ((ui.available_width() - width) * 0.5).max(0.0);
+    ui.horizontal_top(|ui| {
+        ui.add_space(inset);
+        ui.allocate_ui_with_layout(
+            egui::vec2(width, ui.available_height()),
+            egui::Layout::top_down(egui::Align::Min),
+            |ui| {
+                ui.set_width(width);
+                contents(ui)
+            },
+        )
+        .inner
+    })
+}
+
+fn navigation_tabs(ui: &mut egui::Ui, selected: &mut MainView) -> [egui::Rect; 3] {
+    let mut rectangles = [egui::Rect::NOTHING; 3];
+    let colors = theme::palette(ui.ctx());
+    for (index, (view, label)) in [
+        (MainView::Files, "File da convertire"),
+        (MainView::QuickQueue, "Coda rapida"),
+        (MainView::History, "Cronologia"),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let response = ui.add(egui::Button::new(theme::heading(label, theme::BODY)).frame(false));
+        rectangles[index] = response.rect;
+        if response.clicked() {
+            *selected = view;
+        }
+        if *selected == view {
+            let y = response.rect.bottom() + 4.0;
+            ui.painter().line_segment(
+                [
+                    egui::pos2(response.rect.left() + 8.0, y),
+                    egui::pos2(response.rect.right() - 8.0, y),
+                ],
+                egui::Stroke::new(2.0_f32, colors.accent),
+            );
+        }
+    }
+    rectangles
+}
+
+fn icon_button(ui: &mut egui::Ui, icon: FluentIcon, tooltip: &str) -> egui::Response {
+    ui.add(
+        egui::Button::new(theme::icon(icon, 16.0))
+            .frame(false)
+            .min_size(egui::vec2(30.0, 30.0)),
+    )
+    .on_hover_text(tooltip)
+}
+
+fn file_icon(ui: &mut egui::Ui, icons: &mut FileIcons, path: &Path) {
+    if let Some(texture) = icons.get(ui.ctx(), path) {
+        ui.add(egui::Image::new((texture, egui::vec2(28.0, 28.0))));
     } else {
-        Color32::from_rgb(248, 249, 251)
+        ui.label(theme::icon(FluentIcon::Document, 28.0).color(theme::palette(ui.ctx()).secondary));
+    }
+}
+
+#[derive(Clone, Copy)]
+enum InfoKind {
+    Info,
+    Warning,
+    Error,
+}
+
+fn info_bar(ui: &mut egui::Ui, message: &str, kind: InfoKind) {
+    let colors = theme::palette(ui.ctx());
+    let tone = match kind {
+        InfoKind::Info => colors.accent,
+        InfoKind::Warning => ui.visuals().warn_fg_color,
+        InfoKind::Error => colors.error,
+    };
+    egui::Frame::new()
+        .fill(tone.gamma_multiply(if ui.visuals().dark_mode { 0.13 } else { 0.07 }))
+        .stroke(egui::Stroke::new(1.0_f32, tone.gamma_multiply(0.45)))
+        .corner_radius(theme::CONTROL_RADIUS)
+        .inner_margin(12)
+        .show(ui, |ui| {
+            ui.horizontal_top(|ui| {
+                ui.label(theme::icon(FluentIcon::Info, 16.0).color(tone));
+                ui.add(
+                    egui::Label::new(
+                        RichText::new(message)
+                            .size(theme::CAPTION)
+                            .color(colors.text),
+                    )
+                    .wrap(),
+                );
+            });
+        });
+    ui.add_space(6.0);
+}
+
+fn setting_card(
+    ui: &mut egui::Ui,
+    title: &str,
+    detail: &str,
+    controls: impl FnOnce(&mut egui::Ui),
+) {
+    theme::show_card(ui, |ui| {
+        ui.horizontal(|ui| {
+            let left = (ui.available_width() - 155.0).max(90.0);
+            ui.allocate_ui_with_layout(
+                egui::vec2(left, 40.0),
+                egui::Layout::top_down(egui::Align::Min),
+                |ui| {
+                    ui.label(theme::heading(title, theme::BODY));
+                    ui.label(
+                        RichText::new(detail)
+                            .size(theme::CAPTION)
+                            .color(theme::palette(ui.ctx()).secondary),
+                    );
+                },
+            );
+            ui.allocate_ui_with_layout(
+                egui::vec2(145.0, 40.0),
+                egui::Layout::right_to_left(egui::Align::Center),
+                controls,
+            );
+        });
+    });
+}
+
+fn duration_hms(duration: std::time::Duration) -> String {
+    let seconds = duration.as_secs();
+    format!(
+        "{:02}:{:02}:{:02}",
+        seconds / 3600,
+        (seconds % 3600) / 60,
+        seconds % 60
+    )
+}
+
+fn progress_display(ui: &mut egui::Ui, fraction: f32, message: &str) {
+    let colors = theme::palette(ui.ctx());
+    let fraction = quick_progress(fraction);
+    ui.horizontal(|ui| {
+        ui.add(
+            egui::Label::new(
+                RichText::new(message)
+                    .size(theme::CAPTION)
+                    .color(colors.secondary),
+            )
+            .wrap(),
+        );
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            ui.label(theme::heading(
+                format!("{:.0}%", fraction * 100.0),
+                theme::CAPTION,
+            ));
+        });
+    });
+    let (rect, _) =
+        ui.allocate_exact_size(egui::vec2(ui.available_width(), 3.0), egui::Sense::hover());
+    ui.painter().rect_filled(rect, 1.5, colors.stroke);
+    if fraction > 0.0 {
+        let mut fill = rect;
+        fill.max.x = fill.min.x + fill.width() * fraction;
+        ui.painter().rect_filled(fill, 1.5, colors.accent);
     }
 }
 
@@ -2613,5 +2842,57 @@ mod queue_reader_tests {
             released.recv_timeout(std::time::Duration::from_secs(2)),
             Err(mpsc::RecvTimeoutError::Disconnected)
         ));
+    }
+}
+
+#[cfg(test)]
+mod fluent_ui_tests {
+    use super::*;
+
+    #[test]
+    fn selector_buttons_switch_views_without_creating_an_app_or_touching_userdata() {
+        let ctx = egui::Context::default();
+        theme::configure(&ctx);
+        let mut selected = MainView::Files;
+        let mut rectangles = [egui::Rect::NOTHING; 3];
+        let input = |events| egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::Pos2::ZERO,
+                egui::vec2(700.0, 100.0),
+            )),
+            events,
+            ..Default::default()
+        };
+        let _ = ctx.run(input(Vec::new()), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                ui.horizontal(|ui| rectangles = navigation_tabs(ui, &mut selected));
+            });
+        });
+        for (index, expected) in [
+            (1, MainView::QuickQueue),
+            (2, MainView::History),
+            (0, MainView::Files),
+        ] {
+            let point = rectangles[index].center();
+            for pressed in [true, false] {
+                let _ = ctx.run(
+                    input(vec![
+                        egui::Event::PointerMoved(point),
+                        egui::Event::PointerButton {
+                            pos: point,
+                            button: egui::PointerButton::Primary,
+                            pressed,
+                            modifiers: egui::Modifiers::default(),
+                        },
+                    ]),
+                    |ctx| {
+                        egui::CentralPanel::default().show(ctx, |ui| {
+                            ui.horizontal(|ui| rectangles = navigation_tabs(ui, &mut selected));
+                        });
+                    },
+                );
+            }
+            assert_eq!(selected, expected);
+        }
     }
 }
