@@ -1,6 +1,6 @@
 # Microsoft Store: preparazione della submission
 
-Stato al 4 novembre 2026: il proprietario ha confermato la registrazione come sviluppatore e la prenotazione del nome **Convert Here**. Una verifica diretta nel portale dopo la modifica dell'editore mostra **Corsivo** in Legal info, account **Individual**, stato **Active**, e un avviso di completamento della verifica dell'account. La pagina Product identity, anche dopo ricaricamento, assegna ancora `SalvatoreCorsi.ConvertHere`, publisher `CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17` e `PublisherDisplayName` **Salvatore Corsi**. Occorre risolvere la differenza tra profilo e identita prodotto prima di generare il candidato pubblico come Corsivo; non e stata accertata una scadenza di propagazione. La configurazione locale `packaging/store/identity.partner-center.json`, esclusa da Git, conserva esattamente i valori dell'identita prodotto osservata, senza sostituire arbitrariamente l'editore. Non e stato generato o caricato un candidato con editore Corsivo. La preview con certificato di sviluppo non e un pacchetto pronto da caricare. Autore e sviluppatore: **Salvatore Corsi**. CORSIVO e il brand indicato dall'autore, non una ragione sociale verificata.
+Stato al 4 novembre 2026: la verifica diretta in Partner Center conferma il prodotto **Convert Here**, `Name` **SalvatoreCorsi.ConvertHere**, `Publisher` **CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17** e `PublisherDisplayName` **Corsivo**. Lo Store ID attuale e **9NPKPPCBNBM8**, con URL [apps.microsoft.com/detail/9NPKPPCBNBM8](https://apps.microsoft.com/detail/9NPKPPCBNBM8). L'applicazione e alla versione **0.3.0**; la versione del pacchetto Store e indipendente. Titolare, autore e sviluppatore: **Salvatore Corsi**; contatto pubblico: **salvo@salvatorecorsi.com**, riportato nella [pagina contatti](https://www.salvatorecorsi.com/contatti/). La configurazione locale `packaging/store/identity.partner-center.json`, esclusa da Git, deve usare i valori effettivi del prodotto. Invio, certificazione, WACK e collaudo dell'installazione del candidato finale restano da completare; una preview con certificato di sviluppo e un artefatto distinto.
 
 ## Percorso scelto
 
@@ -8,23 +8,24 @@ Distribuire un **MSIX completo x64**, contenente applicazione, DLL Explorer, ris
 
 Il menu moderno usa la DLL `IExplorerCommand`, COM surrogate e `windows.fileExplorerContextMenus` dichiarati nel manifest del pacchetto completo. Non richiede script di registrazione del menu classico nel pacchetto Store. [Integrazione ufficiale con Esplora file](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/integrate-packaged-app-with-file-explorer).
 
-## Dati ancora necessari dal proprietario
+## Dati confermati e campi della submission
 
 | Campo | Stato / azione |
 | --- | --- |
-| Account sviluppatore Partner Center | Il portale mostra **Active**, ma segnala un'azione per completare la verifica. Seguire il collegamento Verification Summary e le indicazioni Microsoft. |
-| Tipo account | **Individual**, verificato in Legal info. Il brand Corsivo non rende l'account Company: verificare con Microsoft l'idoneita all'uso professionale/commerciale previsto, senza assumere una conversione automatica. |
+| Account sviluppatore Partner Center | Gia registrato; eventuali azioni di verifica pendenti sono quelle mostrate dal portale. |
+| Tipo account | **Individual** nell'ultima verifica documentata di Legal info. |
 | Nome prodotto riservato | **Convert Here**, prenotazione confermata dal proprietario il 4 novembre 2026. |
 | `Package/Identity/@Name` | `SalvatoreCorsi.ConvertHere`, dalla schermata Product identity fornita dal proprietario. |
 | `Package/Identity/@Publisher` | `CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17`, dalla stessa schermata. Non sostituirlo con un `CN=CORSIVO` presunto. |
-| Publisher display name | Legal info mostra **Corsivo**; Product identity mostra ancora **Salvatore Corsi**. Attendere o risolvere con Microsoft l'allineamento e usare il valore realmente assegnato all'app. |
-| Store ID | `9NW38R2W20P9`; l'esistenza dell'ID non implica che l'app sia pubblicata. |
-| Identita legale e recapiti del titolare | Da fornire e verificare; non coincidono automaticamente con il brand. |
-| URL HTTPS privacy e supporto | Da pubblicare e verificare; la bozza [privacy.md](privacy.md) contiene i campi mancanti. |
-| Prezzo, mercati e calendario | Da scegliere dal proprietario. Nessuna pubblicazione automatica prevista. |
-| Licenza applicazione | Da scegliere; attualmente manca una licenza propria nel repository. Gli avvisi delle dipendenze non sostituiscono la licenza dell'app. |
+| Publisher display name | **Corsivo**, confermato nel prodotto in Partner Center. |
+| Store ID | `9NPKPPCBNBM8`; l'identificativo non attesta la pubblicazione dell'app. |
+| Titolare e contatto | **Salvatore Corsi**, **salvo@salvatorecorsi.com**. |
+| Informativa privacy | [URL pubblico](https://github.com/salvatorecorsi/convert-here/blob/master/docs/privacy.md); verificare il contenuto aggiornato dopo il push prima di inserirlo nella submission. |
+| Supporto | **salvo@salvatorecorsi.com** oppure [pagina contatti](https://www.salvatorecorsi.com/contatti/), gia pubblici. Per PC il campo e facoltativo, ma consigliato. |
+| Prezzo, mercati e calendario | Scelte confermate dal proprietario: **Gratuita**, **tutti i mercati**, **pubblicazione appena approvata**. |
+| Licenza applicazione Store | Il campo Additional license terms puo rimanere vuoto per usare gli Standard Application License Terms; termini diversi vanno inseriti esplicitamente. Questo non assegna una licenza open source al repository. |
 
-Le istruzioni Microsoft includono gli sviluppatori indipendenti e i freelance che distribuiscono nell'ambito del proprio lavoro fra gli account Company; Individual e descritto per attivita personali non commerciali. [Scelta dell'account](https://learn.microsoft.com/en-us/windows/apps/publish/get-started#prerequisite).
+Riferimenti Microsoft: [privacy e supporto](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/support-info), [termini di licenza aggiuntivi](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-additional-information#additional-license-terms).
 
 ## Identita, versione e lingue
 
@@ -36,7 +37,7 @@ L'anteprima si genera senza account o certificato:
 .\scripts\build-store-package.ps1
 ```
 
-La configurazione locale dell'identita osservata e gia disponibile in `packaging/store/identity.partner-center.json`; il nome pubblico dell'editore e ancora **Salvatore Corsi**. Per una nuova configurazione, copiare `packaging/store/identity.partner-center.example.json` e sostituire tutti i placeholder con i valori reali. Dopo aver risolto il nome Corsivo nell'account, aggiornare la configurazione con i dati della pagina Product identity. Per generare il MSIX unsigned destinato alla submission:
+La configurazione locale dell'identita e in `packaging/store/identity.partner-center.json`; prima della build deve riportare **Corsivo** come `PublisherDisplayName`, mantenendo `Name` e `Publisher` indicati sopra. Per una nuova configurazione, copiare `packaging/store/identity.partner-center.example.json` e sostituire i placeholder con i valori reali. Per generare il MSIX unsigned destinato alla submission:
 
 ```powershell
 .\scripts\build-store-package.ps1 -ForSubmission -IdentityConfig .\packaging\store\identity.partner-center.json
@@ -48,7 +49,7 @@ In alternativa, aprire [Actions → Microsoft Store package → Run workflow](ht
 
 [Windows checks](https://github.com/salvatorecorsi/convert-here/actions/workflows/windows-ci.yml) esegue automaticamente formattazione, test Rust e fixture PowerShell. Una pipeline verde verifica queste operazioni; non sostituisce la certificazione Microsoft o il collaudo dell'installazione su Windows 11.
 
-- Versione Store iniziale predisposta: `1.0.0.0`, distinta dalla versione applicazione Rust `0.2.0`. Il primo segmento Store deve essere maggiore di zero; il quarto rimane zero. Ogni segmento e al massimo 65535. [Versioni dei pacchetti](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/app-package-requirements#version-numbering-for-windows-10-and-11-packages).
+- Versione Store iniziale predisposta: `1.0.0.0`, distinta dalla versione applicazione Rust `0.3.0`. Il primo segmento Store deve essere maggiore di zero; il quarto rimane zero. Ogni segmento e al massimo 65535. [Versioni dei pacchetti](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/app-package-requirements#version-numbering-for-windows-10-and-11-packages).
 - Nome e Publisher devono corrispondere esattamente ai dati Partner Center, comprese maiuscole e punteggiatura. Il builder ricompila gli eseguibili con il manifest dedicato al pacchetto completo, senza l'elemento di identita sparse dell'installer EXE.
 - La UI e attualmente in italiano. La scheda inglese e una traduzione della descrizione, non una traduzione dell'interfaccia. Non dichiarare supporto UI inglese finche non implementato e verificato.
 - Target previsto: Windows 11 desktop x64 per il menu moderno. Il limite OS e quello effettivamente impostato e collaudato nel manifest Store; non promettere ARM64 nativo.
@@ -81,9 +82,9 @@ Consultare lo [stato delle verifiche](store-validation.md): le prove su una prev
 
 - [ ] Identita reale Partner Center configurata; nessun placeholder e nessuna firma di sviluppo presentata come firma pubblica.
 - [ ] Privacy completata con identita legale e contatto reali, pubblicata a un URL HTTPS accessibile. La policy 10.5.1 la richiede anche alle app Win32 senza telemetria. [Requisiti privacy](https://learn.microsoft.com/en-us/windows/apps/publish/store-policies#105-personal-information).
-- [ ] Schede [italiana](store-listing-it.md) e [inglese](store-listing-en.md) ricontrollate sul pacchetto finale; licenza, disponibilita, categorie e questionario IARC completati dal proprietario.
+- [ ] Schede [italiana](store-listing-it.md) e [inglese](store-listing-en.md) ricontrollate sul pacchetto finale; licenza, disponibilita, categorie e questionario IARC completati in Partner Center.
 - [ ] Asset del pacchetto inclusi e risolti dal manifest: Square44x44Logo, Square150x150Logo e StoreLogo con varianti di scala; verificare le varianti richieste e l'aspetto su temi chiaro/scuro. [Icone e risorse](https://learn.microsoft.com/en-us/windows/apps/design/iconography/app-icon-construction).
-- [ ] Schermate aggiornate con il nome Convert Here sul pacchetto finale; lo screenshot precedente non documenta il nuovo nome. Almeno una schermata PNG reale per scheda, desktop almeno 1366 x 768, massimo 50 MB; consigliate quattro. Preparare separatamente l'icona Store 300 x 300. [Screenshot e immagini](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/screenshots-and-images).
+- [ ] Schermate aggiornate con il nome Convert Here sul pacchetto finale; lo screenshot precedente non documenta il nuovo nome. Almeno una schermata PNG reale per scheda, desktop almeno 1366 x 768, massimo 50 MB; consigliate quattro. Preparare separatamente l'icona Store 300 x 300. [Screenshot e immagini](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/screenshots-and-images).
 - [ ] Windows App Certification Kit eseguito sul MSIX completo; conservare il report. Controllare installazione, aggiornamento, disinstallazione e avvio da Start su ambiente pulito.
 - [ ] Verificati menu moderno, selezione multipla, conversione rapida senza finestra opzioni, segnaposto, annullamento, nomi duplicati e percorsi con spazi/accenti.
 - [ ] Provate le funzioni native senza motori; separatamente provati i motori opzionali e il selettore di eseguibili. Verificati percorsi di dati realmente usati sotto MSIX e comportamento della disinstallazione.
@@ -91,7 +92,7 @@ Consultare lo [stato delle verifiche](store-validation.md): le prove su una prev
 - [ ] Per la trascrizione: distinguere test con server simulato da richieste reali autorizzate. Non presentare test simulati come prova di disponibilita del servizio. Verificare il contratto GPT-Transcribe: risposta JSON, estrazione di `text`, suggerimento lingua con `languages[]` e continuita delle preferenze salvate. [Guida ufficiale OpenAI](https://developers.openai.com/api/docs/guides/speech-to-text).
 - [ ] Associare ogni report al pacchetto e al commit verificati. Le prove locali o WACK precedenti all'integrazione OpenAI non attestano il funzionamento della nuova trascrizione.
 - [ ] Nessun motore scaricato automaticamente, certificato di sviluppo, chiave privata o script di installazione esterno nell'artefatto Store.
-- [ ] Invio per certificazione e pubblicazione eseguiti soltanto dopo la revisione del proprietario.
+- [ ] Submission completa inviata per certificazione, con pubblicazione automatica appena approvata secondo l'autorizzazione del proprietario.
 
 Per il CSV attendere l'esportazione del prodotto reale da Partner Center: preservare colonne Field, ID e Type; trasferire i testi preparati nei campi della lingua corretta. Non inventare un template con ID presunti. [Importazione/esportazione delle schede](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/import-and-export-store-listings).
 
@@ -99,7 +100,7 @@ Per il CSV attendere l'esportazione del prodotto reale da Partner Center: preser
 
 Usare il testo seguente dopo il collaudo del pacchetto completo e adattare i passi solo se la UI cambia:
 
-> The publisher brand is CORSIVO; the application is developed by Salvatore Corsi. The application UI is currently Italian. Local conversions do not require an account or login. Optional online transcription requires the user's own OpenAI API key and separately billed API access; it does not use a ChatGPT subscription.
+> The publisher brand is Corsivo; the application is developed by Salvatore Corsi. The application UI is currently Italian. Local conversions do not require an account or login. Optional online transcription requires the user's own OpenAI API key and separately billed API access; it does not use a ChatGPT subscription.
 >
 > The package includes native image conversion, image-to-PDF conversion and local PDF compression, splitting and merging. It does not bundle or automatically download conversion engines. Audio/video conversion requires FFmpeg; PDF page/text export requires Poppler; Office/HTML-to-PDF and Excel/CSV conversion require LibreOffice; local OCR requires Tesseract with the selected language data; HEIC/AVIF conversion requires libheif tools and the required codecs. PDF OCR also uses Poppler. PDF-to-DOCX/HTML reconstructs text only, using optional OCR for scans; original images, tables and layout are not reconstructed. CSV exports the first worksheet without formulas or formatting, with a selectable separator. Existing local executables can be selected under Strumenti using Seleziona programma…. Missing engines are reported in the UI. These dependencies and HTML linked-resource behavior are disclosed in the Store description.
 >
@@ -109,6 +110,6 @@ Usare il testo seguente dopo il collaudo del pacchetto completo e adattare i pas
 >
 > On Windows 11 x64, right-click a supported image in File Explorer and select Converti in, then choose a compatible format. The conversion is queued without opening the settings window. A temporary shortcut with a pending icon appears in the output folder and is replaced by the completed output. Double-clicking the shortcut opens job status. Impostazioni personalizzate opens the main options window. The shell extension is registered declaratively through the MSIX manifest.
 >
-> For a PDF input, the quick PDF · comprimi command always selects lossless compression. Splitting and merging are explicit GUI/CLI operations. Compression never produces a larger result than the input snapshot and may preserve the original bytes. Merging and splitting omit document-level metadata, bookmarks and accessibility tagging; signed PDFs and interactive forms require a static unsigned copy. TXT · OCR identifies local image recognition; TXT con OpenAI identifies online audio transcription, including explicit labels for mixed selections. The shell and application support 44 output formats across compatible categories and 93 input extensions; an offered output still requires its optional engine when applicable.
+> For a PDF input, the quick PDF · comprimi command always selects lossless compression. With multiple PDF-compatible inputs, PDF (Bulk) creates separate queued outputs; PDF (Merge) opens a page-order editor for a single PDF, also available from the main app. Drag pages or use the arrow controls to interleave pages from images, PDFs and compatible Office/HTML documents. Splitting and merging are also available through the CLI. Compression never produces a larger result than the input snapshot and may preserve the original bytes. Merging and splitting omit document-level metadata, bookmarks and accessibility tagging; signed PDFs and interactive forms require a static unsigned copy. TXT · OCR identifies local image recognition; TXT con OpenAI identifies online audio transcription, including explicit labels for mixed selections. The shell and application support 44 output formats across compatible categories and 93 input extensions; an offered output still requires its optional engine when applicable.
 >
-> General PDF content editing is not included. Animated image inputs, multipage TIFF inputs and HEIC/AVIF collections use their first frame/page/image. Image-to-PDF creates a separate A4 PDF for each image. The app contains no advertising, subscription or in-app purchase code.
+> General PDF content editing is not included. Animated image inputs, multipage TIFF inputs and HEIC/AVIF collections use their first frame/page/image. Normal image-to-PDF conversion creates a separate A4 PDF for each image; PDF (Merge) combines the prepared pages in the selected order. The app contains no advertising, subscription or in-app purchase code.

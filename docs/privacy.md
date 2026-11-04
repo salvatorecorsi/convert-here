@@ -1,15 +1,15 @@
 # Convert Here — informativa sulla privacy / privacy statement
 
-Bozza del 4 novembre 2026, basata sul codice applicativo attuale. **Prima della pubblicazione occorre completare i dati seguenti e verificare i percorsi dati sul MSIX finale.** Questo file non costituisce un URL privacy gia pubblicato.
+Informativa aggiornata al 4 novembre 2026, relativa alle funzioni di Convert Here 0.3.0.
 
 | Dato | Valore |
 | --- | --- |
-| Applicazione | Convert Here |
-| Brand editore | CORSIVO |
-| Autore / sviluppatore | Salvatore Corsi |
-| Identita legale del titolare | DA COMPLETARE con i dati reali del proprietario; il brand non identifica automaticamente un soggetto giuridico. |
-| Contatto privacy e supporto | DA COMPLETARE con un recapito effettivo del proprietario. |
-| URL pubblico della presente informativa | DA COMPLETARE dopo la pubblicazione HTTPS. |
+| Applicazione / Application | Convert Here |
+| Brand editore / Publisher brand | Corsivo |
+| Autore / sviluppatore / Developer | Salvatore Corsi |
+| Titolare / Data controller | Salvatore Corsi |
+| Contatto privacy e supporto / Privacy and support contact | [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com) |
+| Informativa pubblica / Public privacy statement | [Informativa privacy di Convert Here](https://github.com/salvatorecorsi/convert-here/blob/master/docs/privacy.md) |
 
 ## Italiano
 
@@ -59,11 +59,11 @@ Preferenze e ultimo resoconto non hanno una scadenza automatica. Per rimuovere m
 
 La pagina Strumenti contiene collegamenti ai siti di FFmpeg, Poppler, LibreOffice, Tesseract e libheif, e alla gestione delle chiavi API OpenAI. Si aprono solo quando li selezioni, nel browser configurato. Il browser, il sito visitato e gli strumenti esterni applicano le proprie regole. Anche cartelle di rete, sincronizzazione cloud, antivirus e funzioni diagnostiche di Windows dipendono dalle impostazioni del tuo dispositivo: questa informativa riguarda il codice di Convert Here.
 
-L'edizione Store prevista non scarica automaticamente motori o aggiornamenti eseguibili. Installazione e aggiornamenti Store sono gestiti da Microsoft. L'eventuale script per scaricare motori della distribuzione EXE separata contatta i distributori indicati nello script quando viene avviato; non fa parte del pacchetto Store previsto.
+L'edizione Store non scarica automaticamente motori o aggiornamenti eseguibili. Installazione e aggiornamenti Store sono gestiti da Microsoft. L'eventuale script per scaricare motori della distribuzione EXE separata contatta i distributori indicati nello script quando viene avviato; non fa parte del pacchetto Store.
 
 ### Controlli e richieste
 
-Puoi scegliere file e destinazioni, configurare i motori, rimuovere la chiave API e annullare i lavori. Non esiste un archivio cloud dei file presso Corsivo; per l'audio inviato a OpenAI valgono i controlli del servizio descritti sopra. Per richieste su questa informativa usa il contatto effettivo da completare sopra. La presente informativa deve essere aggiornata se cambiano le funzioni o i dati trattati.
+Puoi scegliere file e destinazioni, configurare i motori, rimuovere la chiave API e annullare i lavori. Non esiste un archivio cloud dei file presso Corsivo; per l'audio inviato a OpenAI valgono i controlli del servizio descritti sopra. Per richieste su questa informativa scrivi a [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). La presente informativa descrive il comportamento della versione indicata sopra.
 
 ## English
 
@@ -113,8 +113,8 @@ Preferences and the last report have no automatic expiry. To remove local data m
 
 The Strumenti page links to the FFmpeg, Poppler, LibreOffice, Tesseract and libheif websites and to OpenAI API-key management. Selecting a link opens your configured browser; the browser and destination website apply their own policies. External engines, network folders, cloud synchronization, antivirus and Windows diagnostics are governed by their own behavior and your device settings. This statement describes Convert Here's application code.
 
-The planned Store edition does not automatically download conversion engines or executable updates. Microsoft manages Store installation and updates. A separate EXE distribution may offer an engine-download script that contacts the distributors named in that script when run; that script is not part of the planned Store package.
+The Store edition does not automatically download conversion engines or executable updates. Microsoft manages Store installation and updates. A separate EXE distribution may offer an engine-download script that contacts the distributors named in that script when run; that script is not part of the Store package.
 
 ### Controls and questions
 
-You choose the files, destination and optional engines, can remove your saved API key, and can cancel jobs. Corsivo does not hold a cloud copy of your files. Audio submitted to OpenAI is subject to the service controls described above. For privacy questions use the real contact details that must be completed above. This statement must be updated when the app's functionality or data practices change.
+You choose the files, destination and optional engines, can remove your saved API key, and can cancel jobs. Corsivo does not hold a cloud copy of your files. Audio submitted to OpenAI is subject to the service controls described above. For privacy questions, contact [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). This statement describes the behavior of the version identified above.
