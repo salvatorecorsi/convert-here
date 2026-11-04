@@ -1,8 +1,10 @@
 # Materiale visivo Store
 
-- `store-icon-300.png`: icona prodotto 300 x 300 derivata dall'icona esistente dell'app.
-- `01-conversione-immagini.png`: cattura reale della preview MSIX su Windows 11, 3072 x 1680, PNG; mostra un file dimostrativo pubblico, senza documenti dell'utente.
+- `store-icon-300.png`: icona prodotto trasparente 300 x 300, riproducibile dalla sorgente `assets/app.svg` con `scripts/render-app-icon.ps1`.
+- `01-conversione-immagini.png`: finestra principale chiara con due immagini dimostrative, 1062 x 790.
+- `02-conversione-scura.png`: tema scuro durante una vera conversione WebM, con un errore su un secondo file dimostrativo danneggiato, 1536 x 912.
+- `04-strumenti.png`: pagina Strumenti con aspetto e motori, 1062 x 790.
 
-La schermata raffigura l'interfaccia attuale in italiano. Non sono stati inventati controlli o funzioni; l'esportazione in PNG conserva i pixel della cattura della finestra. La preview usa l'editore Corsivo nei metadati del pacchetto; l'identita Store definitiva resta da assegnare in Partner Center.
+Le catture native su Windows mostrano il codice dell'interfaccia integrata, eseguito con preferenze e coda di prova isolate. Usano soltanto file dimostrativi, senza documenti o chiavi API dell'utente. I PNG conservano i pixel della finestra; non sono mockup e non attestano l'installazione o la certificazione del pacchetto MSIX. I motori rilevati appartengono al PC di prova e non al pacchetto Store.
 
-Ricontrollare immagini, nome riservato e descrizioni sul pacchetto finale prima del caricamento. E possibile usare la stessa schermata nella scheda inglese, dichiarando che l'interfaccia dell'app e italiana. Preparare ulteriori schermate reali se richieste durante la revisione editoriale.
+Ricontrollare le immagini sul candidato Store, il nome riservato e le descrizioni prima del caricamento. E possibile usare le stesse catture nella scheda inglese, dichiarando che l'interfaccia dell'app e italiana.

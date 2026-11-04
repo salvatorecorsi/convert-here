@@ -116,7 +116,7 @@ Il testo mantiene la lingua parlata, senza traduzione, timestamp o riconosciment
 - OCR richiede Tesseract e i modelli delle lingue; per i PDF serve anche Poppler. E riconoscimento del testo, senza ricostruzione della grafica o del layout.
 - Le immagini GIF animate e i TIFF multipagina sono letti dal primo fotogramma/pagina. La conversione da video a GIF conserva l'animazione.
 - WebP è codificato senza perdita. La qualità JPEG non influisce sui formati senza perdita.
-- Ogni immagine genera il proprio PDF. Puoi poi unire i PDF nell'ordine scelto; unione e divisione non trasferiscono segnalibri, tag o metadati e rifiutano moduli interattivi. Le operazioni PDF rifiutano documenti cifrati o firmati.
+- Ogni immagine genera il proprio PDF. Puoi poi unire i PDF nell'ordine scelto; unione e divisione non trasferiscono segnalibri, tag o metadati e rifiutano moduli interattivi. Compressione, divisione e unione rifiutano documenti cifrati o firmati. L'esportazione PDF in PNG/JPEG accetta la sola password proprietario; una password di apertura richiede di sbloccare prima il documento.
 - I documenti Office, i fogli di calcolo, i CSV e HTML in PDF richiedono LibreOffice installato o configurato; l'impaginazione dipende anche dai font disponibili.
 - PDF in DOCX/HTML e una ricostruzione del testo, senza immagini o impaginazione originale. Excel in CSV esporta soltanto il primo foglio e perde formule e formattazione.
 - La coda interattiva usa un formato comune ai file selezionati. Se le categorie non hanno una destinazione comune, vanno convertite in gruppi separati.
@@ -144,13 +144,17 @@ Per le prove con un certificato di sviluppo, su Windows 11 build 26200 il trust 
 
 ## Motori e preferenze
 
-L'app cerca gli strumenti nella cartella `tools` accanto all'eseguibile, nel `PATH`, nelle impostazioni salvate e nella cartella indicata dalla variabile `THE_CONVERTER_TOOLS`. I percorsi possono essere scelti nella finestra **Strumenti**. LibreOffice viene cercato anche nella sua posizione standard di installazione.
+L'app cerca gli strumenti nella cartella `tools` accanto all'eseguibile, nella cartella utente `%LOCALAPPDATA%\Corsivo\TheConverter\tools`, nel `PATH`, nelle impostazioni salvate e nella cartella indicata dalla variabile `THE_CONVERTER_TOOLS`. I percorsi possono essere scelti nella pagina **Strumenti**. LibreOffice e Tesseract vengono cercati anche nelle rispettive posizioni standard di installazione.
 
-La distribuzione locale di sviluppo può includere FFmpeg e Poppler. L'installer e l'archivio portable pubblici li scaricano separatamente dagli upstream su richiesta. LibreOffice, libheif, Tesseract e i modelli OCR non sono inclusi ne scaricati automaticamente: configura installazioni locali nella finestra Strumenti. Le copie estratte sotto `.tools/` per i test non fanno parte dei pacchetti pubblici. L'app non richiede Python, Node, WebView o un'installazione Rust per essere eseguita.
+Per Poppler, `pdftoppm.exe` esporta le pagine in immagini e prepara i PDF per OCR, `pdftotext.exe` estrae il testo incorporato e `pdfinfo.exe` conta le pagine. Selezionandone uno, l'app cerca gli altri nella stessa installazione, rispettando eventuali scelte esplicite separate. Se `pdfinfo.exe` non e disponibile, il conteggio usa il lettore PDF interno.
+
+La distribuzione locale di sviluppo può includere FFmpeg e Poppler. L'installer e l'archivio portable pubblici li scaricano separatamente dagli upstream su richiesta. LibreOffice, libheif, Tesseract e i modelli OCR non sono inclusi ne scaricati automaticamente: configura installazioni locali nella pagina Strumenti. Le copie estratte sotto `.tools/` per i test non fanno parte dei pacchetti pubblici. L'app non richiede Python, Node, WebView o un'installazione Rust per essere eseguita.
 
 Le preferenze si trovano nella cartella di configurazione utente `SalvatoreCorsi\TheConverter\config` sotto `%APPDATA%`: `preferences.json` e `report-last.json`. Il resoconto include percorsi locali ed errori e non viene trasmesso. La conversione interattiva mantiene i propri risultati nella coda corrente.
 
 La coda rapida è salvata nei dati locali dell'app sotto `%LOCALAPPDATA%`. Un solo processo elabora i lavori, anche quando provengono da più comandi del menu contestuale. Dopo un'interruzione forzata, i lavori già in corso vengono segnalati come interrotti e i lavori ancora in attesa ripartono al successivo avvio dell'app o invio. I nomi sono prenotati prima di iniziare e rimangono quelli mostrati nei segnaposto. Per i PDF esportati in immagini viene prenotato un nome per pagina. Le cartelle temporanee nella destinazione sono nascoste.
+
+La pulizia della cronologia, eseguita quando il processo di lavoro riprende o termina la coda, elimina i record completati o annullati dopo 7 giorni e quelli falliti dopo 30 giorni; tenta inoltre di conservare al massimo i 300 record terminali piu recenti. Originali, risultati e lavori attivi vengono preservati. I record illeggibili sono isolati e conservati, insieme agli eventuali file estranei. Per un lavoro fallito puoi usare **Rimuovi segnaposto**: elimina soltanto i collegamenti ancora appartenenti a quel lavoro, mantenendo record e risultati.
 
 ## Compilazione
 
