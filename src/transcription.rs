@@ -255,6 +255,9 @@ pub fn transcribe(
 }
 
 fn direct_format(path: &Path) -> bool {
+    // The Audio API file-upload contract includes FLAC and OGG. Preserve their
+    // direct path without requiring FFmpeg for files within the upload limit.
+    // https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create
     matches!(
         path.extension()
             .and_then(|e| e.to_str())
@@ -726,6 +729,85 @@ mod tests {
         settings
     }
     const TEST_KEY: &str = "sk-local-http-test-not-a-real-key";
+
+    #[test]
+    fn flac_and_ogg_upload_original_bytes_and_mime_without_ffmpeg() {
+        for (extension, expected_mime, bytes) in [
+            (
+                "flac",
+                "audio/flac",
+                b"fLaC\0\x01\x80-local-mock-audio".as_slice(),
+            ),
+            (
+                "ogg",
+                "audio/ogg",
+                b"OggS\0\x02\xff-local-mock-audio".as_slice(),
+            ),
+        ] {
+            let folder = tempfile::tempdir().unwrap();
+            let source = folder.path().join(format!("nome privato è.{extension}"));
+            fs::write(&source, bytes).unwrap();
+            let unused_stage = folder.path().join("unused-preparation");
+            let parts = prepare_audio(
+                &source,
+                &unused_stage,
+                &ToolPaths::default(),
+                &AtomicBool::new(false),
+                &mut |_| {},
+            )
+            .unwrap();
+            assert_eq!(parts, vec![source.clone()]);
+            assert!(!unused_stage.exists());
+            let (endpoint, server) = server(vec![Reply::transcript("Testo del file")]);
+            let output = runtime()
+                .block_on(transcribe_parts(
+                    &client(),
+                    &endpoint,
+                    TEST_KEY,
+                    &parts,
+                    &source,
+                    folder.path(),
+                    &settings(),
+                    &AtomicBool::new(false),
+                    &mut |_| {},
+                ))
+                .unwrap();
+            assert_eq!(fs::read_to_string(output).unwrap(), "Testo del file\n");
+            assert_eq!(fs::read(&source).unwrap(), bytes);
+            let requests = server.join().unwrap();
+            assert_eq!(requests.len(), 1);
+            let request = &requests[0];
+            let text = String::from_utf8_lossy(request);
+            assert!(text.contains("name=\"model\"\r\n\r\ngpt-transcribe"));
+            assert!(text.contains(&format!("filename=\"audio.{extension}\"")));
+            assert!(
+                text.to_ascii_lowercase()
+                    .contains(&format!("content-type: {expected_mime}\r\n"))
+            );
+            assert!(!text.contains("nome privato"));
+            let boundary = text
+                .lines()
+                .find_map(|line| line.split_once("boundary=").map(|(_, value)| value.trim()))
+                .unwrap();
+            let filename = format!("filename=\"audio.{extension}\"");
+            let file_header = request
+                .windows(filename.len())
+                .position(|value| value == filename.as_bytes())
+                .unwrap();
+            let file_start = file_header
+                + request[file_header..]
+                    .windows(4)
+                    .position(|value| value == b"\r\n\r\n")
+                    .unwrap()
+                + 4;
+            let terminator = format!("\r\n--{boundary}");
+            let file_length = request[file_start..]
+                .windows(terminator.len())
+                .position(|value| value == terminator.as_bytes())
+                .unwrap();
+            assert_eq!(&request[file_start..file_start + file_length], bytes);
+        }
+    }
 
     #[test]
     fn gpt_transcribe_json_preserves_unicode_newlines_and_accepts_empty_detected_languages() {
