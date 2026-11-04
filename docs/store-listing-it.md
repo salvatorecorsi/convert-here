@@ -1,6 +1,6 @@
 # Scheda Microsoft Store — italiano (it-IT)
 
-Bozza per Convert Here **0.4.0**, pacchetto Store **1.0.3.0**, in preparazione: nessun nuovo caricamento, invio o pubblicazione attestato. Editore e sviluppatore: **Salvatore Corsi**, account Active e verifica Authorized. Testi e schermate devono essere verificati sulla nuova versione. Non copiare questo preambolo nei campi pubblici.
+Schede di Convert Here **0.4.0**, pacchetto Store **1.0.3.0** caricato e Validated, Submission 2 **In certification**. Editore e sviluppatore: **Salvatore Corsi**, account Active e verifica Authorized. IT/EN salvate e rilette con 17 funzionalita e quattro catture ciascuna. L'aggiornamento non e ancora approvato o pubblicato nello Store. Non copiare questo preambolo nei campi pubblici.
 
 ## Descrizione breve
 
@@ -105,18 +105,18 @@ Copyright:
 Copyright (C) 2026 Salvatore Corsi.
 ```
 
-Per Additional license terms usare il seguente singolo URL dopo aver pubblicato e verificato il tag 0.4.0; lo Store lo mostra come collegamento al testo integrale della GPLv3:
+Per Additional license terms il seguente singolo URL pubblico e verificato; lo Store lo mostra come collegamento al testo integrale della GPLv3:
 
 ```text
 https://github.com/salvatorecorsi/convert-here/blob/v0.4.0/LICENSE
 ```
 
-La scelta del progetto e GPL-3.0-only. L'archivio previsto `ConvertHere-0.4.0-source.zip` include sorgenti, dipendenze Cargo vendorizzate e istruzioni di build offline. Queste istruzioni di compilazione dei campi non fanno parte della descrizione pubblica.
+La scelta del progetto e GPL-3.0-only. L'archivio pubblico `ConvertHere-0.4.0-source.zip` include sorgenti, dipendenze Cargo vendorizzate e istruzioni di build offline. Queste istruzioni dei campi non fanno parte della descrizione pubblica.
 
 ## Riferimenti submission
 
-Titolare e sviluppatore: **Salvatore Corsi**; editore: **Salvatore Corsi**. Contatto privacy e supporto: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Bozza privacy 0.4.0](privacy.md), da pubblicare e verificare prima di inserirne l'URL versionato nella nuova submission; la [privacy 0.3.2](https://github.com/salvatorecorsi/convert-here/blob/v0.3.2/docs/privacy.md) resta il precedente riferimento pubblico verificato. Nome riservato: **Convert Here**. Per licenza, identita e stato operativo vedere la [procedura di submission](store-submission.md).
+Titolare e sviluppatore: **Salvatore Corsi**; editore: **Salvatore Corsi**. Contatto privacy e supporto: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Privacy 0.4.0 pubblica verificata](https://github.com/salvatorecorsi/convert-here/blob/v0.4.0/docs/privacy.md). Nome riservato: **Convert Here**. Per licenza, identita e stato operativo vedere la [procedura di submission](store-submission.md).
 
-Questi testi preparano la nuova 0.4.0 e non sono ancora attestati come salvati o inviati in Partner Center; le evidenze delle versioni precedenti restano nello storico.
+Le schede IT/EN e i termini GPL sono salvati e riletti per la 0.4.0. La Submission 2 e stata inviata ed e in certificazione; le evidenze delle versioni precedenti restano nello storico.
 
 Descrizione entro 10.000 caratteri; breve entro 1.000 (qui meno di 270); massimo 20 funzionalita da 200 caratteri; novita massimo 1.500, vuote alla prima submission. [Limiti ufficiali dei campi MSIX](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).

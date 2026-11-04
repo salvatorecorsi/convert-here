@@ -2,19 +2,34 @@
 
 Queste verifiche accompagnano la preparazione Store di Convert Here, sviluppato da Salvatore Corsi. Non equivalgono alla certificazione Microsoft e non sostituiscono l'identita reale di Partner Center.
 
-## Preparazione corrente 0.4.0 / Store 1.0.3.0
+## Stato corrente 0.4.0 / Store 1.0.3.0
 
-La nuova versione prepara uscite visibili configurabili e download esplicito di FFmpeg/Poppler in Impostazioni → Motori. Le 93 estensioni in ingresso e le 44 destinazioni del motore restano supportate, con otto uscite mostrate per default. Il download HTTPS verifica lo SHA-256 e conserva licenze e documentazione nella cartella dei motori dell'utente.
+La [release GitHub 0.4.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.4.0) e pubblicata dal **4 novembre 2026, 18:56:51 UTC**, commit `b4d5d0866a59b821125e35053566c454dd598471`, senza flag draft o prerelease. [Windows checks 41890745922](https://github.com/salvatorecorsi/convert-here/actions/runs/41890745922) e **SUCCESS**, inclusi i nuovi controlli dei sorgenti e del wrapper motori. I quattro digest remoti corrispondono agli artefatti locali verificati.
 
-Il codice originale adotta GPL-3.0-only, Copyright (C) 2026 Salvatore Corsi, con testo canonico completo in `LICENSE`; licenze di dipendenze, font e motori restano separate. La nuova release prevede anche il pacchetto sorgente vendorizzato `ConvertHere-0.4.0-source.zip`, da verificare e includere nei checksum insieme a setup e portable. Il campo Store Additional license terms deve puntare alla licenza pubblica della nuova versione, dopo la verifica del relativo URL.
+| Artefatto | Byte | SHA-256 |
+| --- | ---: | --- |
+| `ConvertHere-0.4.0-windows-x64-setup.exe` | 11004425 | `eb413012f5e8f8708b3ca44645b8b1afe85119e70023b93059765963a4a06076` |
+| `ConvertHere-0.4.0-windows-x64-portable.zip` | 13579654 | `b5d73c9ba708bee7d6f6bf80caef52e7977d334a9482251b6d918e382baa5609` |
+| `ConvertHere-0.4.0-source.zip` | 82525036 | `6b58cab25c466d967aa45c25c63121978456d8b801ca5840f246f3f15658530c` |
+| `SHA256SUMS.txt` | 313 | `633771e2b0ac2223d1ec9e402e6af6e03c5878196add8bfa7b4fbfd9bd04353d` |
 
-Build degli artefatti pubblici, audit, checksum e invio Store 1.0.3.0 non sono ancora documentati come completati. La **Submission 2**, ID **1152921505702316905**, e **In draft**. Le prove 0.4.0 gia eseguite restano distinte dallo storico delle precedenti revisioni.
+L'audit pubblico confronta tutti i **144 file tracciati** con il commit, entrambe le lockfile e la provenienza dei binari. Il pacchetto sorgente contiene **429 crate vendorizzati**, **22578 file verificati** e **703 file di licenza upstream**; l'inventario Windows resta di **236 componenti**. Una verifica separata ha eseguito realmente `cargo check --locked --offline --all-targets` per app e DLL dai sorgenti estratti, con Cargo home inizialmente vuota, target isolato e Rust **1.99.1** identico alla provenienza. Entrambi i comandi sono passati; il registro Cargo finale contiene solo `CACHEDIR.TAG`. L'audit del pacchetto e questa prova di compilazione hanno report separati e non riscrivono i precedenti.
+
+Il MSIX `ConvertHere-1.0.3.0-x64-store.msix`, **6348284 byte**, SHA-256 `2b042f23f96e5d12d2cd1ca104bf6c5252214b83df4718a8eed11e1a2e4fbbd9`, deriva dal medesimo commit pulito. Sono verificati **57 elementi payload**, **59 voci ZIP**, licenze, manifest e import PE. Il report schema 2 dichiara installer nativo presente, nessun motore e nessuno script downloader inclusi. Un successivo smoke test carica la DLL estratta dal MSIX e verifica COM, preferenze e selezioni reali senza registrarla nel sistema. Il nuovo MSIX non e stato installato e il WACK non e stato eseguito.
+
+Il pacchetto e caricato, salvato e **Validated**. La **Submission 2**, ID **1152921505702316905**, e stata inviata il **4 novembre 2026** e il portale mostra **Update in certification / Product update: In certification**. Timeline: **Submission Complete**, **Pre-processing In progress**, **Certification Not started**, **Publishing Not started**. La 0.4.0 non e ancora approvata o pubblicata nello Store; e confermata la pubblicazione automatica dopo il superamento della certificazione. Schede IT/EN rilette con 17 funzionalita, quattro catture e URL GPL 0.4.0 ciascuna; privacy 0.4.0 riletta nelle Properties. Le note di test di **3446 caratteri** e la motivazione `runFullTrust` di **433 caratteri** persistono. Prezzo gratuito, 240 mercati, telefono e indirizzo vuoti restano confermati. [Privacy](https://github.com/salvatorecorsi/convert-here/blob/v0.4.0/docs/privacy.md) e [licenza](https://github.com/salvatorecorsi/convert-here/blob/v0.4.0/LICENSE) rispondono HTTP 200 con contenuto verificato. Prova locale dello stato: `.tools/store-submission-040-final-state.txt`; nessun tag, artefatto o report precedente e riscritto.
+
+La nuova versione offre uscite visibili configurabili e download esplicito di FFmpeg/Poppler in Impostazioni → Motori. Le 93 estensioni in ingresso e le 44 destinazioni del motore restano supportate, con otto uscite mostrate per default. Il download HTTPS verifica lo SHA-256 e conserva licenze e documentazione nella cartella dei motori dell'utente.
+
+Il codice originale adotta GPL-3.0-only, Copyright (C) 2026 Salvatore Corsi, con testo canonico completo in `LICENSE`; licenze di dipendenze, font e motori restano separate. I pacchetti contengono licenza e avvisi; il pacchetto sorgente pubblico include dipendenze vendorizzate e istruzioni offline.
+
+Le prove native e le fixture della 0.4.0 seguenti sono distinte dallo storico delle precedenti revisioni. Tag, binari e report della release restano immutati dopo questo aggiornamento documentale.
 
 Le fixture isolate hanno superato **21 controlli del pacchetto sorgente** e **11 controlli del wrapper motori**, sia con PowerShell 7 sia con Windows PowerShell 5.1. Verificano commit e lockfile esatti, vendor offline per entrambi i workspace, provenienza dei binari, conservazione delle licenze dei terzi, argomenti CLI, percorsi con spazi e propagazione degli errori. Usano repository e CLI fittizi: non scaricano o eseguono motori e non compilano Rust. Windows checks include ora entrambi gli script.
 
 La verifica nativa dell'interfaccia 0.4.0 ha completato due conversioni PNG in JPEG senza errori, controllato le cinque uscite compatibili mostrate per default alle immagini, l'abilitazione FLAC salvata in JSON e il ripristino delle otto uscite iniziali. Il dialogo di download mostra fonti, versioni, dimensioni e nuova cartella personale; Annulla chiude la conferma senza avviare il download. Un fixture FLAC inerte di 53 byte e stato accettato e il selettore mostra esattamente MP3 e WAV. Sono stati verificati percorso dei motori e testo GPL integrale nel dialogo licenza; nessun motore e stato installato dalla GUI. I sei controlli Rust sono superati: 225 test dell'app, il fixture separato degli archivi upstream in cache e 10 test DLL. Queste prove non attestano un'installazione del nuovo MSIX o un nuovo invio Store. L'inventario Windows resta di **236 componenti**, con le rispettive licenze e avvisi.
 
-## Ultimo stato verificato 0.3.2 / Store 1.0.2.0
+## Stato precedente verificato 0.3.2 / Store 1.0.2.0
 
 La [release GitHub 0.3.2](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.2) e pubblicata come latest dal **4 novembre 2026, 16:25:31 UTC**, commit `8f7532bf9d16f80ef65b5229dba93929e11c1d82`. Sono superati formattazione Rust, Clippy rigoroso e test `--all-targets` per app e DLL, oltre alle fixture PowerShell 7 e 5.1. Il job `verify` del [run Windows checks 41866571328](https://github.com/salvatorecorsi/convert-here/actions/runs/41866571328) e **SUCCESS**; questo riferimento attesta il job, non uno stato complessivo del workflow non ancora registrato.
 

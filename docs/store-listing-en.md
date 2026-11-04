@@ -1,6 +1,6 @@
 # Microsoft Store listing — English (en-US)
 
-Draft for Convert Here **0.4.0**, Store package **1.0.3.0**, in preparation: no new upload, submission or publication is claimed. Publisher and developer: **Salvatore Corsi**, with account Active and verification Authorized. Text and screenshots must be checked against the new version. The app UI is Italian. Do not copy this preamble into public listing fields.
+Convert Here **0.4.0** listings, Store package **1.0.3.0** uploaded and Validated in **In certification** Submission 2. Publisher and developer: **Salvatore Corsi**, account Active and verification Authorized. Both listings were saved and reloaded with 17 features and four screenshots each. The update is not yet approved or live in the Store. The app UI is Italian. Do not copy this preamble into public listing fields.
 
 ## Short description
 
@@ -105,18 +105,18 @@ Copyright:
 Copyright (C) 2026 Salvatore Corsi.
 ```
 
-For Additional license terms, use this single URL after publishing and checking the 0.4.0 tag. The Store displays it as a link to the complete GPLv3 text:
+For Additional license terms, this single public URL is verified. The Store displays it as a link to the complete GPLv3 text:
 
 ```text
 https://github.com/salvatorecorsi/convert-here/blob/v0.4.0/LICENSE
 ```
 
-The project uses GPL-3.0-only. The planned `ConvertHere-0.4.0-source.zip` asset includes source code, vendored Cargo dependencies and offline build instructions. These field-entry instructions are not part of the public description.
+The project uses GPL-3.0-only. The public `ConvertHere-0.4.0-source.zip` asset includes source code, vendored Cargo dependencies and offline build instructions. These field-entry instructions are not part of the public description.
 
 ## Submission references
 
-Data controller and developer: **Salvatore Corsi**; publisher: **Salvatore Corsi**. Privacy and support contact: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Draft 0.4.0 privacy statement](privacy.md), to be published and checked before using its versioned URL in the new submission; the [0.3.2 statement](https://github.com/salvatorecorsi/convert-here/blob/v0.3.2/docs/privacy.md) remains the previous verified public reference. Reserved name: **Convert Here**. See the [submission procedure](store-submission.md) for licensing, identity and current status.
+Data controller and developer: **Salvatore Corsi**; publisher: **Salvatore Corsi**. Privacy and support contact: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Verified public 0.4.0 privacy statement](https://github.com/salvatorecorsi/convert-here/blob/v0.4.0/docs/privacy.md). Reserved name: **Convert Here**. See the [submission procedure](store-submission.md) for licensing, identity and current status.
 
-These texts prepare the new 0.4.0; they do not attest that its listings have been saved or submitted in Partner Center. Previous-version evidence remains historical.
+Both listings and GPL terms were saved and reloaded for 0.4.0. Submission 2 has been submitted and is In certification; previous-version evidence remains historical.
 
 Description: 10,000 characters maximum; short description: 1,000 maximum (this draft is below 270); up to 20 features of 200 characters each; release notes: 1,500 maximum, empty for the first submission. [Official MSIX listing limits](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).
