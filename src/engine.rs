@@ -1484,31 +1484,57 @@ mod tests {
     }
 
     #[cfg(windows)]
-    fn pdf_probe_test_command(script: &str) -> Command {
-        let root = std::env::var_os("SystemRoot").unwrap();
-        let mut command = Command::new(
-            PathBuf::from(root).join("System32/WindowsPowerShell/v1.0/powershell.exe"),
-        );
+    fn pdf_probe_test_command(mode: &str) -> Command {
+        let mut command = Command::new(std::env::current_exe().unwrap());
         command.args([
-            "-NoLogo",
-            "-NoProfile",
-            "-NonInteractive",
-            "-Command",
-            script,
+            "--exact",
+            "engine::tests::pdf_probe_fixture_process",
+            "--nocapture",
+            "--test-threads=1",
         ]);
+        command.env("THE_CONVERTER_TEST_PDF_PROBE_MODE", mode);
         command
     }
 
     #[cfg(windows)]
     #[test]
+    fn pdf_probe_fixture_process() {
+        let Ok(mode) = std::env::var("THE_CONVERTER_TEST_PDF_PROBE_MODE") else {
+            return;
+        };
+        match mode.as_str() {
+            "metadata" => {
+                let mut stdout = std::io::stdout().lock();
+                stdout.write_all(&vec![b'x'; 262144]).unwrap();
+                stdout.write_all(b"\nPages: 12\n").unwrap();
+                stdout.flush().unwrap();
+                let mut stderr = std::io::stderr().lock();
+                stderr.write_all(&vec![b'e'; 131072]).unwrap();
+                stderr.flush().unwrap();
+            }
+            "silent" => {
+                if let Some(path) = std::env::var_os("THE_CONVERTER_TEST_PDF_PROBE_CHILD_PID") {
+                    fs::write(path, std::process::id().to_string()).unwrap();
+                }
+                thread::sleep(Duration::from_secs(30));
+            }
+            "descendant" => {
+                let mut child = pdf_probe_test_command("silent");
+                assert!(hidden(&mut child).status().unwrap().success());
+            }
+            _ => panic!("Unknown PDF probe fixture mode: {mode}"),
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
     fn pdf_probe_drains_large_metadata_and_keeps_both_streams_bounded() {
-        let command = pdf_probe_test_command(
-            r#"[Console]::Out.Write(('x' * 262144)); [Console]::Out.WriteLine("`nPages: 12"); [Console]::Error.Write(('e' * 131072))"#,
-        );
+        let command = pdf_probe_test_command("metadata");
         let output = run_pdf_probe(command, &AtomicBool::new(false), PDF_PROBE_TIMEOUT).unwrap();
         assert!(output.status.success());
         assert_eq!(output.stdout.len(), PDF_PROBE_STDOUT_LIMIT);
         assert_eq!(output.stderr.len(), PDF_PROBE_STDERR_LIMIT);
+        assert!(output.stderr.iter().all(|&byte| byte == b'e'));
         assert_eq!(parse_pdf_page_count(&output.stdout).unwrap(), 12);
     }
 
@@ -1517,7 +1543,7 @@ mod tests {
     fn pdf_probe_timeout_and_cancellation_do_not_wait_for_a_silent_tool() {
         let start = std::time::Instant::now();
         let result = run_pdf_probe(
-            pdf_probe_test_command("Start-Sleep -Seconds 30"),
+            pdf_probe_test_command("silent"),
             &AtomicBool::new(false),
             Duration::from_millis(150),
         );
@@ -1530,11 +1556,8 @@ mod tests {
                 thread::sleep(Duration::from_millis(150));
                 cancel.store(true, Ordering::Relaxed);
             });
-            let result = run_pdf_probe(
-                pdf_probe_test_command("Start-Sleep -Seconds 30"),
-                &cancel,
-                PDF_PROBE_TIMEOUT,
-            );
+            let result =
+                run_pdf_probe(pdf_probe_test_command("silent"), &cancel, PDF_PROBE_TIMEOUT);
             assert!(result.unwrap_err().to_string().contains("annullata"));
         });
         assert!(start.elapsed() < Duration::from_secs(3));
@@ -1544,35 +1567,56 @@ mod tests {
     #[test]
     fn pdf_probe_closes_its_job_and_terminates_descendants_on_cancellation() {
         use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
-        use windows_sys::Win32::System::Threading::{
-            OpenProcess, PROCESS_SYNCHRONIZE, WaitForSingleObject,
+        use windows_sys::Win32::{
+            Foundation::{WAIT_OBJECT_0, WAIT_TIMEOUT},
+            System::Threading::{OpenProcess, PROCESS_SYNCHRONIZE, WaitForSingleObject},
         };
         let directory = tempfile::tempdir().unwrap();
         let child_pid = directory.path().join("child.pid");
-        let quoted_path = child_pid.to_string_lossy().replace('\'', "''");
-        let command = pdf_probe_test_command(&format!(
-            "$helper = Start-Process -FilePath $env:ComSpec -ArgumentList '/d /c ping -n 30 127.0.0.1 > nul' -WindowStyle Hidden -PassThru; [IO.File]::WriteAllText('{quoted_path}', [string]$helper.Id); Start-Sleep -Seconds 30"
-        ));
+        let mut command = pdf_probe_test_command("descendant");
+        command.env("THE_CONVERTER_TEST_PDF_PROBE_CHILD_PID", &child_pid);
         let cancel = AtomicBool::new(false);
         std::thread::scope(|scope| {
-            scope.spawn(|| {
-                let started = std::time::Instant::now();
-                while !child_pid.is_file() && started.elapsed() < Duration::from_secs(4) {
-                    thread::sleep(Duration::from_millis(20));
-                }
+            let observer = scope.spawn(|| {
+                let observed = (|| -> Result<OwnedHandle> {
+                    let started = std::time::Instant::now();
+                    while started.elapsed() < Duration::from_secs(15) {
+                        if let Some(pid) = fs::read_to_string(&child_pid)
+                            .ok()
+                            .and_then(|value| value.parse::<u32>().ok())
+                        {
+                            let raw = unsafe { OpenProcess(PROCESS_SYNCHRONIZE, 0, pid) };
+                            if raw.is_null() {
+                                bail!("Cannot observe the descendant fixture process");
+                            }
+                            let process = unsafe { OwnedHandle::from_raw_handle(raw) };
+                            if unsafe { WaitForSingleObject(process.as_raw_handle(), 0) }
+                                != WAIT_TIMEOUT
+                            {
+                                bail!("The descendant fixture exited before cancellation");
+                            }
+                            return Ok(process);
+                        }
+                        thread::sleep(Duration::from_millis(10));
+                    }
+                    bail!("The descendant fixture did not become ready");
+                })();
+                let cancelled_at = std::time::Instant::now();
                 cancel.store(true, Ordering::Relaxed);
+                observed.map(|process| (process, cancelled_at))
             });
-            let result = run_pdf_probe(command, &cancel, PDF_PROBE_TIMEOUT);
+            // Startup readiness has its own test budget; cancellation must still
+            // close the inherited pipes and kill an already running descendant promptly.
+            let result = run_pdf_probe(command, &cancel, Duration::from_secs(30));
+            let returned_at = std::time::Instant::now();
+            let (process, cancelled_at) = observer.join().unwrap().unwrap();
             assert!(result.unwrap_err().to_string().contains("annullata"));
+            assert!(returned_at.duration_since(cancelled_at) < Duration::from_secs(3));
+            assert_eq!(
+                unsafe { WaitForSingleObject(process.as_raw_handle(), 1000) },
+                WAIT_OBJECT_0
+            );
         });
-        let pid: u32 = fs::read_to_string(child_pid).unwrap().parse().unwrap();
-        unsafe {
-            let process = OpenProcess(PROCESS_SYNCHRONIZE, 0, pid);
-            if !process.is_null() {
-                let process = OwnedHandle::from_raw_handle(process);
-                assert_eq!(WaitForSingleObject(process.as_raw_handle(), 1000), 0);
-            }
-        }
     }
 
     #[cfg(windows)]

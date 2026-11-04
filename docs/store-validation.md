@@ -4,7 +4,7 @@ Queste verifiche accompagnano la preparazione Store di Corsivo. Non equivalgono 
 
 ## Verifiche della revisione corrente
 
-Il modello espone 44 destinazioni e 93 estensioni riconosciute. Sul codice dell'interfaccia integrata sono passati tutti i sei controlli richiesti: formattazione, Clippy con `--all-targets -- -D warnings` e test per app e DLL. I test sono **194 per l'app e 5 per la DLL**, senza test ignorati. Sono compilati entrambi gli eseguibili release; una conversione reale dalla CLI release verifica anche l'alias `jpeg`.
+Il modello espone 44 destinazioni e 93 estensioni riconosciute. Sul codice dell'interfaccia integrata sono passati tutti i sei controlli richiesti: formattazione, Clippy con `--all-targets -- -D warnings` e test per app e DLL. I test sono **195 per l'app e 5 per la DLL**, senza test ignorati. Sono compilati entrambi gli eseguibili release; una conversione reale dalla CLI release verifica anche l'alias `jpeg`.
 
 La suite comprende Excel/CSV, HTML in PDF, ricostruzione del testo PDF in Word/HTML, OCR locale, HEIC/AVIF e operazioni PDF. Le prove locali usano FFmpeg/FFprobe e Poppler del progetto, LibreOffice 26.8.2, Tesseract con i modelli ita/eng e libheif estratti nelle cartelle di validazione, senza installazione nel sistema. Le copie di validazione non fanno parte dei pacchetti pubblici; FFmpeg e Poppler restano esclusi dal pacchetto Store.
 
@@ -21,6 +21,8 @@ I 20 test del modulo di trascrizione usano fixture locali e server HTTP simulati
 La verifica completa comprende test e Clippy con `--all-targets` per app e DLL, formattazione Rust, sintassi PowerShell e fixture dell'installer con PowerShell 5.1 e 7. Il workflow Windows checks prepara FFmpeg e Poppler con archivi e hash fissati prima dei test, compila la DLL Explorer ed esegue smoke test COM e parita delle estensioni. LibreOffice, Tesseract e libheif restano motori aggiuntivi delle prove locali. La whitelist e confrontata fra core, DLL, script di registrazione e installer; i GUID dei vecchi comandi restano stabili. Queste verifiche non registrano il menu installato e non costituiscono una certificazione Store.
 
 La verifica finale PowerShell ha superato il parser di tutti i 20 script, i 6 casi della policy di disinstallazione e i 7 roundtrip degli apici sia con PowerShell 5.1 sia con PowerShell 7. Sono passati la parita delle 93 estensioni con due fixture negative, i 25 controlli del menu moderno e i 44 controlli Store, inclusa la validazione semantica MakeAppx. La DLL release supera lo smoke COM reale senza registrazione nel sistema; nessun installer e stato eseguito.
+
+I test dei probe PDF usano processi fixture Rust nativi: l'avvio di PowerShell sul runner CI non consuma piu il budget del probe. La cancellazione viene misurata dopo aver verificato vivo un discendente, del quale si trattiene l'handle fino alla verifica della terminazione. Limiti, timeout e comportamento del motore distribuito restano invariati.
 
 Il restyle mantiene egui con superfici che simulano l'aspetto Mica: il bonus Mica nativo non e applicato. Sono state verificate a schermo la finestra principale, le opzioni, la pagina Strumenti, i temi chiaro/scuro e una conversione WebM reale che prosegue dopo un errore su un altro file. Le [catture native](store-assets/README.md) usano preferenze e coda isolate; non attestano la certificazione o l'installazione MSIX del candidato finale.
 
