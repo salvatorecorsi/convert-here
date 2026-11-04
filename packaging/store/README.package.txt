@@ -1,5 +1,5 @@
 Convert Here
-Corsivo - developed by Salvatore Corsi
+Developed and published by Salvatore Corsi
 
 Converts images locally and integrates compatible conversions into the Windows
 File Explorer context menu. Choose a format to start a queued conversion with

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       for_submission:
-        description: Build with the real Corsivo Partner Center identity
+        description: Build with the real Convert Here Partner Center identity
         type: boolean
         default: false
       identity_name:
@@ -14,9 +14,9 @@ on:
         description: Exact Package/Identity/Publisher from Partner Center (submission only)
         type: string
       publisher_display_name:
-        description: Exact PublisherDisplayName assigned to Corsivo (submission only)
+        description: Exact PublisherDisplayName assigned in Partner Center (submission only)
         type: string
-        default: Corsivo
+        default: Salvatore Corsi
       display_name:
         description: Reserved product display name
         type: string
@@ -69,7 +69,7 @@ jobs:
       - name: Keep package and submission material
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: corsivo-convert-here-store-${{ inputs.for_submission && 'candidate' || 'preview' }}
+          name: convert-here-store-${{ inputs.for_submission && 'candidate' || 'preview' }}
           if-no-files-found: error
           retention-days: 30
           path: |
@@ -87,10 +87,10 @@ jobs:
         shell: pwsh
         run: |
           @'
-          ## Corsivo — Convert Here
+          ## Convert Here — Salvatore Corsi
           The MSIX is unsigned. Microsoft signs a Store submission after certification.
           Preview packages use a development identity and must not be submitted.
           Candidate packages still require a completed Store listing, public privacy policy,
-          screenshots and review in the Corsivo Partner Center account.
+          screenshots and review in the publisher's Partner Center account.
           This workflow never imports certificates, installs the app or submits to the Store.
           '@ | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY

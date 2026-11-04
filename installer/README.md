@@ -23,7 +23,7 @@ Gli script eseguiti dal setup usano esplicitamente PowerShell x64, anche quando 
 Per una prova silenziosa senza download di motori:
 
 ```powershell
-.\ConvertHere-0.3.1-windows-x64-setup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /TASKS="contextmenu" /LOG="install.log"
+.\ConvertHere-0.3.2-windows-x64-setup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /TASKS="contextmenu" /LOG="install.log"
 ```
 
 La disinstallazione conserva le preferenze, la coda e i file convertiti nelle loro cartelle. Rimuove il contenuto applicativo e la cartella privata `tools` nell'installazione. Non usare la cartella dell'applicazione o `tools` come cartella per salvare documenti personali.

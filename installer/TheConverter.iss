@@ -1,9 +1,9 @@
 ; Small, per-user installer. Conversion runtimes are obtained from their upstream publishers.
 #ifndef AppVersion
-  #define AppVersion "0.3.1"
+  #define AppVersion "0.3.2"
 #endif
 #ifndef FileVersion
-  #define FileVersion "0.3.1.0"
+  #define FileVersion "0.3.2.0"
 #endif
 #ifndef SourceDir
   #define SourceDir "..\dist\ConvertHere"
@@ -22,7 +22,7 @@ AppId={{441C8D1C-A78E-4D93-9221-2FA8B207E408}
 AppName=Convert Here
 AppVersion={#AppVersion}
 AppVerName=Convert Here {#AppVersion}
-AppPublisher=Corsivo
+AppPublisher=Salvatore Corsi
 AppPublisherURL={#RepositoryUrl}
 AppSupportURL={#RepositoryUrl}/issues
 AppUpdatesURL={#RepositoryUrl}/releases

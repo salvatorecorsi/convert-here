@@ -34,7 +34,13 @@ function New-PeFixture([string]$Path, [string]$Import = 'kernel32.dll', [uint16]
 try {
     New-Item -ItemType Directory -Path $fixture | Out-Null
     $preview = Get-StorePackageIdentity
-    Assert ($preview.Name -ceq 'Corsivo.TheConverter.StorePreview' -and $preview.DisplayName -ceq 'Convert Here Store Preview' -and $preview.PublisherDisplayName -ceq 'Corsivo') 'Preview identity is not clearly separate.'
+    Assert ($preview.Name -ceq 'Corsivo.TheConverter.StorePreview' -and $preview.DisplayName -ceq 'Convert Here Store Preview' -and $preview.PublisherDisplayName -ceq 'Salvatore Corsi') 'Preview identity is not clearly separate.'
+    [xml]$fullTemplate = Get-Content -LiteralPath (Join-Path $definitions 'AppxManifest.xml') -Raw -Encoding UTF8
+    Assert ($fullTemplate.Package.Properties.PublisherDisplayName -ceq 'Salvatore Corsi' -and $fullTemplate.Package.Identity.Name -ceq 'Corsivo.TheConverter.StorePreview' -and $fullTemplate.Package.Identity.Publisher -ceq 'CN=Salvatore Corsi') 'Full template publisher changed a technical identity.'
+    [xml]$sparseTemplate = Get-Content -LiteralPath (Join-Path $root 'shell-extension/package/AppxManifest.xml') -Raw -Encoding UTF8
+    Assert ($sparseTemplate.Package.Properties.PublisherDisplayName -ceq 'Salvatore Corsi' -and $sparseTemplate.Package.Identity.Name -ceq 'SalvatoreCorsi.TheConverter' -and $sparseTemplate.Package.Identity.Publisher -ceq 'CN=Salvatore Corsi') 'Sparse template publisher changed a technical identity.'
+    $identityExample = Get-Content -LiteralPath (Join-Path $definitions 'identity.partner-center.example.json') -Raw | ConvertFrom-Json
+    Assert ($identityExample.PublisherDisplayName -ceq 'Salvatore Corsi' -and $identityExample.Name -ceq 'REPLACE_WITH_PARTNER_CENTER_PACKAGE_IDENTITY_NAME' -and $identityExample.Publisher -ceq 'CN=REPLACE_WITH_PARTNER_CENTER_PACKAGE_IDENTITY_PUBLISHER') 'Identity example must keep its technical placeholders.'
     Assert ($preview.Version -eq '1.0.0.0' -and $preview.ExecutionAlias -eq 'corsivo-the-converter-preview.exe') 'Incorrect preview version or alias.'
     Assert (-not $preview.PSObject.Properties['CliExecutionAlias']) 'Preview identity advertises an unsupported Store CLI alias.'
     Assert-Fails { Get-StorePackageIdentity -ForSubmission -IdentityConfig (Join-Path $definitions 'identity.partner-center.example.json') } 'Submission accepted placeholder identity.'
@@ -45,10 +51,10 @@ try {
     }
     Assert ((Get-StorePackageIdentity -PreviewVersion '2.4.1.0').Version -eq '2.4.1.0') 'Explicit preview version ignored.'
     $configPath = Join-Path $fixture 'fixture-identity.json'
-    $config = [ordered]@{ Name = '12345Corsivo.Fixture'; Publisher = 'CN=00000000-0000-0000-0000-000000000001'; DisplayName = 'Fixture Converter'; PublisherDisplayName = 'Corsivo'; Version = '1.0.0.0' }
+    $config = [ordered]@{ Name = '12345Corsivo.Fixture'; Publisher = 'CN=00000000-0000-0000-0000-000000000001'; DisplayName = 'Fixture Converter'; PublisherDisplayName = 'Fixture Publisher'; Version = '1.0.0.0' }
     Write-Json $configPath $config
     $submission = Get-StorePackageIdentity -ForSubmission -IdentityConfig $configPath
-    Assert ($submission.Name -eq $config.Name -and $submission.ExecutionAlias -eq 'corsivo-the-converter.exe' -and $submission.Mode -eq 'submission') 'Explicit submission identity was not preserved.'
+    Assert ($submission.Name -eq $config.Name -and $submission.PublisherDisplayName -eq $config.PublisherDisplayName -and $submission.ExecutionAlias -eq 'corsivo-the-converter.exe' -and $submission.Mode -eq 'submission') 'Explicit submission identity was not preserved.'
     Assert (-not $submission.PSObject.Properties['CliExecutionAlias']) 'Submission identity advertises an unsupported Store CLI alias.'
     $neverOutput = Join-Path $fixture 'must-not-be-created'
     Assert-Fails { & (Join-Path $PSScriptRoot 'build-store-package.ps1') -ForSubmission -IdentityConfig (Join-Path $definitions 'identity.partner-center.example.json') -OutputDirectory $neverOutput } 'Builder accepted placeholder submission config.'

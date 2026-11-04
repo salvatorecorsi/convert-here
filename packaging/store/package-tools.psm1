@@ -5,7 +5,7 @@ function Get-StorePackageIdentity {
     param([string]$IdentityConfig, [switch]$ForSubmission, [string]$PreviewVersion = '1.0.0.0')
     if ($ForSubmission) {
         if (-not $IdentityConfig -or -not (Test-Path -LiteralPath $IdentityConfig -PathType Leaf)) {
-            throw 'Submission requires -IdentityConfig with exact identity values from the Corsivo Partner Center account.'
+            throw 'Submission requires -IdentityConfig with the exact identity values assigned to the app in Partner Center.'
         }
         $config = Get-Content -LiteralPath $IdentityConfig -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
         foreach ($field in @('Name', 'Publisher', 'DisplayName', 'PublisherDisplayName', 'Version')) {
@@ -15,7 +15,7 @@ function Get-StorePackageIdentity {
         $identity = [pscustomobject]@{ Name = $config.Name; Publisher = $config.Publisher; DisplayName = $config.DisplayName; PublisherDisplayName = $config.PublisherDisplayName; Version = $config.Version; Mode = 'submission'; ExecutionAlias = 'corsivo-the-converter.exe' }
     } else {
         if ($IdentityConfig) { throw 'IdentityConfig is only accepted with -ForSubmission. Preview uses an explicitly separate identity.' }
-        $identity = [pscustomobject]@{ Name = 'Corsivo.TheConverter.StorePreview'; Publisher = 'CN=Salvatore Corsi'; DisplayName = 'Convert Here Store Preview'; PublisherDisplayName = 'Corsivo'; Version = $PreviewVersion; Mode = 'preview'; ExecutionAlias = 'corsivo-the-converter-preview.exe' }
+        $identity = [pscustomobject]@{ Name = 'Corsivo.TheConverter.StorePreview'; Publisher = 'CN=Salvatore Corsi'; DisplayName = 'Convert Here Store Preview'; PublisherDisplayName = 'Salvatore Corsi'; Version = $PreviewVersion; Mode = 'preview'; ExecutionAlias = 'corsivo-the-converter-preview.exe' }
     }
     if ($identity.Name -notmatch '^[A-Za-z0-9][A-Za-z0-9.-]{1,48}[A-Za-z0-9]$') { throw 'Store package Name must contain 3-50 letters, digits, periods or hyphens.' }
     if ($identity.Publisher -notmatch '^CN=\S' -or $identity.Publisher.Length -gt 8192) { throw 'Store Publisher must be the exact Partner Center X.500 distinguished name.' }

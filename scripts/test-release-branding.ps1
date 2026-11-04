@@ -18,6 +18,9 @@ function Write-Fixture([string]$Relative, [string]$Content = 'Inert fixture data
 try {
     New-Item -ItemType Directory -Path $fixture | Out-Null
     $installer = Get-Content -LiteralPath (Join-Path $root 'installer/TheConverter.iss') -Raw
+    Assert ($installer -match '(?m)^AppPublisher=Salvatore Corsi\r?$') 'Installer public publisher is incorrect.'
+    $resources = Get-Content -LiteralPath (Join-Path $root 'build.rs') -Raw
+    Assert ($resources.Contains('resource.set("CompanyName", "Salvatore Corsi")')) 'PE public company metadata is incorrect.'
     Assert ($installer -match '(?m)^AppId=\{\{441C8D1C-A78E-4D93-9221-2FA8B207E408\}') 'Installer upgrade identity changed.'
     Assert ($installer -match '(?m)^DefaultDirName=\{localappdata\}\\Programs\\The Converter\r?$') 'Legacy installation directory changed.'
     Assert ($installer -match '(?m)^UsePreviousAppDir=yes\r?$' -and $installer -match '(?m)^UsePreviousGroup=yes\r?$') 'Upgrade must retain remembered directory and Start group.'
@@ -27,6 +30,11 @@ try {
     }
     Assert ($installer.Contains('#define RepositoryUrl "https://github.com/salvatorecorsi/convert-here"')) 'Installer points at the old repository.'
     Assert ($installer.Contains('#define AppVersion "' + $appVersion + '"') -and $installer.Contains('#define FileVersion "' + $appVersion + '.0"')) 'Installer fallback version differs from the release.'
+    [xml]$sparseApplication = Get-Content -LiteralPath (Join-Path $root 'shell-extension/app.manifest') -Raw -Encoding UTF8
+    [xml]$sparsePackage = Get-Content -LiteralPath (Join-Path $root 'shell-extension/package/AppxManifest.xml') -Raw -Encoding UTF8
+    Assert ($sparseApplication.assembly.assemblyIdentity.version -ceq "$appVersion.0" -and $sparsePackage.Package.Identity.Version -ceq "$appVersion.0") 'Sparse application and package template versions differ from the release.'
+    $storeWorkflow = Get-Content -LiteralPath (Join-Path $root '.github/workflows/microsoft-store.yml') -Raw -Encoding UTF8
+    Assert ($storeWorkflow -match '(?ms)publisher_display_name:\s*\n\s*description: [^\r\n]+\r?\n\s*type: string\r?\n\s*default: Salvatore Corsi\r?\n' -and $storeWorkflow.Contains('name: convert-here-store-${{ inputs.for_submission')) 'Store workflow public publisher or artifact branding is incorrect.'
     Assert ($installer.Contains('#define ConverterClass "{67B51BA1-8A78-4B4B-A5F9-08A825BE91F8}"')) 'Explorer CLSID changed.'
     foreach ($script in @('build-release.ps1', 'build-installer.ps1', 'prepare-public-release.ps1', 'install-context-menu.ps1')) {
         $source = Get-Content -LiteralPath (Join-Path $PSScriptRoot $script) -Raw

@@ -1,6 +1,6 @@
 # Scheda Microsoft Store — italiano (it-IT)
 
-Bozza per Convert Here **0.3.1**, pacchetto Store **1.0.1.0**: nuovo candidato ancora in preparazione e non caricato. Da verificare sul pacchetto finale. Editore: **Corsivo**. Sviluppatore: **Salvatore Corsi**. Il proprietario ha confermato la prenotazione del nome **Convert Here** in Partner Center il 4 novembre 2026. Non copiare questo preambolo nei campi pubblici.
+Bozza per Convert Here **0.3.2**, pacchetto Store **1.0.2.0**: nuovo candidato in preparazione, non ancora inviato. Editore previsto: **Salvatore Corsi**; il cambio del nome nel profilo Microsoft e ancora da verificare. Sviluppatore: **Salvatore Corsi**. Il proprietario ha confermato la prenotazione del nome **Convert Here** in Partner Center il 4 novembre 2026. Non copiare questo preambolo nei campi pubblici.
 
 ## Descrizione breve
 
@@ -91,7 +91,7 @@ Lasciare vuoto per la prima submission Store. Preparare una nota specifica solta
 
 ## Riferimenti submission
 
-Titolare e sviluppatore: **Salvatore Corsi**; brand editore: **Corsivo**. Contatto privacy e supporto: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Informativa privacy pubblica](https://github.com/salvatorecorsi/convert-here/blob/master/docs/privacy.md). Nome riservato: **Convert Here**. Per licenza, identita e stato operativo vedere la [procedura di submission](store-submission.md).
+Titolare e sviluppatore: **Salvatore Corsi**; editore previsto: **Salvatore Corsi**. Contatto privacy e supporto: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Informativa privacy pubblica](https://github.com/salvatorecorsi/convert-here/blob/master/docs/privacy.md). Nome riservato: **Convert Here**. Per licenza, identita e stato operativo vedere la [procedura di submission](store-submission.md).
 
 Questi testi sono predisposti per il nuovo candidato e devono ancora essere applicati alla submission; non attestano il suo caricamento o l'aggiornamento delle schede in Partner Center.
 

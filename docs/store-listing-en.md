@@ -1,6 +1,6 @@
 # Microsoft Store listing — English (en-US)
 
-Draft for Convert Here **0.3.1**, Store package **1.0.1.0**: the new candidate is still in preparation and has not been uploaded. Check against the final package. Publisher: **Corsivo**. Developer: **Salvatore Corsi**. The owner confirmed reservation of **Convert Here** in Partner Center on 4 November 2026. This listing is translated; the application UI is currently Italian. Do not copy this preamble into public listing fields.
+Draft for Convert Here **0.3.2**, Store package **1.0.2.0**: the new candidate is in preparation and has not been submitted. Intended publisher: **Salvatore Corsi**; the Microsoft account display-name change still needs verification. Developer: **Salvatore Corsi**. The owner confirmed reservation of **Convert Here** in Partner Center on 4 November 2026. This listing is translated; the application UI is currently Italian. Do not copy this preamble into public listing fields.
 
 ## Short description
 
@@ -91,7 +91,7 @@ Leave blank for the first Microsoft Store submission. Add release-specific notes
 
 ## Submission references
 
-Data controller and developer: **Salvatore Corsi**; publisher brand: **Corsivo**. Privacy and support contact: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Public privacy statement](https://github.com/salvatorecorsi/convert-here/blob/master/docs/privacy.md). Reserved name: **Convert Here**. See the [submission procedure](store-submission.md) for licensing, identity and current status.
+Data controller and developer: **Salvatore Corsi**; intended publisher: **Salvatore Corsi**. Privacy and support contact: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Public privacy statement](https://github.com/salvatorecorsi/convert-here/blob/master/docs/privacy.md). Reserved name: **Convert Here**. See the [submission procedure](store-submission.md) for licensing, identity and current status.
 
 These texts are prepared for the new candidate and still need to be applied to the submission. They do not attest its upload or an update to the Partner Center listings.
 

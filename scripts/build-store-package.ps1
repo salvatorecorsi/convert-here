@@ -212,7 +212,7 @@ $submissionText = @(
     'Remaining review: Windows App Certification Kit, clean-machine app/menu/queue tests, Store listing and privacy information, runFullTrust justification and Partner Center certification.',
     'No Partner Center upload or package installation was performed.'
 )
-if (-not $ForSubmission) { $submissionText += @('', 'DO NOT UPLOAD THIS PREVIEW: it uses a deliberately separate preview identity. Reserve the Corsivo app in Partner Center and use its exact identity config with -ForSubmission.') }
+if (-not $ForSubmission) { $submissionText += @('', 'DO NOT UPLOAD THIS PREVIEW: it uses a deliberately separate preview identity. Reserve Convert Here in Partner Center and use its exact identity config with -ForSubmission.') }
 $submissionReport = Join-Path $runDirectory 'SUBMISSION-REPORT.md'
 [IO.File]::WriteAllLines($submissionReport, $submissionText, (New-Object Text.UTF8Encoding($false)))
 $checksums = foreach ($path in @($package, $reportPath, $submissionReport)) { (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() + '  ' + [IO.Path]::GetFileName($path) }

@@ -1,11 +1,11 @@
 # Convert Here — informativa sulla privacy / privacy statement
 
-Informativa aggiornata al 4 novembre 2026, relativa alle funzioni di Convert Here 0.3.1.
+Informativa aggiornata al 4 novembre 2026, relativa alle funzioni di Convert Here 0.3.2.
 
 | Dato | Valore |
 | --- | --- |
 | Applicazione / Application | Convert Here |
-| Brand editore / Publisher brand | Corsivo |
+| Editore / Publisher | Salvatore Corsi |
 | Autore / sviluppatore / Developer | Salvatore Corsi |
 | Titolare / Data controller | Salvatore Corsi |
 | Contatto privacy e supporto / Privacy and support contact | [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com) |
@@ -15,7 +15,7 @@ Informativa aggiornata al 4 novembre 2026, relativa alle funzioni di Convert Her
 
 ### File e conversioni
 
-Convert Here legge i file che scegli tramite Esplora file, selettore o trascinamento e crea i risultati nella destinazione configurata. Le conversioni di formato e l'OCR avvengono sul PC. Il software e gratuito, senza abbonamenti, acquisti in-app o costi a consumo. L'app non invia file o percorsi a un server di Corsivo e non contiene servizi di telemetria, pubblicita o registrazione di account propri. Gli originali non vengono modificati dall'app.
+Convert Here legge i file che scegli tramite Esplora file, selettore o trascinamento e crea i risultati nella destinazione configurata. Le conversioni di formato e l'OCR avvengono sul PC. Il software e gratuito, senza abbonamenti, acquisti in-app o costi a consumo. L'app non invia file o percorsi a un server dello sviluppatore e non contiene servizi di telemetria, pubblicita o registrazione di account propri. Gli originali non vengono modificati dall'app.
 
 Se usi FFmpeg, Poppler, LibreOffice, Tesseract o libheif, gli eseguibili locali ricevono i percorsi e le opzioni necessari alla conversione. Sono programmi separati, installati o selezionati dall'utente. Possono avere proprie impostazioni e informative; Convert Here non controlla tutte le loro funzioni. Non e prevista una trasmissione allo sviluppatore dell'app.
 
@@ -48,13 +48,13 @@ L'edizione Store non scarica automaticamente motori o aggiornamenti eseguibili. 
 
 ### Controlli e richieste
 
-Puoi scegliere file e destinazioni, configurare i motori e annullare i lavori. Non esiste un archivio cloud dei file presso Corsivo. Per richieste su questa informativa scrivi a [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). La presente informativa descrive il comportamento della versione indicata sopra.
+Puoi scegliere file e destinazioni, configurare i motori e annullare i lavori. Non esiste un archivio cloud dei file presso lo sviluppatore. Per richieste su questa informativa scrivi a [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). La presente informativa descrive il comportamento della versione indicata sopra.
 
 ## English
 
 ### Files and local processing
 
-Convert Here reads files you select through File Explorer, a file picker or drag and drop, then writes results to your configured destination. Format conversion and OCR take place on your PC. The software is free, with no subscriptions, in-app purchases or usage-based charges. The app does not send files or paths to a Corsivo server and contains no telemetry service, advertising or its own account-registration system. The app does not modify source files.
+Convert Here reads files you select through File Explorer, a file picker or drag and drop, then writes results to your configured destination. Format conversion and OCR take place on your PC. The software is free, with no subscriptions, in-app purchases or usage-based charges. The app does not send files or paths to a server operated by the developer and contains no telemetry service, advertising or its own account-registration system. The app does not modify source files.
 
 Optional local FFmpeg, Poppler, LibreOffice, Tesseract and libheif executables receive the paths and options needed for conversion. They are separate programs installed or selected by the user and may have their own settings and privacy statements. Convert Here does not control all their behavior. No transfer to the app developer is part of this workflow.
 
@@ -87,4 +87,4 @@ The Store edition does not automatically download conversion engines or executab
 
 ### Controls and questions
 
-You choose the files, destination and optional engines, and can cancel jobs. Corsivo does not hold a cloud copy of your files. For privacy questions, contact [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). This statement describes the behavior of the version identified above.
+You choose the files, destination and optional engines, and can cancel jobs. The developer does not hold a cloud copy of your files. For privacy questions, contact [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). This statement describes the behavior of the version identified above.

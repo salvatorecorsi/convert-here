@@ -1,8 +1,12 @@
 # Verifiche tecniche — 4 novembre 2026
 
-Queste verifiche accompagnano la preparazione Store di Corsivo. Non equivalgono alla certificazione Microsoft e non sostituiscono l'identita reale di Partner Center.
+Queste verifiche accompagnano la preparazione Store di Convert Here, sviluppato da Salvatore Corsi. Non equivalgono alla certificazione Microsoft e non sostituiscono l'identita reale di Partner Center.
 
-## Verifiche correnti 0.3.1 / Store 1.0.1.0
+## Preparazione corrente 0.3.2 / Store 1.0.2.0
+
+La nuova versione e in preparazione con editore pubblico previsto **Salvatore Corsi**. La richiesta e stata salvata nell'account **Individual**, ma Verification Summary mostra **In Progress**, con **Email Verification In Progress** ed **Employment/Business Not Started**, e il nome attivo resta **Corsivo** fino all'approvazione Microsoft. Non sono ancora attestati nuova build, commit, checksum, validazione o invio del 1.0.2.0. La precedente certificazione e stata ritirata; Submission 1 e **In draft**, con tutte le sezioni Complete e il vecchio 1.0.1.0 ancora Validated. Le verifiche della 0.3.1 documentate sotto restano riferite esclusivamente ai relativi artefatti.
+
+## Verifiche della 0.3.1 prima del ritiro della certificazione
 
 Convert Here e gratuito, con conversioni di formato e OCR locali, senza abbonamenti, acquisti in-app o costi a consumo. Nessun pagamento richiesto per continuare a usarlo. Restano 44 destinazioni e 93 estensioni riconosciute, con motori locali opzionali. La [release GitHub 0.3.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.1) e pubblicata come latest dal commit `884cb2c610a9197d8b4853f0fa741dbe9035b5ed`; [Windows checks 41852511198](https://github.com/salvatorecorsi/convert-here/actions/runs/41852511198) e **SUCCESS**. L'inventario degli avvisi delle dipendenze Windows comprende **236 componenti**, senza avvisi mancanti.
 
@@ -68,4 +72,4 @@ Il report WACK locale della precedente preview **1.0.1.0**, eseguito con kit 10.
 
 **Il precedente report WACK riguarda una preview distinta e non viene dichiarato superato.** Microsoft considera il WACK un controllo locale deprecato e facoltativo: non e stato eseguito sul nuovo candidato e il suo esito non garantirebbe l'approvazione Store. Installazione/aggiornamento/disinstallazione, menu registrato e motori opzionali del MSIX finale restano senza un collaudo su ambiente pulito. [Validazione locale MSIX](https://learn.microsoft.com/en-us/windows/msix/package/packaging-uwp-apps#validate-your-app-package-locally).
 
-Identita Corsivo, Store ID e contatto reale sono documentati. Il pacchetto 1.0.1.0 e caricato e validato; IARC e completato e la submission e **In certification** dal 4 novembre 2026. La pubblicazione non e ancora iniziata; e impostata automaticamente dopo il superamento della certificazione. Vedi la [procedura di submission](store-submission.md).
+Il precedente pacchetto 1.0.1.0 con editore **Corsivo** resta Validated, ma la certificazione e stata ritirata e la submission e ora **In draft**. La nuova 0.3.2 / 1.0.2.0 con editore richiesto **Salvatore Corsi** e in preparazione e non e stata inviata. Verification Summary resta **In Progress / Email Verification**; il nuovo nome non e ancora approvato. Vedi la [procedura di submission](store-submission.md).
