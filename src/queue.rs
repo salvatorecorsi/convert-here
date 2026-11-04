@@ -8,6 +8,7 @@ use crate::{
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::BTreeSet,
     fs::{self, File, OpenOptions},
     io::Write,
     path::{Path, PathBuf},
@@ -36,9 +37,12 @@ pub struct QueueJob {
     pub id: String,
     pub input: PathBuf,
     pub format: String,
+    #[serde(default)]
     pub outputs: Vec<PathBuf>,
     pub state: JobState,
+    #[serde(default)]
     pub progress: f32,
+    #[serde(default)]
     pub message: String,
     pub error: Option<String>,
 }
@@ -48,10 +52,15 @@ struct StoredJob {
     #[serde(flatten)]
     view: QueueJob,
     plan: PreparedConversion,
+    #[serde(default)]
     tools: ToolPaths,
+    #[serde(default)]
     previews: Vec<PendingLink>,
+    #[serde(default)]
     batch_id: String,
+    #[serde(default)]
     submitted_at: u64,
+    #[serde(default)]
     updated_at: u64,
 }
 
@@ -121,6 +130,7 @@ fn next_order(root: &Path) -> Result<u64> {
         u64::from_le_bytes(bytes)
     } else {
         records(root)?
+            .0
             .iter()
             .map(|job| job.submitted_at)
             .max()
@@ -140,6 +150,30 @@ fn lock_contended(error: &std::io::Error) -> bool {
             .is_some_and(|(actual, expected)| actual == expected)
 }
 fn store(root: &Path, record: &StoredJob) -> Result<()> {
+    retry_store(|| store_once(root, record))
+}
+
+fn retry_store(mut operation: impl FnMut() -> Result<()>) -> Result<()> {
+    for delay in [25, 50, 100] {
+        match operation() {
+            Ok(()) => return Ok(()),
+            Err(error)
+                if cfg!(windows)
+                    && error.chain().any(|cause| {
+                        cause
+                            .downcast_ref::<std::io::Error>()
+                            .is_some_and(|error| matches!(error.raw_os_error(), Some(5 | 32 | 33)))
+                    }) =>
+            {
+                thread::sleep(Duration::from_millis(delay))
+            }
+            Err(error) => return Err(error),
+        }
+    }
+    operation()
+}
+
+fn store_once(root: &Path, record: &StoredJob) -> Result<()> {
     let dir = job_dir(root, &record.view.id)?;
     fs::create_dir_all(&dir)?;
     let mut temporary = tempfile::NamedTempFile::new_in(&dir)?;
@@ -161,28 +195,128 @@ fn load(root: &Path, id: &str) -> Result<StoredJob> {
     }
     Ok(record)
 }
-fn records(root: &Path) -> Result<Vec<StoredJob>> {
-    let mut jobs = Vec::new();
-    for entry in fs::read_dir(root)? {
+fn quarantine_record(path: &Path) -> Result<PathBuf> {
+    let mut source = tempfile::TempPath::try_from_path(path)?;
+    // This is an existing user record, not a disposable temporary: a failed
+    // rename must never let TempPath's destructor delete the original file.
+    source.disable_cleanup(true);
+    for number in 0..10_000 {
+        let target = path.with_file_name(if number == 0 {
+            "job.json.unreadable".to_owned()
+        } else {
+            format!("job.json.unreadable.{number}")
+        });
+        match source.persist_noclobber(&target) {
+            Ok(()) => return Ok(target),
+            Err(error) => {
+                source = error.path;
+                if error.error.kind() != std::io::ErrorKind::AlreadyExists {
+                    return Err(error.error.into());
+                }
+            }
+        }
+    }
+    bail!("Troppi record illeggibili conservati per lo stesso lavoro")
+}
+
+fn has_quarantined_record(directory: &Path) -> std::io::Result<bool> {
+    for entry in fs::read_dir(directory)? {
         let entry = entry?;
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if (name == "job.json.unreadable" || name.starts_with("job.json.unreadable."))
+            && entry.file_type()?.is_file()
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+fn records(root: &Path) -> Result<(Vec<StoredJob>, Vec<String>)> {
+    let mut jobs = Vec::new();
+    let mut warnings = Vec::new();
+    for entry in fs::read_dir(root)? {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(error) => {
+                warnings.push(format!(
+                    "Una voce della coda non è leggibile ed è stata ignorata: {error}"
+                ));
+                continue;
+            }
+        };
         let Some(id) = entry.file_name().to_str().map(str::to_owned) else {
             continue;
         };
-        if valid_id(&id) && entry.file_type()?.is_dir() && entry.path().join("job.json").is_file() {
-            jobs.push(load(root, &id)?);
+        if !valid_id(&id) {
+            continue;
+        }
+        match entry.file_type() {
+            Ok(kind) if kind.is_dir() => {}
+            Ok(_) => continue,
+            Err(error) => {
+                warnings.push(format!("{id}: cartella del lavoro non leggibile: {error}"));
+                continue;
+            }
+        }
+        let path = entry.path().join("job.json");
+        let mut warning = None;
+        if path.is_file() {
+            match load(root, &id) {
+                Ok(job) => jobs.push(job),
+                Err(error) => {
+                    warning = Some(match quarantine_record(&path) {
+                        Ok(target) => format!(
+                            "{id}: record ignorato e conservato in {}: {error:#}",
+                            target.display()
+                        ),
+                        Err(quarantine_error) => format!(
+                            "{id}: record ignorato, impossibile rinominarlo come illeggibile: {error:#}; {quarantine_error:#}"
+                        ),
+                    });
+                }
+            }
+        }
+        if warning.is_none() {
+            match has_quarantined_record(&entry.path()) {
+                Ok(true) => {
+                    warning = Some(format!(
+                        "{id}: record illeggibile ignorato e conservato come job.json.unreadable"
+                    ))
+                }
+                Ok(false) => {}
+                Err(error) => {
+                    warning = Some(format!(
+                        "{id}: impossibile controllare i record della coda: {error}"
+                    ))
+                }
+            }
+        }
+        if let Some(warning) = warning {
+            warnings.push(warning);
         }
     }
     jobs.sort_by(|left, right| {
         (left.submitted_at, &left.view.id).cmp(&(right.submitted_at, &right.view.id))
     });
-    Ok(jobs)
+    warnings.sort();
+    Ok((jobs, warnings))
 }
 
-/// Read-only snapshots do not acquire the worker/dispatch locks; GUI polling stays responsive.
+/// Snapshot without worker/dispatch locks; unreadable records are preserved separately.
 pub fn list_jobs() -> Result<Vec<QueueJob>> {
-    let mut items = records(&queue_root()?)?;
+    Ok(list_jobs_with_warnings()?.0)
+}
+
+pub fn list_jobs_with_warnings() -> Result<(Vec<QueueJob>, Vec<String>)> {
+    jobs_with_warnings_at(&queue_root()?)
+}
+
+fn jobs_with_warnings_at(root: &Path) -> Result<(Vec<QueueJob>, Vec<String>)> {
+    let (mut items, warnings) = records(root)?;
     items.reverse();
-    Ok(items.into_iter().map(|job| job.view).collect())
+    Ok((items.into_iter().map(|job| job.view).collect(), warnings))
 }
 pub fn get_job(id: &str) -> Result<QueueJob> {
     Ok(load(&queue_root()?, id)?.view)
@@ -298,6 +432,7 @@ pub fn ensure_worker() -> Result<()> {
     let root = queue_root()?;
     let _dispatch = dispatch_lock(&root)?;
     if records(&root)?
+        .0
         .iter()
         .any(|job| !job.view.state.is_terminal())
     {
@@ -361,6 +496,14 @@ pub fn run_worker() -> Result<()> {
 }
 
 fn run_worker_at(root: &Path, report: Option<&Path>) -> Result<()> {
+    run_worker_with_store(root, report, store)
+}
+
+fn run_worker_with_store(
+    root: &Path,
+    report: Option<&Path>,
+    mut persist: impl FnMut(&Path, &StoredJob) -> Result<()>,
+) -> Result<()> {
     let worker = open_lock(root, "worker.lock")?;
     match fs2::FileExt::try_lock_exclusive(&worker) {
         Ok(()) => {}
@@ -371,28 +514,35 @@ fn run_worker_at(root: &Path, report: Option<&Path>) -> Result<()> {
     // treated as complete, and no external file at its reserved path is ever removed.
     {
         let _dispatch = dispatch_lock(root)?;
-        for mut job in records(root)? {
+        for mut job in records(root)?.0 {
             if job.view.state == JobState::Running {
                 job.view.state = JobState::Failed;
                 job.view.message = "Conversione interrotta".into();
-                job.view.error = Some("La conversione è stata interrotta prima del completamento. Puoi avviarla di nuovo dal file originale.".into());
+                job.view.error = Some("Il processo precedente si è interrotto senza salvare lo stato finale. Verifica gli eventuali file di risultato prima di avviare una nuova conversione dall'originale.".into());
                 job.updated_at = now();
                 for preview in &job.previews {
                     let _ = preview.fail("Conversione interrotta — apri per i dettagli");
                 }
                 let _ = engine::release_prepared(&job.plan);
-                store(root, &job)?;
+                if let Err(error) = persist(root, &job) {
+                    eprintln!(
+                        "Impossibile salvare il recupero del lavoro {}: {error:#}",
+                        job.view.id
+                    );
+                }
                 if let Some(path) = report {
                     let _ = update_report(root, &job.batch_id, path);
                 }
             }
         }
     }
+    let mut skipped = BTreeSet::new();
     loop {
         let dispatch = dispatch_lock(root)?;
         let next = records(root)?
+            .0
             .into_iter()
-            .find(|job| job.view.state == JobState::Queued);
+            .find(|job| job.view.state == JobState::Queued && !skipped.contains(&job.view.id));
         let Some(mut job) = next else {
             // Release worker ownership while enqueue is excluded. This closes the empty-queue
             // handoff race: a submitter will either be seen here or start the next worker.
@@ -406,14 +556,30 @@ fn run_worker_at(root: &Path, report: Option<&Path>) -> Result<()> {
             job.view.message = "Annullato".into();
             clean_previews(&job);
             let _ = engine::release_prepared(&job.plan);
-            store(root, &job)?;
+            if let Err(error) = persist(root, &job) {
+                eprintln!(
+                    "Impossibile salvare l'annullamento del lavoro {}: {error:#}",
+                    job.view.id
+                );
+                skipped.insert(job.view.id.clone());
+            }
             drop(dispatch);
             continue;
         }
         job.view.state = JobState::Running;
         job.view.message = "Conversione in corso…".into();
         job.updated_at = now();
-        store(root, &job)?;
+        if let Err(error) = persist(root, &job) {
+            // Without a durable Running state, a restart would see Queued and
+            // could invoke the converter again after an already published output.
+            eprintln!(
+                "Impossibile avviare il lavoro {} senza salvarne lo stato: {error:#}",
+                job.view.id
+            );
+            skipped.insert(job.view.id.clone());
+            drop(dispatch);
+            continue;
+        }
         drop(dispatch);
         for preview in &job.previews {
             let _ = preview.update("Conversione in corso…");
@@ -443,7 +609,7 @@ fn run_worker_at(root: &Path, report: Option<&Path>) -> Result<()> {
                 job.view.message = progress.message;
                 job.updated_at = now();
                 if last_snapshot.elapsed() >= Duration::from_millis(300) {
-                    let _ = store(root, &job);
+                    let _ = persist(root, &job);
                     last_snapshot = Instant::now();
                 }
                 if last_preview.elapsed() >= Duration::from_secs(1) {
@@ -493,7 +659,15 @@ fn run_worker_at(root: &Path, report: Option<&Path>) -> Result<()> {
                 .push_str(&format!(" · Pulizia temporanei: {error:#}"));
         }
         job.updated_at = now();
-        store(root, &job)?;
+        if let Err(error) = persist(root, &job) {
+            // Keep the durable Running record: recovery marks it interrupted
+            // rather than retrying a conversion whose output may already exist.
+            eprintln!(
+                "Impossibile salvare l'esito del lavoro {}: {error:#}",
+                job.view.id
+            );
+            skipped.insert(job.view.id.clone());
+        }
         if let Some(path) = report {
             let _ = update_report(root, &job.batch_id, path);
         }
@@ -507,6 +681,7 @@ fn clean_previews(job: &StoredJob) {
 }
 fn update_report(root: &Path, batch_id: &str, report: &Path) -> Result<()> {
     let jobs: Vec<_> = records(root)?
+        .0
         .into_iter()
         .filter(|job| job.batch_id == batch_id)
         .collect();
@@ -684,5 +859,351 @@ mod tests {
         assert_eq!(fs::read(&record.view.outputs[0]).unwrap(), b"external file");
         assert!(!record.plan.outputs[0].marker.exists());
         assert!(get_job("../../outside").is_err());
+    }
+
+    fn queued_image(root: &Path, source: &Path) -> QueueJob {
+        image::RgbaImage::from_pixel(16, 8, image::Rgba([30, 80, 150, 255]))
+            .save(source)
+            .unwrap();
+        let settings = ConversionSettings {
+            format: OutputFormat::Jpg,
+            ..Default::default()
+        };
+        submit_at(
+            root,
+            &[source.to_owned()],
+            &settings,
+            &ToolPaths::default(),
+            &std::env::current_exe().unwrap(),
+            false,
+        )
+        .unwrap()
+        .jobs
+        .remove(0)
+    }
+
+    #[test]
+    fn unreadable_record_is_preserved_and_does_not_block_snapshots_or_valid_jobs() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("queue");
+        let valid = queued_image(&root, &directory.path().join("valid.png"));
+        let invalid = root.join("job-truncated");
+        fs::create_dir(&invalid).unwrap();
+        let bytes = br#"{"id":"job-truncated"}"#;
+        fs::write(invalid.join("job.json"), bytes).unwrap();
+        let (jobs, warnings) = jobs_with_warnings_at(&root).unwrap();
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(jobs[0].id, valid.id);
+        assert_eq!(warnings.len(), 1);
+        assert!(!invalid.join("job.json").exists());
+        assert_eq!(
+            fs::read(invalid.join("job.json.unreadable")).unwrap(),
+            bytes
+        );
+        // Startup can quarantine before the GUI's first refresh.
+        let (jobs, warnings) = jobs_with_warnings_at(&root).unwrap();
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(warnings.len(), 1);
+        run_worker_at(&root, None).unwrap();
+        assert_eq!(
+            load(&root, &valid.id).unwrap().view.state,
+            JobState::Completed
+        );
+        assert!(image::open(&valid.outputs[0]).is_ok());
+        assert_eq!(jobs_with_warnings_at(&root).unwrap().1.len(), 1);
+    }
+
+    #[test]
+    fn quarantining_never_replaces_earlier_unreadable_records() {
+        let directory = tempfile::tempdir().unwrap();
+        let invalid = directory.path().join("job-invalid");
+        fs::create_dir(&invalid).unwrap();
+        fs::write(
+            invalid.join("job.json.unreadable"),
+            b"earlier corrupt record",
+        )
+        .unwrap();
+        fs::write(invalid.join("job.json"), b"new corrupt record").unwrap();
+        let (jobs, warnings) = records(directory.path()).unwrap();
+        assert!(jobs.is_empty());
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(
+            fs::read(invalid.join("job.json.unreadable")).unwrap(),
+            b"earlier corrupt record"
+        );
+        assert_eq!(
+            fs::read(invalid.join("job.json.unreadable.1")).unwrap(),
+            b"new corrupt record"
+        );
+        assert_eq!(records(directory.path()).unwrap().1.len(), 1);
+    }
+
+    #[test]
+    fn optional_job_fields_default_without_defaulting_identity_plan_or_state() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("queue");
+        let job = queued_image(&root, &directory.path().join("source.png"));
+        let record = load(&root, &job.id).unwrap();
+        let mut value = serde_json::to_value(&record).unwrap();
+        for field in [
+            "tools",
+            "previews",
+            "batch_id",
+            "submitted_at",
+            "updated_at",
+            "outputs",
+            "progress",
+            "message",
+            "error",
+        ] {
+            value.as_object_mut().unwrap().remove(field);
+        }
+        let old: StoredJob = serde_json::from_value(value.clone()).unwrap();
+        assert_eq!(old.view.id, job.id);
+        assert_eq!(old.view.state, JobState::Queued);
+        assert_eq!(old.view.progress, 0.0);
+        assert!(old.previews.is_empty() && old.view.outputs.is_empty());
+        assert_eq!(old.submitted_at, 0);
+        let serialized = serde_json::to_value(&old).unwrap();
+        for field in [
+            "tools",
+            "previews",
+            "batch_id",
+            "submitted_at",
+            "updated_at",
+            "outputs",
+            "progress",
+            "message",
+            "error",
+        ] {
+            assert!(
+                serialized.get(field).is_some(),
+                "serialization omitted {field}"
+            );
+        }
+        for required in ["id", "input", "state", "plan"] {
+            let mut invalid = value.clone();
+            invalid.as_object_mut().unwrap().remove(required);
+            assert!(
+                serde_json::from_value::<StoredJob>(invalid).is_err(),
+                "defaulted {required}"
+            );
+        }
+        engine::release_prepared(&record.plan).unwrap();
+    }
+
+    #[test]
+    fn failed_running_store_skips_the_job_without_converting_and_processes_the_next() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("queue");
+        let first = queued_image(&root, &directory.path().join("first.png"));
+        let second = queued_image(&root, &directory.path().join("second.png"));
+        let mut attempts = 0;
+        run_worker_with_store(&root, None, |root, job| {
+            if job.view.id == first.id && job.view.state == JobState::Running {
+                attempts += 1;
+                bail!("simulated state write failure");
+            }
+            store(root, job)
+        })
+        .unwrap();
+        assert_eq!(attempts, 1);
+        assert_eq!(load(&root, &first.id).unwrap().view.state, JobState::Queued);
+        assert!(!first.outputs[0].exists());
+        assert!(
+            load(&root, &first.id).unwrap().plan.outputs[0]
+                .marker
+                .exists()
+        );
+        assert_eq!(
+            load(&root, &second.id).unwrap().view.state,
+            JobState::Completed
+        );
+        run_worker_at(&root, None).unwrap();
+        assert_eq!(
+            load(&root, &first.id).unwrap().view.state,
+            JobState::Completed
+        );
+        assert!(image::open(&first.outputs[0]).is_ok());
+    }
+
+    #[test]
+    fn failed_final_store_keeps_running_durable_and_recovery_never_republishes() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("queue");
+        let first = queued_image(&root, &directory.path().join("first.png"));
+        let second = queued_image(&root, &directory.path().join("second.png"));
+        run_worker_with_store(&root, None, |root, job| {
+            if job.view.id == first.id && job.view.state == JobState::Completed {
+                bail!("simulated final state failure");
+            }
+            store(root, job)
+        })
+        .unwrap();
+        assert_eq!(
+            load(&root, &first.id).unwrap().view.state,
+            JobState::Running
+        );
+        assert_eq!(
+            load(&root, &second.id).unwrap().view.state,
+            JobState::Completed
+        );
+        let output = fs::read(&first.outputs[0]).unwrap();
+        run_worker_at(&root, None).unwrap();
+        assert_eq!(load(&root, &first.id).unwrap().view.state, JobState::Failed);
+        assert_eq!(fs::read(&first.outputs[0]).unwrap(), output);
+        assert_eq!(
+            fs::read_dir(directory.path())
+                .unwrap()
+                .filter_map(|entry| entry.ok())
+                .filter(|entry| entry
+                    .path()
+                    .extension()
+                    .is_some_and(|extension| extension == "jpg"))
+                .count(),
+            2
+        );
+    }
+
+    #[test]
+    fn recovery_and_cancellation_store_failures_do_not_block_other_jobs() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("queue");
+        let running = queued_image(&root, &directory.path().join("running.png"));
+        let cancelled = queued_image(&root, &directory.path().join("cancelled.png"));
+        let valid = queued_image(&root, &directory.path().join("valid.png"));
+        let mut record = load(&root, &running.id).unwrap();
+        record.view.state = JobState::Running;
+        store(&root, &record).unwrap();
+        fs::write(
+            job_dir(&root, &cancelled.id).unwrap().join("cancel"),
+            b"cancel",
+        )
+        .unwrap();
+        run_worker_with_store(&root, None, |root, job| {
+            if job.view.id == running.id || job.view.id == cancelled.id {
+                bail!("simulated recovery/cancellation write failure");
+            }
+            store(root, job)
+        })
+        .unwrap();
+        assert_eq!(
+            load(&root, &valid.id).unwrap().view.state,
+            JobState::Completed
+        );
+        assert!(!running.outputs[0].exists());
+        assert!(!cancelled.outputs[0].exists());
+        run_worker_at(&root, None).unwrap();
+        assert_eq!(
+            load(&root, &running.id).unwrap().view.state,
+            JobState::Failed
+        );
+        assert_eq!(
+            load(&root, &cancelled.id).unwrap().view.state,
+            JobState::Cancelled
+        );
+    }
+
+    #[test]
+    fn unrelated_store_errors_are_not_retried() {
+        let mut attempts = 0;
+        assert!(
+            retry_store(|| {
+                attempts += 1;
+                Err(std::io::Error::from(std::io::ErrorKind::InvalidInput))
+                    .context("wrapped failure")
+            })
+            .is_err()
+        );
+        assert_eq!(attempts, 1);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_sharing_store_retries_are_bounded_and_unwrap_context() {
+        for code in [5, 32, 33] {
+            let mut attempts = 0;
+            let result = retry_store(|| {
+                attempts += 1;
+                Err(std::io::Error::from_raw_os_error(code)).context("wrapped Windows failure")
+            });
+            assert!(result.is_err());
+            assert_eq!(attempts, 4);
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_transient_job_lock_retries_then_saves_the_record() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("queue");
+        let job = queued_image(&root, &directory.path().join("source.png"));
+        let mut record = load(&root, &job.id).unwrap();
+        record.view.message = "Updated after transient lock".into();
+        let lock = OpenOptions::new()
+            .read(true)
+            .share_mode(1)
+            .open(job_dir(&root, &job.id).unwrap().join("job.json"))
+            .unwrap();
+        let (release, receiver) = std::sync::mpsc::channel();
+        let unlock = thread::spawn(move || {
+            receiver.recv().unwrap();
+            thread::sleep(Duration::from_millis(35));
+            drop(lock);
+        });
+        let mut attempts = 0;
+        retry_store(|| {
+            attempts += 1;
+            let result = store_once(&root, &record);
+            if attempts == 1 {
+                assert!(result.is_err());
+                release.send(()).unwrap();
+            }
+            result
+        })
+        .unwrap();
+        unlock.join().unwrap();
+        assert!(attempts > 1);
+        assert_eq!(
+            load(&root, &job.id).unwrap().view.message,
+            record.view.message
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn failed_quarantine_keeps_the_original_and_valid_jobs_keep_running() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("queue");
+        let valid = queued_image(&root, &directory.path().join("source.png"));
+        let invalid = root.join("job-locked");
+        fs::create_dir(&invalid).unwrap();
+        fs::write(invalid.join("job.json"), b"corrupt record").unwrap();
+        let locked = OpenOptions::new()
+            .read(true)
+            .share_mode(1)
+            .open(invalid.join("job.json"))
+            .unwrap();
+        let (jobs, warnings) = jobs_with_warnings_at(&root).unwrap();
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(warnings.len(), 1);
+        assert!(warnings[0].contains("impossibile rinominarlo"));
+        assert_eq!(
+            fs::read(invalid.join("job.json")).unwrap(),
+            b"corrupt record"
+        );
+        run_worker_at(&root, None).unwrap();
+        assert_eq!(
+            load(&root, &valid.id).unwrap().view.state,
+            JobState::Completed
+        );
+        drop(locked);
+        assert_eq!(records(&root).unwrap().1.len(), 1);
+        assert_eq!(
+            fs::read(invalid.join("job.json.unreadable")).unwrap(),
+            b"corrupt record"
+        );
     }
 }

@@ -23,7 +23,11 @@ use zeroize::Zeroize;
 const ACCENT: Color32 = Color32::from_rgb(0, 103, 192);
 const GREEN: Color32 = Color32::from_rgb(28, 135, 86);
 
-pub fn launch(files: Vec<PathBuf>, target: Option<OutputFormat>) -> eframe::Result {
+pub fn launch(
+    files: Vec<PathBuf>,
+    target: Option<OutputFormat>,
+    startup_warning: Option<String>,
+) -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Convert Here")
@@ -39,12 +43,19 @@ pub fn launch(files: Vec<PathBuf>, target: Option<OutputFormat>) -> eframe::Resu
         options,
         Box::new(move |cc| {
             configure_style(&cc.egui_ctx);
-            Ok(Box::new(ConverterApp::new(files, target)))
+            let mut app = ConverterApp::new(files, target);
+            if let Some(warning) = startup_warning {
+                app.notice = Some(match app.notice.take() {
+                    Some(notice) => format!("{warning}\n{notice}"),
+                    None => warning,
+                });
+            }
+            Ok(Box::new(app))
         }),
     )
 }
 
-pub fn launch_queue_status(job_id: String) -> eframe::Result {
+pub fn launch_queue_status(job_id: String, startup_warning: Option<String>) -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Convert Here · Stato conversione")
@@ -59,7 +70,9 @@ pub fn launch_queue_status(job_id: String) -> eframe::Result {
         options,
         Box::new(move |cc| {
             configure_style(&cc.egui_ctx);
-            Ok(Box::new(QueueStatusApp::new(job_id)))
+            let mut app = QueueStatusApp::new(job_id);
+            app.action_error = startup_warning;
+            Ok(Box::new(app))
         }),
     )
 }
@@ -1816,6 +1829,7 @@ struct QuickQueueView {
     last_refresh: Option<std::time::Instant>,
     error: Option<String>,
     action_error: Option<String>,
+    warnings: Vec<String>,
 }
 
 impl QuickQueueView {
@@ -1827,9 +1841,10 @@ impl QuickQueueView {
             return;
         }
         self.last_refresh = Some(std::time::Instant::now());
-        match queue::list_jobs() {
-            Ok(jobs) => {
+        match queue::list_jobs_with_warnings() {
+            Ok((jobs, warnings)) => {
                 self.jobs = jobs;
+                self.warnings = warnings;
                 self.error = None;
             }
             Err(error) => self.error = Some(format!("Impossibile leggere la coda: {error:#}")),
@@ -1837,7 +1852,11 @@ impl QuickQueueView {
     }
 
     fn show(&mut self, ui: &mut egui::Ui) {
-        if self.jobs.is_empty() && self.error.is_none() && self.action_error.is_none() {
+        if self.jobs.is_empty()
+            && self.error.is_none()
+            && self.action_error.is_none()
+            && self.warnings.is_empty()
+        {
             return;
         }
         let active = self.jobs.iter().filter(|job| quick_job_active(job)).count();
@@ -1847,6 +1866,23 @@ impl QuickQueueView {
             format!("Coda conversioni rapide · {active} in corso o in attesa")
         };
         let mut cancel = None;
+        if !self.warnings.is_empty() {
+            ui.colored_label(
+                Color32::from_rgb(180, 115, 20),
+                format!(
+                    "{} lavori della coda non sono leggibili e sono stati ignorati",
+                    self.warnings.len()
+                ),
+            )
+            .on_hover_text(
+                self.warnings
+                    .iter()
+                    .take(5)
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+            );
+        }
         egui::CollapsingHeader::new(title)
             .id_salt("persistent_quick_queue")
             .default_open(active > 0)

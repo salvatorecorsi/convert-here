@@ -135,8 +135,11 @@ fn run(args: Args) -> Result<()> {
         return queue::run_worker();
     }
     if let Some(id) = args.queue_job {
-        queue::ensure_worker()?;
-        return crate::app::launch_queue_status(id).map_err(|error| anyhow::anyhow!("{error}"));
+        let warning = queue::ensure_worker()
+            .err()
+            .map(|error| format!("La coda non è stata avviata: {error:#}"));
+        return crate::app::launch_queue_status(id, warning)
+            .map_err(|error| anyhow::anyhow!("{error}"));
     }
     if args.diagnose {
         println!("{}", serde_json::to_string_pretty(&ToolPaths::discover())?);
@@ -153,8 +156,11 @@ fn run(args: Args) -> Result<()> {
         return quick_convert(files, args.target.expect("clap requires target"));
     }
     if !args.convert {
-        queue::ensure_worker()?;
-        return crate::app::launch(files, args.target).map_err(|err| anyhow::anyhow!("{err}"));
+        let warning = queue::ensure_worker()
+            .err()
+            .map(|error| format!("La coda non è stata avviata: {error:#}"));
+        return crate::app::launch(files, args.target, warning)
+            .map_err(|err| anyhow::anyhow!("{err}"));
     }
     if files.is_empty() {
         bail!("Indica almeno un file con --files")
