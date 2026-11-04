@@ -4,9 +4,11 @@ This packaging path targets **Windows 11 x64, build 22000 or later**, and contai
 
 Product identity was verified in Partner Center on 4 November 2026: `Name` **SalvatoreCorsi.ConvertHere**, `Publisher` **CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17**, `PublisherDisplayName` **Corsivo**, reserved name **Convert Here**, Store ID **9NPKPPCBNBM8**. The developer is **Salvatore Corsi**. The Git-ignored local `identity.partner-center.json` uses these assigned values; a development publisher subject must not be substituted for them.
 
-Application **0.3.1**, Store package **1.0.1.0**, is a free local file converter with no subscriptions, in-app purchases or usage-based charges. It is being prepared for submission; consult [submission status](../../docs/store-submission.md) for the actual upload and certification state.
+Application **0.3.1**, Store package **1.0.1.0**, is a free local file converter with no subscriptions, in-app purchases or usage-based charges. No payment is required to keep using it. The [GitHub release](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.1) is published from commit `884cb2c610a9197d8b4853f0fa741dbe9035b5ed`, with [Windows checks](https://github.com/salvatorecorsi/convert-here/actions/runs/41852511198) successful.
 
-The earlier unsigned candidate built from application **0.3.0**, commit `d6ad0171dd002d01136e58b511f5e9e5e6dbfffb`, uses Store package **1.0.0.0** and was uploaded and validated in Partner Center without being submitted for certification. Its immutable build report and payload hashes describe that earlier artifact. Neither package validation nor a previous preview test proves installation testing, WACK completion, certification or publication of the replacement.
+The current `ConvertHere-1.0.1.0-x64-store.msix` is **6165956 bytes**, SHA-256 `e5f63b0c59983ebde7209a1a2813a63c4df8941c1dc7d77f813bea91f5dfdfdd`, built from that clean commit. Partner Center reports **Packages: Complete / Validated** and replaced the earlier 1.0.0.0 automatically when the higher version was saved. Italian and English listings each contain three 0.3.1 screenshots with captions, the 300 x 300 logo, 15 features and seven keywords. Properties and Submission options are Complete, including the [versioned privacy URL](https://github.com/salvatorecorsi/convert-here/blob/v0.3.1/docs/privacy.md), 1977-character testing instructions and a 424-character `runFullTrust` reason. Pricing remains free in all 240 markets, with publication as soon as approved.
+
+**IARC is still In Progress**, with a 3+ preview and no acceptance consent given. **The submission has not been sent for certification.** The Store MSIX has not been installed or run through WACK. Earlier build reports remain immutable historical records; portal validation and native-app QA do not prove packaged installation or certification. See [submission status](../../docs/store-submission.md).
 
 ## Preview build
 
@@ -51,7 +53,7 @@ A preliminary two-application package passed MakeAppx validation but WACK 1.0.1 
 
 The package declares only the implemented Italian UI language (`it-it`). An English Store listing is independent of application localization.
 
-Before submission, complete the listing, privacy policy, screenshots, restricted-capability explanation, Windows App Certification Kit and clean-machine app/menu/queue tests. Package generation does not replace Partner Center certification.
+The current package, listings, privacy URL, screenshots and capability explanation are saved in Partner Center. IARC acceptance and submission for certification remain incomplete. WACK is deprecated and optional; it has not been run on this Store candidate. Clean-machine app/menu/queue installation testing also remains unperformed. [Local package validation](https://learn.microsoft.com/en-us/windows/msix/package/packaging-uwp-apps#validate-your-app-package-locally).
 
 ## Microsoft references
 

@@ -2,11 +2,17 @@
 
 Queste verifiche accompagnano la preparazione Store di Corsivo. Non equivalgono alla certificazione Microsoft e non sostituiscono l'identita reale di Partner Center.
 
-## Preparazione corrente 0.3.1 / Store 1.0.1.0
+## Verifiche correnti 0.3.1 / Store 1.0.1.0
 
-Convert Here e gratuito, con conversioni di formato e OCR locali, senza abbonamenti, acquisti in-app o costi a consumo. Restano 44 destinazioni e 93 estensioni riconosciute, con motori locali opzionali. La nuova build 0.3.1 e il MSIX Store 1.0.1.0 sono in preparazione: esiti, commit e checksum saranno associati ai nuovi artefatti dopo le verifiche. **Il nuovo candidato non e ancora stato caricato**, IARC non e stato accettato e non e stata inviata alcuna submission per certificazione.
+Convert Here e gratuito, con conversioni di formato e OCR locali, senza abbonamenti, acquisti in-app o costi a consumo. Nessun pagamento richiesto per continuare a usarlo. Restano 44 destinazioni e 93 estensioni riconosciute, con motori locali opzionali. La [release GitHub 0.3.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.1) e pubblicata come latest dal commit `884cb2c610a9197d8b4853f0fa741dbe9035b5ed`; [Windows checks 41852511198](https://github.com/salvatorecorsi/convert-here/actions/runs/41852511198) e **SUCCESS**. L'inventario degli avvisi delle dipendenze Windows comprende **236 componenti**, senza avvisi mancanti.
 
-I risultati sotto riportati appartengono alle revisioni e agli artefatti indicati; non vengono trasferiti automaticamente alla nuova build.
+Il MSIX `ConvertHere-1.0.1.0-x64-store.msix` e di **6165956 byte**, SHA-256 `e5f63b0c59983ebde7209a1a2813a63c4df8941c1dc7d77f813bea91f5dfdfdd`, generato dal medesimo commit con working tree pulita. Partner Center mostra **Packages: Complete** e file **Validated**, Desktop x64, minimo Windows `10.0.22000.0`. Il salvataggio ha sostituito automaticamente il precedente 1.0.0.0.
+
+Le schede IT (59) ed EN (4) sono **Complete**, ciascuna con tre catture 0.3.1, didascalie, logo 300 x 300, 15 funzionalita e sette parole chiave. Properties e Submission options sono **Complete**: dichiarazione AI generative non selezionata, [privacy fissata alla 0.3.1](https://github.com/salvatorecorsi/convert-here/blob/v0.3.1/docs/privacy.md), istruzioni di test di 1977 caratteri e motivazione `runFullTrust` di 424 caratteri salvate con persistenza verificata. Prezzo gratuito, 240 mercati e pubblicazione appena approvata restano confermati.
+
+La QA nativa 0.3.1 ha completato due PNG in JPEG con zero errori e PDF Merge da tre sorgenti per cinque pagine, con riordino tramite trascinamento e risultato verificato tramite `pdfinfo` e `pdftotext`. Le [catture e il registro](store-assets/0.3.1/README.md) documentano la sessione isolata. **Il MSIX Store non e stato installato e il WACK non e stato eseguito**; questi esiti non vengono dedotti dalle prove native o dalla validazione del portale.
+
+**IARC resta In Progress**, con anteprima 3+ e consenso non dato. **Nessun invio per certificazione o pubblicazione Store e stato eseguito.** I risultati storici seguenti appartengono soltanto alle revisioni e agli artefatti indicati.
 
 ## Verifiche della 0.3.0 (storico)
 
@@ -45,7 +51,7 @@ Il candidato `ConvertHere-1.0.0.0-x64-store.msix`, applicazione 0.3.0, deriva da
 
 La verifica diretta in Partner Center del prodotto **9NPKPPCBNBM8**, submission **1152921505702314630**, mostra **Packages: Complete** e il file **Validated**, con Desktop selezionato. Sono **Complete** entrambe le schede italiana e inglese, ciascuna con due PNG della 0.3.0, didascalie e logo 300 x 300; anche Pricing, Properties e Submission options sono **Complete**. Sono salvate disponibilita gratuita in tutti i 240 mercati, pubblicazione appena approvata, motivazione `runFullTrust` e istruzioni per il certificatore.
 
-Il questionario IARC e rimasto **In Progress**, con anteprima 3+ non accettata. **La submission non e stata inviata per certificazione.** Il candidato 1.0.0.0 non e stato installato e non ha un report WACK. Le prove di preview e degli eseguibili separati non ne attestano installazione, menu registrato o disinstallazione. I report di build immutabili precedono l'upload; i loro campi di stato non vengono riscritti a posteriori. Questo pacchetto deve essere sostituito dal nuovo 1.0.1.0 dopo le verifiche; lo stato operativo e nella [procedura di submission](store-submission.md).
+Il questionario IARC e rimasto **In Progress**, con anteprima 3+ non accettata. **La submission non e stata inviata per certificazione.** Il candidato 1.0.0.0 non e stato installato e non ha un report WACK. Le prove di preview e degli eseguibili separati non ne attestano installazione, menu registrato o disinstallazione. I report di build immutabili precedono l'upload; i loro campi di stato non vengono riscritti a posteriori. Il portale ha poi sostituito questo pacchetto con il nuovo 1.0.1.0; lo stato operativo e nella [procedura di submission](store-submission.md).
 
 ## Pacchetti GitHub Convert Here 0.2.0 (storico)
 
@@ -62,4 +68,4 @@ Il report WACK locale della precedente preview **1.0.1.0**, eseguito con kit 10.
 
 **Il precedente report WACK riguarda una preview distinta e non viene dichiarato superato.** Microsoft considera il WACK un controllo locale deprecato e facoltativo: non e stato eseguito sul nuovo candidato e il suo esito non garantirebbe l'approvazione Store. Installazione/aggiornamento/disinstallazione, menu registrato e motori opzionali del MSIX finale restano senza un collaudo su ambiente pulito. [Validazione locale MSIX](https://learn.microsoft.com/en-us/windows/msix/package/packaging-uwp-apps#validate-your-app-package-locally).
 
-Identita Corsivo, Store ID e contatto reale sono documentati. Solo il precedente pacchetto 1.0.0.0 risulta caricato e validato; il nuovo 1.0.1.0 e in preparazione. IARC non e stato accettato e nessun invio per certificazione e stato eseguito. Vedi la [procedura di submission](store-submission.md).
+Identita Corsivo, Store ID e contatto reale sono documentati. Il pacchetto 1.0.1.0 e caricato e validato, mentre IARC non e stato accettato e nessun invio per certificazione e stato eseguito. Vedi la [procedura di submission](store-submission.md).

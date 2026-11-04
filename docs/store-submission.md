@@ -1,14 +1,15 @@
 # Microsoft Store: preparazione della submission
 
-Stato al 4 novembre 2026: la nuova applicazione **Convert Here 0.3.1**, gratuita e con conversioni e OCR locali, e il candidato Store **1.0.1.0** sono in preparazione. Il nuovo pacchetto **non e ancora stato caricato**. Il prodotto resta **9NPKPPCBNBM8**, [pagina Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8), `Name` **SalvatoreCorsi.ConvertHere**, `Publisher` **CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17**, `PublisherDisplayName` **Corsivo**. Titolare, autore e sviluppatore: **Salvatore Corsi**; contatto pubblico: **salvo@salvatorecorsi.com**, riportato nella [pagina contatti](https://www.salvatorecorsi.com/contatti/). Il precedente MSIX 1.0.0.0 e stato validato dal portale ma non inviato per certificazione; deve essere sostituito dopo le verifiche della nuova build. IARC non e stato accettato.
+Stato al 4 novembre 2026: **Convert Here 0.3.1** e [pubblicata su GitHub](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.1), dal commit `884cb2c610a9197d8b4853f0fa741dbe9035b5ed`. Il candidato Store **1.0.1.0** e stato caricato e risulta **Validated**, con **Packages: Complete**. Il prodotto resta **9NPKPPCBNBM8**, [pagina Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8), `Name` **SalvatoreCorsi.ConvertHere**, `Publisher` **CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17**, `PublisherDisplayName` **Corsivo**. Titolare, autore e sviluppatore: **Salvatore Corsi**; contatto pubblico: **salvo@salvatorecorsi.com**, dalla [pagina contatti](https://www.salvatorecorsi.com/contatti/). IARC resta **In Progress**, con anteprima 3+ e consenso non dato. **Nessun invio per certificazione o pubblicazione Store e stato eseguito.**
 
-## Stato della nuova preparazione 0.3.1 / 1.0.1.0
+## Stato corrente 0.3.1 / Store 1.0.1.0
 
-- **Pacchetto:** da generare e verificare come `ConvertHere-1.0.1.0-x64-store.msix`, Desktop x64, minimo Windows `10.0.22000.0`. Nessun nuovo upload o stato Validated attestato.
-- **Schede:** i testi IT/EN locali sono aggiornati alle sole conversioni e all'OCR locali; devono sostituire quelli della 0.3.0 nel portale.
-- **Properties e Submission options:** allineare le dichiarazioni delle funzioni e le istruzioni di test alla nuova 0.3.1.
-- **Prezzo e disponibilita:** restano le scelte del proprietario gia salvate: gratuita, tutti i 240 mercati disponibili, pubblicazione appena approvata.
-- **IARC e invio:** accettazione IARC non eseguita; nessun invio per certificazione o pubblicazione. La validazione precedente non attesta il nuovo candidato.
+- **Pacchetto:** `ConvertHere-1.0.1.0-x64-store.msix`, **6165956 byte**, SHA-256 `e5f63b0c59983ebde7209a1a2813a63c4df8941c1dc7d77f813bea91f5dfdfdd`, generato dal commit pulito `884cb2c610a9197d8b4853f0fa741dbe9035b5ed`. Caricato e **Validated**, **Packages: Complete**, Desktop x64, minimo Windows `10.0.22000.0`. Il salvataggio ha sostituito automaticamente il precedente 1.0.0.0 con la versione superiore.
+- **Schede:** italiana (59) e inglese (4) **Complete**; ciascuna contiene tre catture PNG della 0.3.1 con didascalie, logo 300 x 300, 15 funzionalita e sette parole chiave. I testi descrivono il prodotto gratuito e locale: nessun pagamento richiesto per continuare a usarlo.
+- **Properties:** **Complete**; dichiarazione delle funzionalita AI generative non selezionata e [privacy della 0.3.1](https://github.com/salvatorecorsi/convert-here/blob/v0.3.1/docs/privacy.md) pubblica verificata e salvata.
+- **Submission options:** **Complete**; motivazione `runFullTrust` di 424 caratteri e Additional Testing Information di 1977 caratteri salvate, con persistenza verificata.
+- **Prezzo e disponibilita:** gratuita, tutti i 240 mercati disponibili, pubblicazione appena approvata.
+- **IARC e invio:** **In Progress**, anteprima 3+ non accettata; consenso non dato e nessun invio per certificazione. La validazione del pacchetto non equivale alla certificazione o a una prova d'installazione.
 
 ## Storico: candidato 1.0.0.0, applicazione 0.3.0
 
@@ -26,7 +27,7 @@ Stato osservato per il precedente candidato 1.0.0.0, applicazione 0.3.0, nella s
 | Age ratings / IARC | **In Progress**; anteprima 3+, non finalizzata e non accettata. Il proprietario ha sospeso questo passaggio. |
 | Invio e certificazione | **Non eseguiti**. Nessuna approvazione o pubblicazione attestata. |
 
-Il file caricato conserva SHA-256 `e130564d34e88b3e9f60ba6de76b06536adaa109957e1673a0043886ad2fe1de`. Il report di build e i relativi checksum restano immutati: descrivono lo stato al momento della creazione, prima dell'upload. La validazione del portale non equivale alla certificazione o a una prova d'installazione.
+Il precedente file 1.0.0.0 aveva SHA-256 `e130564d34e88b3e9f60ba6de76b06536adaa109957e1673a0043886ad2fe1de` ed e stato sostituito nel portale dal 1.0.1.0. I report di build e i checksum storici restano immutati: descrivono lo stato al momento della creazione, prima dell'upload.
 
 ## Percorso scelto
 
@@ -46,7 +47,7 @@ Il menu moderno usa la DLL `IExplorerCommand`, COM surrogate e `windows.fileExpl
 | Publisher display name | **Corsivo**, confermato nel prodotto in Partner Center. |
 | Store ID | `9NPKPPCBNBM8`; l'identificativo non attesta la pubblicazione dell'app. |
 | Titolare e contatto | **Salvatore Corsi**, **salvo@salvatorecorsi.com**. |
-| Informativa privacy | [URL pubblico](https://github.com/salvatorecorsi/convert-here/blob/master/docs/privacy.md), con titolare e contatto reali nell'informativa IT/EN. |
+| Informativa privacy | [URL della versione 0.3.1](https://github.com/salvatorecorsi/convert-here/blob/v0.3.1/docs/privacy.md), pubblico verificato e salvato nelle Properties; titolare e contatto reali nell'informativa IT/EN. |
 | Supporto | **salvo@salvatorecorsi.com** oppure [pagina contatti](https://www.salvatorecorsi.com/contatti/), gia pubblici. Per PC il campo e facoltativo, ma consigliato. |
 | Prezzo, mercati e calendario | Scelte confermate dal proprietario e salvate: **Gratuita**, **tutti i 240 mercati disponibili**, **pubblicazione appena approvata**. |
 | Licenza applicazione Store | Il campo Additional license terms puo rimanere vuoto per usare gli Standard Application License Terms; termini diversi vanno inseriti esplicitamente. Questo non assegna una licenza open source al repository. |
@@ -95,7 +96,7 @@ La dipendenza va dichiarata all'inizio delle descrizioni: la policy 10.2.4 ammet
 
 ## Capability e motivazione per la certificazione
 
-`runFullTrust` e dichiarato per l'app desktop `mediumIL` e il COM packaged. Una motivazione di 469 caratteri era stata salvata per il precedente candidato; lo scopo tecnico resta:
+`runFullTrust` e dichiarato per l'app desktop `mediumIL` e il COM packaged. La motivazione corrente di 424 caratteri e stata salvata nelle Submission options. Scopo tecnico:
 
 > Convert Here is a native Rust desktop file conversion application. It reads files explicitly selected by the user, writes converted outputs to the selected folder, and provides an IExplorerCommand shell extension through packaged COM. Optional conversion engines already installed or explicitly selected by the user run as child processes with the user's permissions. The app does not require administrator privileges, a service, a driver, or elevation.
 
@@ -103,15 +104,15 @@ Non aggiungere `unvirtualizedResources` per abitudine ereditandolo dal pacchetto
 
 ## Stato dei materiali e delle verifiche
 
-Le prove e i campi Complete del candidato 1.0.0.0 sono storici. Lo [stato delle verifiche](store-validation.md) distingue la nuova 0.3.1 dai report precedenti.
+Il candidato 1.0.1.0 e le schede della 0.3.1 sono validati e salvati nel portale. Lo [stato delle verifiche](store-validation.md) distingue release, prove native e report storici dal collaudo d'installazione del MSIX.
 
 - [x] Identita reale Partner Center e contatto confermati.
 - [x] Informativa privacy IT/EN e schede locali aggiornate alla 0.3.1.
 - [x] Scelte del proprietario salvate: gratuita, 240 mercati disponibili, pubblicazione appena approvata.
-- [ ] Build 0.3.1 e controlli associati al nuovo commit completati; nuovo MSIX 1.0.1.0 generato, validato e identificato con checksum.
-- [ ] Nuovo candidato verificato dal responsabile della build e caricato al posto del precedente 1.0.0.0.
-- [ ] Schede IT/EN, Properties e Additional Testing Information aggiornate nel portale al comportamento della 0.3.1.
-- [ ] Catture e asset ricontrollati per il nuovo candidato; le due PNG e il logo gia caricati documentano la 0.3.0.
+- [x] Build 0.3.1 associata al commit `884cb2c610a9197d8b4853f0fa741dbe9035b5ed`; [Windows checks 41852511198](https://github.com/salvatorecorsi/convert-here/actions/runs/41852511198) **SUCCESS**. MSIX 1.0.1.0 generato, validato e identificato con checksum.
+- [x] Candidato 1.0.1.0 verificato e caricato al posto del precedente 1.0.0.0; Packages **Complete**, file **Validated**.
+- [x] Schede IT/EN, Properties e Additional Testing Information aggiornate e salvate nel portale per la 0.3.1.
+- [x] Tre catture PNG della 0.3.1 con didascalie e logo 300 x 300 salvati in ciascuna scheda; prove native immagini e PDF Merge superate.
 - [ ] Questionario IARC finalizzato; l'anteprima 3+ precedente non costituisce accettazione o classificazione completata.
 - [ ] Eventuale collaudo installazione/aggiornamento/disinstallazione, menu moderno, coda e motori su ambiente pulito documentato per il candidato finale.
 - [ ] Submission inviata per certificazione; nessun invio e attestato al momento.
@@ -120,9 +121,9 @@ Il Windows App Certification Kit non e stato eseguito sul nuovo candidato. Micro
 
 Per il CSV attendere l'esportazione del prodotto reale da Partner Center: preservare colonne Field, ID e Type; trasferire i testi preparati nei campi della lingua corretta. Non inventare un template con ID presunti. [Importazione/esportazione delle schede](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/import-and-export-store-listings).
 
-## Note per il certificatore: bozza per 0.3.1
+## Note per il certificatore: riferimento per 0.3.1
 
-Istruzioni da sostituire nel portale dopo aver verificato il nuovo candidato; non ancora salvate come note della 1.0.1.0. Descrivono procedure previste dal codice e dal manifest, non prove d'installazione gia eseguite.
+Nel portale sono state salvate e rilette istruzioni di test di 1977 caratteri. Il riferimento esteso seguente descrive le procedure dell'app e del manifest; non attesta un collaudo d'installazione del MSIX.
 
 > Convert Here 0.3.1 / Store package 1.0.1.0. Publisher: Corsivo; developer: Salvatore Corsi. The UI is Italian. The software is free, with no subscriptions, in-app purchases or usage-based charges. Conversion and OCR run locally and need no app account or login. Target: Windows 11 x64.
 >
