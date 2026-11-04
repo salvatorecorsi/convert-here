@@ -582,12 +582,8 @@ pub fn convert_prepared(
             cancelled(cancel)?;
             verify_output(plan, output)?;
             // persist_noclobber performs a same-volume atomic move, including a final race check.
-            let mut temporary = tempfile::Builder::new()
-                .prefix(".publish-")
-                .tempfile_in(&plan.work_dir)?;
-            let mut source = File::open(source)?;
-            std::io::copy(&mut source, temporary.as_file_mut())?;
-            temporary.as_file_mut().sync_all()?;
+            let temporary = super::staged_temporary(source, &plan.work_dir)?;
+            temporary.as_file().sync_all()?;
             let file = temporary
                 .persist_noclobber(&output.path)
                 .map_err(|error| error.error)

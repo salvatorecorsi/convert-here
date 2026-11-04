@@ -297,6 +297,36 @@ pub(crate) fn temporary(dir: &Path, ext: &str) -> Result<NamedTempFile> {
         .tempfile_in(dir)?)
 }
 
+/// Adopt a completed file from a caller-owned staging directory without copying.
+/// The enclosing TempDir/WorkGuard remains responsible for failed publications;
+/// the adopted path must never be an original user input or a symbolic link.
+pub(crate) fn staged_temporary(source: &Path, stage: &Path) -> Result<NamedTempFile> {
+    let metadata = fs::symlink_metadata(source).context("Risultato temporaneo non accessibile")?;
+    if !metadata.file_type().is_file() {
+        bail!("Il risultato temporaneo deve essere un file regolare");
+    }
+    let stage = fs::canonicalize(stage).context("Cartella temporanea non accessibile")?;
+    let source = fs::canonicalize(source).context("Risultato temporaneo non accessibile")?;
+    if source.parent() != Some(stage.as_path()) {
+        bail!("Il risultato non appartiene alla cartella temporanea della conversione");
+    }
+    // Keep this handle across the rename. Reopening the published path could
+    // fail or observe a replacement created by another program in the meantime.
+    let file = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&source)
+        .context("Impossibile aprire il risultato temporaneo")?;
+    if file.metadata()?.len() == 0 {
+        bail!("Il convertitore ha prodotto un file vuoto");
+    }
+    let mut path = tempfile::TempPath::try_from_path(source)?;
+    // A failed no-clobber attempt must leave the owned source available for
+    // another numbered name. Its enclosing staging directory handles cleanup.
+    path.disable_cleanup(true);
+    Ok(NamedTempFile::from_parts(file, path))
+}
+
 /// persist_noclobber performs the final creation without replacing an existing file, including races.
 pub(crate) fn commit(
     mut temp: NamedTempFile,
@@ -1126,13 +1156,15 @@ fn convert_pdf(
     let result = (|| -> Result<()> {
         for (i, page) in pages.iter().enumerate() {
             cancelled(cancel)?;
-            let path = copy_commit(
-                page,
+            let temporary = staged_temporary(page, stage.path())?;
+            let retained = temporary.as_file().try_clone()?;
+            let path = commit(
+                temporary,
                 dir,
                 &format!("{}-pagina-{:03}", stem(input), i + 1),
                 s.format.extension(),
             )?;
-            outputs.push(path);
+            outputs.push((path, retained));
             progress(Progress {
                 fraction: 0.5 + (i + 1) as f32 / pages.len() as f32 * 0.49,
                 message: format!("Pagina {} di {}", i + 1, pages.len()),
@@ -1141,17 +1173,47 @@ fn convert_pdf(
         Ok(())
     })();
     if let Err(e) = result {
-        for output in outputs {
-            let _ = fs::remove_file(output);
+        for (path, retained) in &outputs {
+            if let Ok(current) = fs::File::open(path)
+                && matches!((file_identity(retained), file_identity(&current)), (Ok(a), Ok(b)) if a == b)
+            {
+                let _ = fs::remove_file(path);
+            }
         }
         return Err(e);
     }
-    Ok(outputs)
+    Ok(outputs.into_iter().map(|(path, _)| path).collect())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn adopting_staged_files_never_accepts_an_original_outside_the_staging_directory() {
+        let directory = tempfile::tempdir().unwrap();
+        let stage = directory.path().join("stage");
+        fs::create_dir(&stage).unwrap();
+        let original = directory.path().join("original.txt");
+        fs::write(&original, b"original user data").unwrap();
+        assert!(staged_temporary(&original, &stage).is_err());
+        assert_eq!(fs::read(original).unwrap(), b"original user data");
+    }
+
+    #[test]
+    fn failed_adopted_publication_keeps_the_owned_source_for_staging_cleanup() {
+        let directory = tempfile::tempdir().unwrap();
+        let source = directory.path().join("source.tmp");
+        let destination = directory.path().join("existing.txt");
+        fs::write(&source, b"completed result").unwrap();
+        fs::write(&destination, b"unrelated existing data").unwrap();
+        let temporary = staged_temporary(&source, directory.path()).unwrap();
+        let error = temporary.persist_noclobber(&destination).unwrap_err();
+        assert_eq!(error.error.kind(), std::io::ErrorKind::AlreadyExists);
+        drop(error);
+        assert_eq!(fs::read(source).unwrap(), b"completed result");
+        assert_eq!(fs::read(destination).unwrap(), b"unrelated existing data");
+    }
 
     #[test]
     fn pdfinfo_count_uses_the_real_field_after_metadata_and_rejects_invalid_numbers() {

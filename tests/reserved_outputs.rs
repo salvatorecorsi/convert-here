@@ -25,6 +25,45 @@ fn settings(format: OutputFormat) -> ConversionSettings {
     }
 }
 
+#[cfg(windows)]
+fn file_identity(file: &fs::File) -> (u64, u64) {
+    use std::os::windows::io::AsRawHandle;
+    #[repr(C)]
+    #[derive(Default)]
+    struct Information {
+        attributes: u32,
+        times: [u32; 6],
+        volume: u32,
+        size: [u32; 2],
+        links: u32,
+        high: u32,
+        low: u32,
+    }
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn GetFileInformationByHandle(
+            handle: *mut std::ffi::c_void,
+            information: *mut Information,
+        ) -> i32;
+    }
+    let mut information = Information::default();
+    assert_ne!(
+        unsafe { GetFileInformationByHandle(file.as_raw_handle(), &mut information) },
+        0
+    );
+    (
+        u64::from(information.volume),
+        (u64::from(information.high) << 32) | u64::from(information.low),
+    )
+}
+
+#[cfg(not(windows))]
+fn file_identity(file: &fs::File) -> (u64, u64) {
+    use std::os::unix::fs::MetadataExt;
+    let metadata = file.metadata().unwrap();
+    (metadata.dev(), metadata.ino())
+}
+
 #[test]
 fn names_are_reserved_without_creating_invalid_media_and_survive_serialization() {
     let folder = tempfile::tempdir().unwrap();
@@ -346,6 +385,33 @@ fn prepared_conversion_publishes_exact_name_and_preserves_owned_markers_until_re
 }
 
 #[test]
+fn prepared_publication_retains_the_encoded_files_identity_without_a_second_copy() {
+    let folder = tempfile::tempdir().unwrap();
+    let input = folder.path().join("source.png");
+    fixture(&input);
+    let plan =
+        engine::prepare(&input, &settings(OutputFormat::Jpg), &ToolPaths::default()).unwrap();
+    let mut staged_file = None;
+    let outputs = engine::convert_prepared(
+        &plan,
+        &ToolPaths::default(),
+        &AtomicBool::new(false),
+        |progress| {
+            if progress.message == "Salvataggio del risultato…" && staged_file.is_none() {
+                staged_file = Some(fs::File::open(plan.work_dir.join("source.jpg")).unwrap());
+            }
+        },
+    )
+    .unwrap();
+    let staged_file = staged_file.expect("the encoded file must exist before final publication");
+    let published = fs::File::open(&outputs[0]).unwrap();
+    assert_eq!(file_identity(&staged_file), file_identity(&published));
+    assert!(!plan.work_dir.exists());
+    assert_eq!(image::open(&outputs[0]).unwrap().width(), 40);
+    engine::release_prepared(&plan).unwrap();
+}
+
+#[test]
 fn external_files_and_foreign_reservations_are_never_removed_or_overwritten() {
     let folder = tempfile::tempdir().unwrap();
     let input = folder.path().join("source.png");
@@ -431,6 +497,91 @@ fn two_page_pdf(path: &Path) {
     let root = document.add_object(dictionary! {"Type"=>"Catalog", "Pages"=>pages});
     document.trailer.set("Root", root);
     document.save(path).unwrap();
+}
+
+#[test]
+fn rendered_pdf_page_keeps_its_original_staging_file_identity() {
+    let tools = ToolPaths::discover();
+    if tools.pdftoppm.is_none() {
+        eprintln!("SKIP PDF page move identity: pdftoppm unavailable");
+        return;
+    }
+    let folder = tempfile::tempdir().unwrap();
+    let input = folder.path().join("document.pdf");
+    two_page_pdf(&input);
+    let mut rendered_page = None;
+    let outputs = engine::convert(
+        &input,
+        &settings(OutputFormat::Png),
+        &tools,
+        &AtomicBool::new(false),
+        |progress| {
+            if progress.message == "Pagina 1 di 2" {
+                let stage = fs::read_dir(folder.path())
+                    .unwrap()
+                    .map(|entry| entry.unwrap().path())
+                    .find(|path| {
+                        path.is_dir()
+                            && path
+                                .file_name()
+                                .unwrap()
+                                .to_string_lossy()
+                                .starts_with(".the-converter-pages-")
+                    })
+                    .unwrap();
+                let page = fs::read_dir(stage)
+                    .unwrap()
+                    .map(|entry| entry.unwrap().path())
+                    .find(|path| {
+                        path.file_stem()
+                            .and_then(|name| name.to_str())
+                            .and_then(|name| name.rsplit('-').next())
+                            .and_then(|number| number.parse::<u32>().ok())
+                            == Some(2)
+                    })
+                    .unwrap();
+                rendered_page = Some(fs::File::open(page).unwrap());
+            }
+        },
+    )
+    .unwrap();
+    assert_eq!(outputs.len(), 2);
+    assert_eq!(
+        file_identity(&rendered_page.unwrap()),
+        file_identity(&fs::File::open(&outputs[1]).unwrap())
+    );
+    assert_eq!(fs::read_dir(folder.path()).unwrap().count(), 3);
+}
+
+#[test]
+fn direct_pdf_rollback_preserves_a_published_page_replaced_by_another_program() {
+    let tools = ToolPaths::discover();
+    if tools.pdftoppm.is_none() {
+        eprintln!("SKIP direct PDF rollback: pdftoppm unavailable");
+        return;
+    }
+    let folder = tempfile::tempdir().unwrap();
+    let input = folder.path().join("document.pdf");
+    two_page_pdf(&input);
+    let first_output = folder.path().join("document-pagina-001.png");
+    let cancel = AtomicBool::new(false);
+    let result = engine::convert(
+        &input,
+        &settings(OutputFormat::Png),
+        &tools,
+        &cancel,
+        |progress| {
+            if progress.message == "Pagina 1 di 2" {
+                fs::remove_file(&first_output).unwrap();
+                fs::write(&first_output, b"external replacement").unwrap();
+                cancel.store(true, Ordering::Relaxed);
+            }
+        },
+    );
+    assert!(result.unwrap_err().to_string().contains("annullata"));
+    assert_eq!(fs::read(first_output).unwrap(), b"external replacement");
+    assert!(!folder.path().join("document-pagina-002.png").exists());
+    assert_eq!(fs::read_dir(folder.path()).unwrap().count(), 2);
 }
 
 #[test]
