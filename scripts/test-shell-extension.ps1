@@ -11,6 +11,7 @@ $repo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $registration = Join-Path $PSScriptRoot 'install-context-menu.ps1'
 $installer = Join-Path $repo 'installer\TheConverter.iss'
 $shellSource = Join-Path $repo 'shell-extension\src\lib.rs'
+$modelSource = Join-Path $repo 'src\model.rs'
 if ((Test-Path -LiteralPath $installer) -and (Test-Path -LiteralPath $shellSource)) {
     $installSource = Get-Content -LiteralPath $registration -Raw
     $list = [regex]::Match($installSource, '(?s)\$classicExtensions\s*=\s*@\((.*?)\)')
@@ -25,8 +26,14 @@ if ((Test-Path -LiteralPath $installer) -and (Test-Path -LiteralPath $shellSourc
     $maskSource = $rust.Substring($rust.IndexOf('fn target_mask('), $rust.IndexOf('fn common_target_mask') - $rust.IndexOf('fn target_mask('))
     $shellExtensions = @([regex]::Matches($maskSource, '"([a-z0-9]+)"') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
     if ((Compare-Object @($extensions | Sort-Object -Unique) $shellExtensions)) { throw 'Classic whitelist and shell input extensions differ.' }
+    if (-not (Test-Path -LiteralPath $modelSource -PathType Leaf)) { throw 'Application model source missing.' }
+    $model = Get-Content -LiteralPath $modelSource -Raw
+    $classification = [regex]::Match($model, '(?ms)^impl\s+MediaKind\s*\{(?<classification>.*?)^\}')
+    if (-not $classification.Success) { throw 'MediaKind::from_path extension classification missing.' }
+    $modelExtensions = @([regex]::Matches($classification.Groups['classification'].Value, '"([a-z0-9]+)"') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+    if ((Compare-Object $modelExtensions $shellExtensions)) { throw 'Application model and shell input extensions differ.' }
     if ($extensions -notcontains 'txt' -or $extensions -notcontains 'mpga' -or $extensions -contains 'exe' -or $extensions -contains 'unknown') { throw 'Unexpected classic whitelist capabilities.' }
-    Write-Output "Classic AppliesTo verified: $($extensions.Count) input extensions match DLL and installer; TXT documents included, unknown inputs excluded."
+    Write-Output "Classic AppliesTo verified: $($extensions.Count) input extensions match app, DLL and installer; TXT documents included, unknown inputs excluded."
 } elseif ($ValidateRegistrationOnly) { throw 'Run registration-only validation from the source checkout.' }
 if ($ValidateRegistrationOnly) { return }
 if (-not $LibraryPath) {

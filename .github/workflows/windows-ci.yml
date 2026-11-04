@@ -32,12 +32,44 @@ jobs:
           cargo fmt --all -- --check
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           cargo fmt --manifest-path shell-extension/Cargo.toml -- --check
+      - name: Clippy
+        shell: pwsh
+        run: |
+          cargo clippy --locked --all-targets -- -D warnings
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cargo clippy --locked --all-targets --manifest-path shell-extension/Cargo.toml -- -D warnings
+      - name: Cache conversion engines
+        id: conversion-engines
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            tools/ffmpeg
+            tools/poppler
+          key: ${{ runner.os }}-conversion-engines-${{ hashFiles('scripts/fetch-tools.ps1', 'scripts/install-runtime-tools.ps1') }}
+      - name: Fetch conversion engines
+        if: steps.conversion-engines.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: ./scripts/fetch-tools.ps1
+      - name: Verify conversion engines
+        shell: pwsh
+        run: |
+          foreach ($tool in @('tools/ffmpeg/bin/ffmpeg.exe', 'tools/ffmpeg/bin/ffprobe.exe', 'tools/poppler/Library/bin/pdftoppm.exe', 'tools/poppler/Library/bin/pdftotext.exe', 'tools/poppler/Library/bin/pdfinfo.exe')) {
+            if (-not (Test-Path -LiteralPath $tool -PathType Leaf)) { throw "Conversion engine missing: $tool" }
+          }
       - name: Rust tests
         shell: pwsh
         run: |
           cargo test --locked --all-targets
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          cargo test --locked --manifest-path shell-extension/Cargo.toml
+          cargo test --locked --all-targets --manifest-path shell-extension/Cargo.toml
+      - name: Build Explorer command DLL
+        shell: pwsh
+        run: cargo build --locked --manifest-path shell-extension/Cargo.toml
+      - name: Explorer COM smoke and source parity
+        shell: pwsh
+        run: |
+          ./scripts/test-shell-extension.ps1 -LibraryPath ./shell-extension/target/debug/the_converter_shell.dll
+          ./scripts/test-shell-extension-parity.ps1
       - name: PowerShell syntax
         shell: pwsh
         run: |
@@ -52,6 +84,16 @@ jobs:
       - name: Explorer registration fixtures
         shell: pwsh
         run: ./scripts/test-modern-menu-package.ps1
+      - name: Installer policy and literal fixtures
+        shell: pwsh
+        run: |
+          ./scripts/test-installer-uninstall-policy.ps1
+          ./scripts/test-installer-literals.ps1
+          $windowsPowerShell = Join-Path $env:WINDIR 'System32/WindowsPowerShell/v1.0/powershell.exe'
+          & $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/test-installer-uninstall-policy.ps1
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          & $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/test-installer-literals.ps1
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Store packaging fixtures
         shell: pwsh
         run: ./scripts/test-store-package.ps1
