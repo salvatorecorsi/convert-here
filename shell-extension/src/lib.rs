@@ -35,6 +35,9 @@ const UNKNOWN_SELECTION_MASK: u64 = u64::MAX;
 const SELECTION_CONTAINS_AUDIO: u64 = 1 << 63;
 const SELECTION_CONTAINS_IMAGE: u64 = 1 << 62;
 const SELECTION_CONTAINS_PDF: u64 = 1 << 61;
+const SELECTION_MULTIPLE: u64 = 1 << 60;
+const PDF_TARGET: u64 = 1 << 19;
+const PDF_MERGE_GUID_SLOT: usize = 45;
 const AUDIO_TARGETS: u64 = ((1 << 7) - 1) | (((1 << 5) - 1) << 21);
 const VIDEO_TARGETS: u64 = AUDIO_TARGETS | (((1 << 6) - 1) << 7) | (((1 << 6) - 1) << 26);
 const IMAGE_TARGETS: u64 = (((1 << 8) - 1) << 12) | (((1 << 6) - 1) << 32) | (3 << 42) | (1 << 20);
@@ -162,7 +165,9 @@ fn text_target_title(selection: u64) -> &'static str {
 }
 
 fn pdf_target_title(selection: u64) -> &'static str {
-    if selection != UNKNOWN_SELECTION_MASK && selection & SELECTION_CONTAINS_PDF != 0 {
+    if selection != UNKNOWN_SELECTION_MASK && selection & SELECTION_MULTIPLE != 0 {
+        "PDF (Bulk)"
+    } else if selection != UNKNOWN_SELECTION_MASK && selection & SELECTION_CONTAINS_PDF != 0 {
         "PDF · comprimi"
     } else {
         "PDF"
@@ -230,6 +235,7 @@ struct ExplorerObject {
     header: ComObject<ExplorerVtable>,
     target: Option<String>,
     parent: bool,
+    pdf_merge: bool,
     selection_mask: AtomicU64,
 }
 
@@ -293,7 +299,7 @@ fn allocate<T>(vtable: &'static T) -> *mut c_void {
     })) as *mut c_void
 }
 
-fn allocate_command(target: Option<&str>, parent: bool) -> *mut c_void {
+fn allocate_command(target: Option<&str>, parent: bool, pdf_merge: bool) -> *mut c_void {
     OBJECTS.fetch_add(1, Ordering::Relaxed);
     Box::into_raw(Box::new(ExplorerObject {
         header: ComObject {
@@ -302,6 +308,7 @@ fn allocate_command(target: Option<&str>, parent: bool) -> *mut c_void {
         },
         target: target.map(str::to_owned),
         parent,
+        pdf_merge,
         selection_mask: AtomicU64::new(UNKNOWN_SELECTION_MASK),
     })) as *mut c_void
 }
@@ -405,6 +412,29 @@ unsafe extern "system" fn enumerator_release(this: *mut c_void) -> u32 {
     remaining
 }
 
+// Merge is an action inserted beside PDF, not another OutputFormat or mask bit.
+// The final entry remains custom settings; canonical GUID slots are independent
+// of this presentation order.
+fn enumeration_entry(index: usize, mask: u64) -> Option<(Option<&'static str>, bool)> {
+    const MERGE_POSITION: usize = 20;
+    if index == MERGE_POSITION {
+        return (mask & PDF_TARGET != 0 && mask & SELECTION_MULTIPLE != 0)
+            .then_some((Some("pdf"), true));
+    }
+    let target_index = if index > MERGE_POSITION {
+        index - 1
+    } else {
+        index
+    };
+    if target_index < TARGETS.len() {
+        (mask & (1 << target_index) != 0).then_some((Some(TARGETS[target_index]), false))
+    } else if target_index == TARGETS.len() && mask & ALL_TARGETS != 0 {
+        Some((None, false))
+    } else {
+        None
+    }
+}
+
 unsafe extern "system" fn enumerator_next(
     this: *mut c_void,
     requested: u32,
@@ -422,16 +452,13 @@ unsafe extern "system" fn enumerator_next(
     let mut returned = 0;
     while returned < requested {
         let index = cursor.fetch_add(1, Ordering::AcqRel);
-        if index > TARGETS.len() {
+        if index > TARGETS.len() + 1 {
             break;
         }
-        if (index < TARGETS.len() && mask & (1 << index) == 0)
-            || (index == TARGETS.len() && mask & ALL_TARGETS == 0)
-        {
+        let Some((target, pdf_merge)) = enumeration_entry(index, mask) else {
             continue;
-        }
-        let target = TARGETS.get(index).copied();
-        let child = allocate_command(target, false);
+        };
+        let child = allocate_command(target, false, pdf_merge);
         (*(child as *mut ExplorerObject))
             .selection_mask
             .store(mask, Ordering::Release);
@@ -452,12 +479,10 @@ unsafe extern "system" fn enumerator_skip(this: *mut c_void, count: u32) -> HRes
     for _ in 0..count {
         loop {
             let index = object.cursor.fetch_add(1, Ordering::AcqRel);
-            if index > TARGETS.len() {
+            if index > TARGETS.len() + 1 {
                 return S_FALSE;
             }
-            if (index < TARGETS.len() && object.mask & (1 << index) != 0)
-                || (index == TARGETS.len() && object.mask & ALL_TARGETS != 0)
-            {
+            if enumeration_entry(index, object.mask).is_some() {
                 break;
             }
         }
@@ -496,7 +521,7 @@ unsafe extern "system" fn factory_create(
     if !outer.is_null() {
         return CLASS_E_NOAGGREGATION;
     }
-    let command = allocate_command(None, true);
+    let command = allocate_command(None, true, false);
     let result = explorer_query(command, iid, out);
     explorer_release(command);
     result
@@ -533,6 +558,8 @@ unsafe extern "system" fn explorer_title(
     let command = &*(this as *mut ExplorerObject);
     if command.parent {
         string_result("Converti in", out)
+    } else if command.pdf_merge {
+        string_result("PDF (Merge)", out)
     } else if let Some(target) = command.target.as_deref() {
         let label = match target {
             "txt" => text_target_title(command.selection_mask.load(Ordering::Acquire)).to_owned(),
@@ -558,7 +585,9 @@ unsafe extern "system" fn explorer_tooltip(
     out: *mut *mut u16,
 ) -> HResult {
     let command = &*(this as *mut ExplorerObject);
-    if command.target.is_some() {
+    if command.pdf_merge {
+        string_result("Ordina le pagine e crea un unico PDF", out)
+    } else if command.target.is_some() {
         string_result("Converti subito con le impostazioni salvate", out)
     } else {
         string_result("Scegli formato, qualità e destinazione", out)
@@ -595,7 +624,12 @@ unsafe extern "system" fn explorer_canonical(this: *mut c_void, out: *mut Guid) 
     *out = CLSID_CONVERTER;
     let command = &*(this as *mut ExplorerObject);
     if !command.parent {
-        (*out).d[7] ^= target_guid_slot(command.target.as_deref()) as u8 + 1;
+        let slot = if command.pdf_merge {
+            PDF_MERGE_GUID_SLOT
+        } else {
+            target_guid_slot(command.target.as_deref())
+        };
+        (*out).d[7] ^= slot as u8 + 1;
     }
     S_OK
 }
@@ -773,6 +807,10 @@ unsafe extern "system" fn explorer_state(
         *out = ECS_DISABLED;
         return S_OK;
     }
+    if command.pdf_merge && count < 2 {
+        command.selection_mask.store(0, Ordering::Release);
+        return S_OK;
+    }
     // Windows retries E_PENDING on a background thread with fOkToBeSlow.
     if count > 16 && slow == 0 {
         *out = ECS_DISABLED;
@@ -806,7 +844,11 @@ unsafe extern "system" fn explorer_state(
         }
     }
     command.selection_mask.store(
-        mask | if mask != 0 { metadata } else { 0 },
+        mask | if mask != 0 {
+            metadata | if count >= 2 { SELECTION_MULTIPLE } else { 0 }
+        } else {
+            0
+        },
         Ordering::Release,
     );
     if mask != 0 && required.is_none_or(|required| mask & required != 0) {
@@ -845,6 +887,9 @@ unsafe extern "system" fn explorer_invoke(
         Ok(count) if count > 0 && count <= MAX_SELECTION => count,
         _ => return E_FAIL,
     };
+    if command.pdf_merge && count < 2 {
+        return E_FAIL;
+    }
     let mut selected_paths = Vec::with_capacity(count as usize);
     for index in 0..count {
         match item_path(items, index) {
@@ -910,8 +955,13 @@ unsafe extern "system" fn explorer_invoke(
     drop(file);
     // Command performs Win32 argument quoting. Never interpolate into a shell.
     let mut process = Command::new(executable);
-    if let Some(target) = command.target.as_deref() {
+    if command.pdf_merge {
+        process.args(["--target", "pdf", "--pdf-batch", "merge"]);
+    } else if let Some(target) = command.target.as_deref() {
         process.arg("--quick").arg("--target").arg(target);
+        if target == "pdf" && count >= 2 {
+            process.args(["--pdf-batch", "bulk"]);
+        }
     }
     match process
         .arg("--selection-file")
@@ -1035,7 +1085,7 @@ mod tests {
             }
             let mut clone = ptr::null_mut();
             assert_eq!(enumerator_clone(enumerator, &mut clone), S_OK);
-            assert_eq!(enumerator_skip(clone, (TARGETS.len() - 2) as u32), S_OK);
+            assert_eq!(enumerator_skip(clone, (TARGETS.len() - 1) as u32), S_OK);
             let mut custom = ptr::null_mut();
             assert_eq!(enumerator_next(clone, 1, &mut custom, &mut fetched), S_OK);
             assert!(!(*(custom as *mut ExplorerObject)).parent);
@@ -1051,7 +1101,7 @@ mod tests {
             assert_eq!(enumerator_release(clone), 0);
             assert_eq!(enumerator_reset(enumerator), S_OK);
             assert_eq!(
-                enumerator_skip(enumerator, (TARGETS.len() + 1) as u32),
+                enumerator_skip(enumerator, (TARGETS.len() + 2) as u32),
                 S_OK
             );
             assert_eq!(
@@ -1087,6 +1137,34 @@ mod tests {
             assert!((*(custom as *mut ExplorerObject)).target.is_none());
             assert_eq!(explorer_release(custom), 0);
             assert_eq!(enumerator_release(filtered), 0);
+            let batch = allocate_enumerator(0, PDF_TARGET | SELECTION_MULTIPLE);
+            let mut commands = [ptr::null_mut(); 4];
+            assert_eq!(
+                enumerator_next(batch, 4, commands.as_mut_ptr(), &mut fetched),
+                S_FALSE
+            );
+            assert_eq!(fetched, 3); // Bulk, merge, then custom settings.
+            assert!(!(*(commands[0] as *mut ExplorerObject)).pdf_merge);
+            assert!((*(commands[1] as *mut ExplorerObject)).pdf_merge);
+            assert!((*(commands[2] as *mut ExplorerObject)).target.is_none());
+            let mut bulk_guid = CLSID_CONVERTER;
+            let mut merge_guid = CLSID_CONVERTER;
+            assert_eq!(explorer_canonical(commands[0], &mut bulk_guid), S_OK);
+            assert_eq!(explorer_canonical(commands[1], &mut merge_guid), S_OK);
+            assert_eq!(bulk_guid.d[7], CLSID_CONVERTER.d[7] ^ 20);
+            assert_eq!(merge_guid.d[7], CLSID_CONVERTER.d[7] ^ 46);
+            for child in &commands[..3] {
+                assert_eq!(explorer_release(*child), 0);
+            }
+            assert_eq!(enumerator_reset(batch), S_OK);
+            assert_eq!(enumerator_skip(batch, 1), S_OK);
+            let mut clone = ptr::null_mut();
+            assert_eq!(enumerator_clone(batch, &mut clone), S_OK);
+            assert_eq!(enumerator_next(clone, 1, &mut custom, &mut fetched), S_OK);
+            assert!((*(custom as *mut ExplorerObject)).pdf_merge);
+            assert_eq!(explorer_release(custom), 0);
+            assert_eq!(enumerator_release(clone), 0);
+            assert_eq!(enumerator_release(batch), 0);
             assert_eq!(explorer_release(command), 0);
             assert_eq!(factory_lock(factory, 1), S_OK);
             assert_eq!(factory_release(factory), 0);
@@ -1162,6 +1240,11 @@ mod tests {
         );
         assert_eq!(pdf_target_title(UNKNOWN_SELECTION_MASK), "PDF");
         assert_eq!(pdf_target_title(SELECTION_CONTAINS_PDF), "PDF · comprimi");
+        assert_eq!(pdf_target_title(SELECTION_MULTIPLE), "PDF (Bulk)");
+        assert_eq!(
+            pdf_target_title(SELECTION_MULTIPLE | SELECTION_CONTAINS_PDF),
+            "PDF (Bulk)"
+        );
         assert_eq!(
             text_target_title(TEXT_TARGET | SELECTION_CONTAINS_AUDIO),
             "TXT con OpenAI"
@@ -1175,7 +1258,7 @@ mod tests {
             .map(core_model::OutputFormat::extension)
             .collect();
         assert_eq!(core_targets, TARGETS);
-        assert!(TARGETS.len() < 61); // The upper bits record input category metadata.
+        assert!(TARGETS.len() < 60); // The upper bits record selection metadata.
         let registration = include_str!("../../scripts/install-context-menu.ps1");
         let extensions: Vec<_> = registration
             .lines()
@@ -1247,6 +1330,8 @@ mod tests {
                 assert_eq!(slot, index);
             }
         }
+        assert!(slots.insert(PDF_MERGE_GUID_SLOT));
+        assert_eq!(PDF_MERGE_GUID_SLOT, 45);
     }
 
     #[test]

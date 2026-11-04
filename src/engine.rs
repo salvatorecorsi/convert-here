@@ -206,19 +206,34 @@ pub fn merge_pdfs(
     mut on_progress: impl FnMut(Progress),
 ) -> Result<Vec<PathBuf>> {
     cancelled(cancel)?;
+    if inputs.len() < 2 {
+        bail!("Per unire i PDF seleziona almeno due file compatibili");
+    }
     if settings.format != OutputFormat::Pdf || settings.pdf.action != PdfAction::Merge {
         bail!("L'unione richiede destinazione PDF e operazione Merge");
     }
     validate(settings)?;
-    crate::pdf_ops::merge(
+    let prepared = crate::pdf_merge::prepare_pdf_merge(
         inputs,
-        settings.output_dir.as_deref(),
+        settings,
+        &ToolPaths::discover(),
         cancel,
-        &mut on_progress,
-    )
+        |update| {
+            on_progress(Progress {
+                fraction: update.fraction * 0.5,
+                message: update.message,
+            })
+        },
+    )?;
+    crate::pdf_merge::merge_prepared(&prepared, &prepared.pages(), settings, cancel, |update| {
+        on_progress(Progress {
+            fraction: 0.5 + update.fraction * 0.5,
+            message: update.message,
+        })
+    })
 }
 
-fn validate(s: &ConversionSettings) -> Result<()> {
+pub(crate) fn validate(s: &ConversionSettings) -> Result<()> {
     if let Some(language) = &s.transcription.language {
         crate::transcription::validate_language(language)?;
     }

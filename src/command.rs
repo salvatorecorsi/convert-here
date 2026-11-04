@@ -9,7 +9,9 @@ use std::{
 };
 use the_converter::{
     engine,
-    model::{ConversionSettings, CsvDelimiter, MediaKind, OutputFormat, PdfAction},
+    model::{
+        ConversionSettings, CsvDelimiter, MediaKind, OutputFormat, PdfAction, supported_formats,
+    },
     queue,
     tools::ToolPaths,
 };
@@ -35,6 +37,9 @@ struct Args {
     /// Conversione rapida da Esplora file, con preferenze salvate e resoconto locale.
     #[arg(long, requires = "target", conflicts_with_all = ["convert", "diagnose"])]
     quick: bool,
+    /// Selezioni PDF multiple: conversione individuale oppure ordine pagine e PDF unico.
+    #[arg(long, value_enum, requires = "target", conflicts_with_all = ["convert", "diagnose", "queue_job", "queue_worker"])]
+    pdf_batch: Option<PdfBatch>,
     /// Stato di una conversione, aperto dal segnaposto in Esplora file.
     #[arg(long, conflicts_with_all = ["quick", "convert", "diagnose", "queue_worker"])]
     queue_job: Option<String>,
@@ -80,6 +85,39 @@ enum PdfCommand {
     Compress,
     Split,
     Merge,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+enum PdfBatch {
+    Bulk,
+    Merge,
+}
+
+fn validate_pdf_batch(
+    mode: PdfBatch,
+    target: Option<OutputFormat>,
+    quick: bool,
+    files: &[PathBuf],
+) -> Result<()> {
+    if target != Some(OutputFormat::Pdf) {
+        bail!("--pdf-batch richiede --target pdf");
+    }
+    if files.len() < 2 {
+        bail!("PDF (Bulk) e PDF (Merge) richiedono almeno due file");
+    }
+    if files
+        .iter()
+        .any(|path| !supported_formats(MediaKind::from_path(path)).contains(&OutputFormat::Pdf))
+    {
+        bail!("La selezione contiene file che non possono essere convertiti in PDF");
+    }
+    match mode {
+        PdfBatch::Bulk if !quick => bail!("PDF (Bulk) richiede --quick"),
+        PdfBatch::Merge if quick => {
+            bail!("PDF (Merge) apre l'ordine delle pagine e non usa --quick")
+        }
+        _ => Ok(()),
+    }
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -158,6 +196,16 @@ fn run(args: Args) -> Result<()> {
     }
     let mut seen = std::collections::HashSet::new();
     files.retain(|p| seen.insert(p.clone()));
+    if let Some(mode) = args.pdf_batch {
+        validate_pdf_batch(mode, args.target, args.quick, &files)?;
+        if mode == PdfBatch::Merge {
+            let warning = queue::ensure_worker()
+                .err()
+                .map(|error| format!("La coda non è stata avviata: {error:#}"));
+            return crate::pdf_merge_app::launch(files, warning)
+                .map_err(|error| anyhow::anyhow!("{error}"));
+        }
+    }
     if args.quick {
         return quick_convert(files, args.target.expect("clap requires target"));
     }
@@ -191,12 +239,17 @@ fn run(args: Args) -> Result<()> {
             PdfCommand::Split => PdfAction::Split,
             PdfCommand::Merge => PdfAction::Merge,
         };
-        if settings.format != OutputFormat::Pdf
-            || files
-                .iter()
-                .any(|path| MediaKind::from_path(path) != MediaKind::Pdf)
-        {
-            bail!("--pdf-action richiede --target pdf e soltanto PDF in ingresso");
+        let compatible = files.iter().all(|path| {
+            if matches!(action, PdfCommand::Merge) {
+                supported_formats(MediaKind::from_path(path)).contains(&OutputFormat::Pdf)
+            } else {
+                MediaKind::from_path(path) == MediaKind::Pdf
+            }
+        });
+        if settings.format != OutputFormat::Pdf || !compatible {
+            bail!(
+                "--pdf-action richiede --target pdf: Merge accetta i file convertibili in PDF, Compress e Split soltanto PDF"
+            );
         }
     }
     if args.ocr {
@@ -243,9 +296,31 @@ fn run(args: Args) -> Result<()> {
         signal.store(true, Ordering::Relaxed);
     })?;
     if settings.format == OutputFormat::Pdf && settings.pdf.action == PdfAction::Merge {
-        let outputs = engine::merge_pdfs(&files, &settings, &cancel, |progress| {
-            eprintln!("{:3.0}% {}", progress.fraction * 100.0, progress.message);
-        })?;
+        if files.len() < 2 {
+            bail!("Per unire i PDF indica almeno due file compatibili");
+        }
+        let prepared = the_converter::pdf_merge::prepare_pdf_merge(
+            &files,
+            &settings,
+            &tools,
+            &cancel,
+            |progress| {
+                eprintln!("{:3.0}% {}", progress.fraction * 50.0, progress.message);
+            },
+        )?;
+        let outputs = the_converter::pdf_merge::merge_prepared(
+            &prepared,
+            &prepared.pages(),
+            &settings,
+            &cancel,
+            |progress| {
+                eprintln!(
+                    "{:3.0}% {}",
+                    50.0 + progress.fraction * 50.0,
+                    progress.message
+                );
+            },
+        )?;
         for output in outputs {
             println!("{}", output.display());
         }
@@ -322,6 +397,63 @@ pub fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn explorer_pdf_batch_routes_distinguish_bulk_queue_and_interactive_merge() {
+        let files = vec![
+            PathBuf::from("città & mare.png"),
+            PathBuf::from("ordine.pdf"),
+            PathBuf::from("tabella.xlsx"),
+        ];
+        for (mode, quick, text) in [
+            (PdfBatch::Bulk, true, "bulk"),
+            (PdfBatch::Merge, false, "merge"),
+        ] {
+            let mut arguments = vec!["converter", "--target", "pdf", "--pdf-batch", text];
+            if quick {
+                arguments.push("--quick");
+            }
+            arguments.extend(["--selection-file", "selezione con spazi.json"]);
+            let args = Args::try_parse_from(arguments).unwrap();
+            assert_eq!(args.pdf_batch, Some(mode));
+            assert_eq!(args.quick, quick);
+            assert_eq!(
+                args.selection_file,
+                Some(PathBuf::from("selezione con spazi.json"))
+            );
+            assert!(validate_pdf_batch(mode, args.target, args.quick, &files).is_ok());
+        }
+        for (mode, quick) in [(PdfBatch::Bulk, false), (PdfBatch::Merge, true)] {
+            assert!(validate_pdf_batch(mode, Some(OutputFormat::Pdf), quick, &files).is_err());
+        }
+        for invalid in [
+            vec![],
+            vec![PathBuf::from("one.png")],
+            vec![PathBuf::from("one.png"), PathBuf::from("audio.wav")],
+            vec![PathBuf::from("clip.mp4"), PathBuf::from("doc.pdf")],
+        ] {
+            assert!(
+                validate_pdf_batch(PdfBatch::Merge, Some(OutputFormat::Pdf), false, &invalid)
+                    .is_err()
+            );
+        }
+        assert!(
+            validate_pdf_batch(PdfBatch::Merge, Some(OutputFormat::Jpg), false, &files).is_err()
+        );
+        assert!(
+            Args::try_parse_from([
+                "converter",
+                "--convert",
+                "--target",
+                "pdf",
+                "--pdf-batch",
+                "merge"
+            ])
+            .is_err()
+        );
+        assert!(Args::try_parse_from(["converter", "--pdf-batch", "merge"]).is_err());
+    }
+
     #[test]
     fn selection_preserves_unicode_and_does_not_delete_user_json() {
         let dir = tempfile::tempdir().unwrap();

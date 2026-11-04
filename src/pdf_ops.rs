@@ -2,6 +2,7 @@
 //! but rebuild the catalog: document metadata, outlines and tagging are omitted.
 //! Interactive forms and signatures require a dedicated editor and are rejected.
 use crate::engine::{Progress, cancelled, commit, file_identity, stem, temporary};
+use crate::pdf_merge::{MergePageRef, validate_order};
 use anyhow::{Context, Result, bail};
 use lopdf::{Dictionary, Document, Object, ObjectId, dictionary};
 use std::{
@@ -30,15 +31,33 @@ pub fn merge(
         bail!("Per unire i PDF seleziona da 2 a {MAX_PAGES} file");
     }
     let first = canonical_pdf(&inputs[0])?;
+    merge_ordered(inputs, None, &first, dir, cancel, progress)
+}
+
+/// Prepared sources are private snapshots; naming_input is the original label.
+pub(crate) fn merge_ordered(
+    inputs: &[PathBuf],
+    order: Option<&[MergePageRef]>,
+    naming_input: &Path,
+    dir: Option<&Path>,
+    cancel: &AtomicBool,
+    progress: &mut impl FnMut(Progress),
+) -> Result<Vec<PathBuf>> {
+    cancelled(cancel)?;
+    if inputs.is_empty() || inputs.len() > MAX_PAGES {
+        bail!("L'unione richiede da 1 a {MAX_PAGES} sorgenti PDF");
+    }
     let mut merged = Document::with_version("1.7");
-    let mut page_ids = Vec::new();
+    let mut source_page_ids = Vec::with_capacity(inputs.len());
+    let mut total_pages = 0usize;
     let mut next_id = 1u32;
     for (index, input) in inputs.iter().enumerate() {
         cancelled(cancel)?;
         let (_, source, _) = load(input)?;
         reject_forms(&source)?;
         let pages = pages(&source)?;
-        if page_ids.len() + pages.len() > MAX_PAGES {
+        total_pages += pages.len();
+        if total_pages > MAX_PAGES {
             bail!("Il PDF unito non può superare {MAX_PAGES} pagine");
         }
         let mut document = rebuild(&source, &pages)?;
@@ -51,7 +70,7 @@ pub fn merge(
             .max_id
             .checked_add(1)
             .context("Troppi oggetti nei PDF")?;
-        page_ids.extend(document.get_pages().into_values());
+        source_page_ids.push(document.get_pages().into_values().collect::<Vec<_>>());
         merged.max_id = document.max_id;
         merged.objects.extend(document.objects);
         progress(Progress {
@@ -59,20 +78,64 @@ pub fn merge(
             message: format!("Preparato PDF {} di {}", index + 1, inputs.len()),
         });
     }
+    cancelled(cancel)?;
+    let page_ids: Vec<_> = if let Some(order) = order {
+        let counts: Vec<_> = source_page_ids
+            .iter()
+            .map(|pages| pages.len() as u32)
+            .collect();
+        validate_order(order, &counts)?;
+        order
+            .iter()
+            .map(|page| source_page_ids[page.source][page.page as usize - 1])
+            .collect()
+    } else {
+        source_page_ids.into_iter().flatten().collect()
+    };
     attach_pages(&mut merged, &page_ids)?;
     merged.prune_objects();
     merged.renumber_objects();
     compress_streams(&mut merged, cancel)?;
-    let dir = destination(&first, dir)?;
+    let dir = destination(naming_input, dir)?;
     let mut output = temporary(&dir, "pdf")?;
     merged.save_to(output.as_file_mut())?;
     cancelled(cancel)?;
-    let output = commit(output, &dir, &format!("{}-unito", stem(&first)), "pdf")?;
+    let output = commit(
+        output,
+        &dir,
+        &format!("{}-unito", stem(naming_input)),
+        "pdf",
+    )?;
     progress(Progress {
         fraction: 1.0,
         message: "PDF uniti".into(),
     });
     Ok(vec![output])
+}
+
+pub(crate) fn merge_page_count(input: &Path, cancel: &AtomicBool) -> Result<u32> {
+    cancelled(cancel)?;
+    let (_, document, _) = load(input)?;
+    reject_forms(&document)?;
+    let pages = pages(&document)?;
+    for (_, page) in &pages {
+        cancelled(cancel)?;
+        if let Ok(annotations) = page.get_deref(b"Annots", &document) {
+            for annotation in annotations.as_array()? {
+                let dictionary = document.dereference(annotation)?.1.as_dict()?;
+                if dictionary
+                    .get(b"Subtype")
+                    .and_then(Object::as_name)
+                    .is_ok_and(|subtype| subtype == b"Widget")
+                {
+                    bail!(
+                        "Il PDF contiene campi modulo: esportalo come PDF statico prima di unirlo"
+                    );
+                }
+            }
+        }
+    }
+    Ok(u32::try_from(pages.len())?)
 }
 
 /// Export one PDF per page. A failed/cancelled batch rolls back files it owns.

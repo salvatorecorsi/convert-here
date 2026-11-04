@@ -81,7 +81,7 @@ pub fn launch_queue_status(job_id: String, startup_warning: Option<String>) -> e
     )
 }
 
-fn app_icon() -> egui::IconData {
+pub(crate) fn app_icon() -> egui::IconData {
     let icon = image::load_from_memory(include_bytes!("../assets/app.png"))
         .expect("L’icona incorporata deve essere valida")
         .into_rgba8();
@@ -206,6 +206,7 @@ enum MainView {
 }
 
 pub struct ConverterApp {
+    pdf_merge: Option<crate::pdf_merge_app::PdfMergeApp>,
     view: MainView,
     conversion_started: Option<std::time::Instant>,
     conversion_elapsed: std::time::Duration,
@@ -236,6 +237,7 @@ impl ConverterApp {
         }
         let tools = ToolPaths::configured(&saved.overrides);
         let mut app = Self {
+            pdf_merge: None,
             view: MainView::Files,
             conversion_started: None,
             conversion_elapsed: std::time::Duration::ZERO,
@@ -310,11 +312,13 @@ impl ConverterApp {
             self.saved.settings.format = common[0];
             self.settings_dirty = true;
         }
-        if self
-            .items
-            .iter()
-            .any(|item| MediaKind::from_path(&item.path) != MediaKind::Pdf)
-            && self.saved.settings.pdf.action != PdfAction::Compress
+        if (self.saved.settings.pdf.action == PdfAction::Split
+            && self
+                .items
+                .iter()
+                .any(|item| MediaKind::from_path(&item.path) != MediaKind::Pdf))
+            || (self.saved.settings.pdf.action == PdfAction::Merge
+                && (self.items.len() < 2 || !common.contains(&OutputFormat::Pdf)))
         {
             self.saved.settings.pdf.action = PdfAction::Compress;
             self.settings_dirty = true;
@@ -360,13 +364,9 @@ impl ConverterApp {
         }
         if self.saved.settings.format == OutputFormat::Pdf
             && self.saved.settings.pdf.action == PdfAction::Merge
-            && (self.items.len() < 2
-                || self
-                    .items
-                    .iter()
-                    .any(|item| MediaKind::from_path(&item.path) != MediaKind::Pdf))
+            && (self.items.len() < 2 || !self.common_formats().contains(&OutputFormat::Pdf))
         {
-            return Some("Per unire i PDF aggiungi almeno due file PDF. L'ordine della lista determina quello delle pagine.".into());
+            return Some("Per PDF (Merge) aggiungi almeno due file convertibili in PDF. Potrai ordinare le singole pagine prima di creare il PDF unico.".into());
         }
         for item in &self.items {
             let kind = MediaKind::from_path(&item.path);
@@ -409,6 +409,18 @@ impl ConverterApp {
             return;
         }
         self.persist();
+        if self.saved.settings.format == OutputFormat::Pdf
+            && self.saved.settings.pdf.action == PdfAction::Merge
+        {
+            let paths = self.items.iter().map(|item| item.path.clone()).collect();
+            self.pdf_merge = Some(crate::pdf_merge_app::PdfMergeApp::new(
+                paths,
+                self.saved.settings.clone(),
+                self.tools.clone(),
+                None,
+            ));
+            return;
+        }
         self.cancel = Arc::new(AtomicBool::new(false));
         let cancel = self.cancel.clone();
         let paths: Vec<_> = self.items.iter().map(|item| item.path.clone()).collect();
@@ -425,32 +437,6 @@ impl ConverterApp {
         self.notice = None;
         let ctx = ctx.clone();
         std::thread::spawn(move || {
-            if settings.format == OutputFormat::Pdf && settings.pdf.action == PdfAction::Merge {
-                for index in 0..paths.len() {
-                    let _ = sender.send(Event::Started(index));
-                }
-                let result = engine::merge_pdfs(&paths, &settings, &cancel, |progress| {
-                    for index in 0..paths.len() {
-                        let _ = sender.send(Event::Progress(
-                            index,
-                            progress.fraction,
-                            progress.message.clone(),
-                        ));
-                    }
-                    ctx.request_repaint();
-                });
-                for index in 0..paths.len() {
-                    let event = match &result {
-                        Ok(outputs) => Event::Complete(index, outputs.clone()),
-                        Err(_) if cancel.load(Ordering::Relaxed) => Event::Cancelled(index),
-                        Err(error) => Event::Failed(index, format!("{error:#}")),
-                    };
-                    let _ = sender.send(event);
-                }
-                let _ = sender.send(Event::End);
-                ctx.request_repaint();
-                return;
-            }
             for (index, path) in paths.into_iter().enumerate() {
                 if cancel.load(Ordering::Relaxed) {
                     break;
@@ -1090,42 +1076,55 @@ impl ConverterApp {
                 }
             }
             MediaKind::Pdf => {
-                if !self.items.is_empty()
+                let all_pdf = !self.items.is_empty()
                     && self
                         .items
                         .iter()
-                        .all(|item| MediaKind::from_path(&item.path) == MediaKind::Pdf)
-                {
+                        .all(|item| MediaKind::from_path(&item.path) == MediaKind::Pdf);
+                let can_merge =
+                    self.items.len() >= 2 && self.common_formats().contains(&OutputFormat::Pdf);
+                if all_pdf || can_merge {
                     let action = &mut self.saved.settings.pdf.action;
                     egui::ComboBox::from_id_salt("pdf_action")
                         .selected_text(match action {
-                            PdfAction::Compress => "Comprimi senza perdita",
+                            PdfAction::Compress if all_pdf => "Comprimi senza perdita",
+                            PdfAction::Compress => "PDF (Bulk)",
                             PdfAction::Split => "Dividi: una pagina per file",
-                            PdfAction::Merge => "Unisci i PDF della lista",
+                            PdfAction::Merge => "PDF (Merge) · ordina pagine",
                         })
                         .show_ui(ui, |ui| {
                             ui.selectable_value(
                                 action,
                                 PdfAction::Compress,
-                                "Comprimi senza perdita",
+                                if all_pdf {
+                                    "Comprimi senza perdita"
+                                } else {
+                                    "PDF (Bulk)"
+                                },
                             );
-                            ui.selectable_value(
-                                action,
-                                PdfAction::Split,
-                                "Dividi: una pagina per file",
-                            );
-                            ui.selectable_value(
-                                action,
-                                PdfAction::Merge,
-                                "Unisci i PDF della lista",
-                            );
+                            if all_pdf {
+                                ui.selectable_value(
+                                    action,
+                                    PdfAction::Split,
+                                    "Dividi: una pagina per file",
+                                );
+                            }
+                            ui.add_enabled_ui(can_merge, |ui| {
+                                ui.selectable_value(
+                                    action,
+                                    PdfAction::Merge,
+                                    "PDF (Merge) · ordina pagine",
+                                );
+                            });
                         });
                     ui.label(RichText::new(match action {
-                        PdfAction::Compress => "Ottimizza i flussi senza ridurre la qualità. Un PDF già ottimizzato può mantenere le stesse dimensioni.",
+                        PdfAction::Compress if all_pdf => "Ottimizza ogni PDF senza ridurre la qualità. Un PDF già ottimizzato può mantenere le stesse dimensioni.",
+                        PdfAction::Compress => "Crea un PDF separato per ciascun file della lista.",
                         PdfAction::Split => "Crea un PDF per pagina. Segnalibri, struttura accessibile e metadati del documento non vengono trasferiti; documenti firmati o con moduli compilabili richiedono una copia statica.",
-                        PdfAction::Merge => "Unisce nell'ordine della lista: usa le frecce per cambiarlo. Segnalibri, struttura accessibile e metadati non vengono trasferiti; documenti firmati o con moduli compilabili richiedono una copia statica.",
+                        PdfAction::Merge => "Apre l'ordine delle singole pagine: trascinale prima di creare un unico PDF. Segnalibri, struttura accessibile e metadati non vengono trasferiti; documenti firmati o con moduli compilabili richiedono una copia statica.",
                     }).small().weak());
-                } else if self
+                }
+                if self
                     .items
                     .iter()
                     .any(|item| MediaKind::from_path(&item.path) == MediaKind::Image)
@@ -1137,7 +1136,7 @@ impl ConverterApp {
                     );
                     width_setting(ui, "pdf_image_width", &mut self.saved.settings.image.width);
                     ui.label(RichText::new("Una pagina A4 per immagine, con proporzioni mantenute e margine di 24 pt.").small().weak());
-                } else {
+                } else if !all_pdf {
                     ui.label(
                         RichText::new(
                             "Documenti Office, fogli di calcolo e HTML vengono esportati in PDF con LibreOffice. HTML/CSS complessi possono cambiare impaginazione; JavaScript non viene eseguito. Le risorse collegate nell'HTML possono essere lette dal motore.",
@@ -1418,6 +1417,10 @@ impl ConverterApp {
             } else {
                 self.items.remove(index);
             }
+            if self.items.len() < 2 && self.saved.settings.pdf.action == PdfAction::Merge {
+                self.saved.settings.pdf.action = PdfAction::Compress;
+                self.settings_dirty = true;
+            }
         } else if let Some((from, to)) = reorder {
             self.items.swap(from, to);
         }
@@ -1619,6 +1622,10 @@ impl ConverterApp {
                     }
                 } else {
                     let label = if self.saved.settings.format == OutputFormat::Pdf
+                        && self.saved.settings.pdf.action == PdfAction::Merge
+                    {
+                        "Ordina e unisci PDF"
+                    } else if self.saved.settings.format == OutputFormat::Pdf
                         && !self.items.is_empty()
                         && self
                             .items
@@ -1821,7 +1828,23 @@ impl eframe::App for ConverterApp {
         }
     }
 
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        if self.pdf_merge.is_some() {
+            let busy = self.pdf_merge.as_ref().is_some_and(|merge| merge.is_busy());
+            let mut go_back = false;
+            egui::TopBottomPanel::top("merge_return_to_files").show(ctx, |ui| {
+                go_back = ui
+                    .add_enabled(!busy, egui::Button::new("← Torna ai file da convertire"))
+                    .clicked();
+            });
+            if go_back {
+                self.pdf_merge = None;
+                ctx.request_repaint();
+            } else if let Some(merge) = &mut self.pdf_merge {
+                eframe::App::update(merge, ctx, frame);
+            }
+            return;
+        }
         theme::sync_window_theme(ctx);
         self.receive_events();
         self.quick_queue.refresh();

@@ -24,7 +24,7 @@ Con Poppler puoi esportare i PDF in immagini PNG/JPEG, estrarne il testo incorpo
 
 Con Tesseract puoi riconoscere il testo delle immagini in TXT e, attivando OCR locale per i PDF, creare TXT, DOCX o HTML dalle scansioni. OCR dei PDF e disattivato per default e usa anche Poppler. Seleziona lingue installate, per esempio ita+eng, e i DPI delle pagine PDF; conserva i modelli nella cartella tessdata del motore. L'elaborazione resta sul PC, senza OpenAI o costi API. Il testo riconosciuto puo contenere errori e va riletto; OCR non crea un PDF ricercabile.
 
-Puoi comprimere i PDF senza perdita, dividerli in un file per pagina e unire piu PDF nell'ordine scelto, senza motori esterni. Nella finestra delle opzioni usa le frecce per cambiare l'ordine della lista. La compressione non ricampiona le immagini e non produce un file piu grande dell'originale; puo lasciare le dimensioni invariate. Divisione e unione non trasferiscono segnalibri, tag o metadati del documento e rifiutano moduli interattivi. Le operazioni rifiutano PDF cifrati o firmati; la compressione conserva catalogo e moduli e non rimuove i metadati.
+Puoi comprimere i PDF senza perdita o dividerli in un file per pagina. Con piu file convertibili in PDF, PDF (Bulk) crea risultati separati in coda; PDF (Merge) prepara immagini, PDF, Word/Office, Excel/CSV e HTML compatibili per creare un PDF unico. Trascina le singole pagine per intercalarle fra sorgenti, oppure usa le frecce o Alt+su/giu. PDF e immagini native non richiedono motori esterni per l'unione; restano LibreOffice per i documenti e libheif per HEIC/AVIF. Audio e video sono esclusi. La compressione non ricampiona le immagini e non produce un file piu grande dell'originale. Divisione e unione non trasferiscono segnalibri, tag o metadati del documento e rifiutano moduli interattivi. Le operazioni rifiutano PDF cifrati o firmati; la compressione conserva catalogo e moduli e non rimuove i metadati.
 
 Con LibreOffice puoi convertire documenti Word e altri documenti, fogli e presentazioni compatibili in PDF, esportare XLS/XLSX/XLSM/ODS in CSV e creare Excel XLSX da CSV. Il CSV contiene soltanto il primo foglio, in UTF-8 con virgolette: conserva i valori visualizzati, senza formattazione o formule. Puoi scegliere virgola, punto e virgola, tab o pipe sia in ingresso sia in uscita; il default e la virgola. I CSV in ingresso devono essere UTF-8; le espressioni che iniziano con = vengono importate come testo e i campi quotati mantengono gli identificativi con zeri iniziali.
 
@@ -34,7 +34,7 @@ Le conversioni di formato vengono elaborate sul PC. Solo scegliendo la trascrizi
 
 La trascrizione del parlato crea un file TXT e permette il riconoscimento automatico della lingua o la scelta di una lingua. Non e disponibile direttamente per i video. Rileggi sempre il testo ottenuto: possono esserci errori. I costi delle richieste gia inviate possono maturare anche se il lavoro viene annullato.
 
-Limiti: non e disponibile la modifica libera del contenuto delle pagine PDF. OCR riconosce il testo senza ricostruire la grafica o l'impaginazione. Da GIF animate, TIFF multipagina e contenitori HEIC/AVIF viene convertito il primo fotogramma o la prima immagine. Ogni immagine genera un PDF separato, che puoi poi unire ad altri PDF. L'impaginazione dei documenti Office dipende da LibreOffice e dai font disponibili. L'interfaccia e attualmente in italiano. Il menu moderno richiede Windows 11 x64.
+Limiti: non e disponibile la modifica libera del contenuto delle pagine PDF. OCR riconosce il testo senza ricostruire la grafica o l'impaginazione. Da GIF animate, TIFF multipagina e contenitori HEIC/AVIF viene convertito il primo fotogramma o la prima immagine. PDF (Bulk) mantiene risultati separati; PDF (Merge) include tutte le pagine preparate una volta, fino a 10.000. L'impaginazione dei documenti Office dipende da LibreOffice e dai font disponibili. L'interfaccia e attualmente in italiano. Il menu moderno richiede Windows 11 x64.
 
 ## Funzionalita
 
@@ -53,7 +53,7 @@ Excel in CSV del primo foglio e CSV UTF-8 in XLSX, con quattro separatori e Libr
 Word e HTML semplici in PDF con LibreOffice opzionale; JavaScript non eseguito
 HEIC/HEIF e AVIF in ingresso e HEIC/AVIF in uscita con libheif opzionale
 OCR locale di immagini e scansioni PDF con Tesseract e modelli delle lingue opzionali
-Comprimi PDF senza perdita, dividi per pagina e unisci nell'ordine della lista
+PDF Bulk separati o PDF Merge unico con trascinamento delle singole pagine
 File originali conservati e nomi numerati in caso di conflitto
 Conversioni di formato locali; audio inviato a OpenAI solo per la trascrizione richiesta
 Trascrizione audio TXT opzionale con propria API key OpenAI e costi API separati

@@ -1,6 +1,6 @@
 [package]
 name = "the-converter-shell"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 publish = false
 description = "Per-user Windows Explorer IExplorerCommand integration for Convert Here"

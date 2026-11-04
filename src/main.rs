@@ -2,6 +2,8 @@
 mod app;
 mod command;
 pub mod file_icons;
+pub mod pdf_merge_app;
+pub mod pdf_merge_ui;
 pub mod theme;
 fn main() {
     command::main();

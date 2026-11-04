@@ -3,6 +3,9 @@
 param()
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
+$appVersionMatch = [regex]::Match((Get-Content -LiteralPath (Join-Path $root 'Cargo.toml') -Raw), '(?m)^version\s*=\s*"(\d+\.\d+\.\d+)"')
+if (-not $appVersionMatch.Success) { throw 'Numeric application version missing from Cargo.toml.' }
+$appVersion = $appVersionMatch.Groups[1].Value
 $temporaryRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\')
 $fixture = Join-Path $temporaryRoot ('convert-here-release-tests-' + [guid]::NewGuid().ToString('N'))
 $checks = 0
@@ -23,7 +26,7 @@ try {
         Assert ($installer.Contains($entry)) 'Public shortcut name or stable target changed.'
     }
     Assert ($installer.Contains('#define RepositoryUrl "https://github.com/salvatorecorsi/convert-here"')) 'Installer points at the old repository.'
-    Assert ($installer.Contains('#define AppVersion "0.2.0"') -and $installer.Contains('#define FileVersion "0.2.0.0"')) 'Installer fallback version differs from the release.'
+    Assert ($installer.Contains('#define AppVersion "' + $appVersion + '"') -and $installer.Contains('#define FileVersion "' + $appVersion + '.0"')) 'Installer fallback version differs from the release.'
     Assert ($installer.Contains('#define ConverterClass "{67B51BA1-8A78-4B4B-A5F9-08A825BE91F8}"')) 'Explorer CLSID changed.'
     foreach ($script in @('build-release.ps1', 'build-installer.ps1', 'prepare-public-release.ps1', 'install-context-menu.ps1')) {
         $source = Get-Content -LiteralPath (Join-Path $PSScriptRoot $script) -Raw
@@ -35,7 +38,7 @@ try {
         Copy-Item -LiteralPath (Join-Path $root $relative) -Destination $target
     }
     foreach ($script in @('install-context-menu.ps1', 'uninstall-context-menu.ps1', 'install-runtime-tools.ps1')) { Write-Fixture "scripts/$script" '# Inert packaged script fixture' }
-    Write-Fixture 'Cargo.toml' "[package]`nname = `"fixture`"`nversion = `"0.2.0`"`n"
+    Write-Fixture 'Cargo.toml' "[package]`nname = `"fixture`"`nversion = `"$appVersion`"`n"
     foreach ($name in @('the-converter.exe', 'the-converter-cli.exe', 'the_converter_shell.dll')) { Write-Fixture "dist/ConvertHere/$name" }
     Write-Fixture 'dist/ConvertHere/tools/ffmpeg.exe' 'Must not be packaged'
     foreach ($name in @('README.md', 'THIRD-PARTY-NOTICES.md')) { Write-Fixture $name }
@@ -56,15 +59,15 @@ if (-not $name) { throw 'Missing output filename in actual installer source.' }
 $global:LASTEXITCODE = 0
 '@
     & (Join-Path $fixture 'scripts/prepare-public-release.ps1') -CompilerPath (Join-Path $fixture 'compiler-capture.ps1') | Out-Null
-    $output = Join-Path $fixture 'dist/releases/v0.2.0'
-    $setup = Join-Path $output 'ConvertHere-0.2.0-windows-x64-setup.exe'
-    $portable = Join-Path $output 'ConvertHere-0.2.0-windows-x64-portable.zip'
+    $output = Join-Path $fixture "dist/releases/v$appVersion"
+    $setup = Join-Path $output "ConvertHere-$appVersion-windows-x64-setup.exe"
+    $portable = Join-Path $output "ConvertHere-$appVersion-windows-x64-portable.zip"
     Assert (Test-Path -LiteralPath $setup -PathType Leaf) 'Public setup filename does not match the compiler output.'
     Assert (Test-Path -LiteralPath $portable -PathType Leaf) 'Public portable filename has old branding.'
     $arguments = Get-Content -LiteralPath (Join-Path $fixture 'compiler-arguments.json') -Raw | ConvertFrom-Json
-    Assert ($arguments -contains '/DAppVersion=0.2.0' -and $arguments -contains '/DFileVersion=0.2.0.0') 'Release version did not reach the compiler.'
+    Assert ($arguments -contains "/DAppVersion=$appVersion" -and $arguments -contains "/DFileVersion=${appVersion}.0") 'Release version did not reach the compiler.'
     Assert ($arguments -contains '/DModernMenuAvailable=0') 'Unsigned classic fixture unexpectedly enables modern registration.'
-    Assert ($arguments -contains ('/DSourceDir=' + (Join-Path $fixture 'dist/public-stage/0.2.0/classic/ConvertHere'))) 'Installer did not consume the branded public stage.'
+    Assert ($arguments -contains ('/DSourceDir=' + (Join-Path $fixture "dist/public-stage/$appVersion/classic/ConvertHere"))) 'Installer did not consume the branded public stage.'
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $archive = [IO.Compression.ZipFile]::OpenRead($portable)
     try {

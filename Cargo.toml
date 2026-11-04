@@ -1,6 +1,6 @@
 [package]
 name = "the-converter"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 description = "Conversioni di audio, video, immagini e PDF, integrate in Windows"
 repository = "https://github.com/salvatorecorsi/convert-here"

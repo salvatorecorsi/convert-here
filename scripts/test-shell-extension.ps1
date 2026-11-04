@@ -104,6 +104,8 @@ public static class ConverterShellSmokeV2 {
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
     delegate int GetTitle(IntPtr self, IntPtr items, out IntPtr title);
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    delegate int GetCanonical(IntPtr self, out Guid canonical);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
     delegate int EnumCommands(IntPtr self, out IntPtr enumerator);
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
     delegate int NextCommand(IntPtr self, uint requested, out IntPtr command, out uint fetched);
@@ -172,7 +174,72 @@ public static class ConverterShellSmokeV2 {
     static void Expect(string label, string[] actual, string[] expected) {
         if (String.Join("|", actual) != String.Join("|", expected)) throw new Exception(label + ": " + String.Join(", ", actual));
     }
-    public static void CaptureInvoke(string library, string capture, string[] files, bool custom) {
+    static void WithSelection(string[] files, Action<IntPtr> action) {
+        IntPtr[] pidls = new IntPtr[files.Length];
+        IntPtr array = IntPtr.Zero;
+        try {
+            for (int index = 0; index < files.Length; index++) {
+                uint attributes;
+                Check(SHParseDisplayName(files[index], IntPtr.Zero, out pidls[index], 0, out attributes));
+            }
+            Check(SHCreateShellItemArrayFromIDLists((uint)pidls.Length, pidls, out array));
+            action(array);
+        } finally {
+            if (array != IntPtr.Zero) Marshal.Release(array);
+            foreach (IntPtr pidl in pidls) if (pidl != IntPtr.Zero) Marshal.FreeCoTaskMem(pidl);
+        }
+    }
+    static Guid ExpectedCanonical(byte xor) {
+        byte[] bytes = new Guid("67b51ba1-8a78-4b4b-a5f9-08a825be91f8").ToByteArray();
+        bytes[15] ^= xor;
+        return new Guid(bytes);
+    }
+    static void ValidatePdfActions(IntPtr parent, string image, string pdf, string audio) {
+        WithSelection(new string[]{image, pdf}, delegate(IntPtr valid) {
+            uint state;
+            Check(((GetState)Slot(parent, 7, typeof(GetState)))(parent, valid, 1, out state));
+            IntPtr enumerator = IntPtr.Zero, bulk = IntPtr.Zero, merge = IntPtr.Zero;
+            try {
+                Check(((EnumCommands)Slot(parent, 10, typeof(EnumCommands)))(parent, out enumerator));
+                var next = (NextCommand)Slot(enumerator, 3, typeof(NextCommand));
+                for (;;) {
+                    IntPtr child; uint fetched;
+                    Check(next(enumerator, 1, out child, out fetched));
+                    if (fetched == 0) break;
+                    if (Title(child) == "PDF (Bulk)") bulk = child;
+                    else if (Title(child) == "PDF (Merge)") merge = child;
+                    else Marshal.Release(child);
+                }
+                if (bulk == IntPtr.Zero || merge == IntPtr.Zero) throw new Exception("Azioni PDF multiple mancanti");
+                Guid bulkId, mergeId;
+                Check(((GetCanonical)Slot(bulk, 6, typeof(GetCanonical)))(bulk, out bulkId));
+                Check(((GetCanonical)Slot(merge, 6, typeof(GetCanonical)))(merge, out mergeId));
+                if (bulkId != ExpectedCanonical(20) || mergeId != ExpectedCanonical(46)) throw new Exception("GUID PDF non preservati");
+                WithSelection(new string[]{image}, delegate(IntPtr single) {
+                    Check(((GetState)Slot(merge, 7, typeof(GetState)))(merge, single, 1, out state));
+                    if (state != 2) throw new Exception("Merge visibile per un solo file");
+                    if (((InvokeCommand)Slot(merge, 8, typeof(InvokeCommand)))(merge, single, IntPtr.Zero) >= 0) throw new Exception("Merge accetta un solo file");
+                });
+                WithSelection(new string[]{image, audio}, delegate(IntPtr incompatible) {
+                    Check(((GetState)Slot(merge, 7, typeof(GetState)))(merge, incompatible, 1, out state));
+                    if (state != 2) throw new Exception("Merge accetta audio incompatibile con PDF");
+                    Check(((GetState)Slot(bulk, 7, typeof(GetState)))(bulk, incompatible, 1, out state));
+                    if (state != 2) throw new Exception("Bulk PDF accetta audio incompatibile");
+                    // Invoke must inspect the new array, even after a valid GetState.
+                    foreach (IntPtr child in new IntPtr[]{bulk, merge}) {
+                        Check(((GetState)Slot(child, 7, typeof(GetState)))(child, valid, 1, out state));
+                        if (state != 0) throw new Exception("Selezione PDF valida disabilitata");
+                        if (((InvokeCommand)Slot(child, 8, typeof(InvokeCommand)))(child, incompatible, IntPtr.Zero) >= 0) throw new Exception("Invoke usa una selezione PDF obsoleta");
+                    }
+                });
+            } finally {
+                if (bulk != IntPtr.Zero) Marshal.Release(bulk);
+                if (merge != IntPtr.Zero) Marshal.Release(merge);
+                if (enumerator != IntPtr.Zero) Marshal.Release(enumerator);
+            }
+        });
+    }
+    public static void CaptureInvoke(string library, string capture, string[] files, string requested) {
         int initialized = CoInitializeEx(IntPtr.Zero, 2);
         IntPtr module = LoadLibrary(library), factory = IntPtr.Zero, parent = IntPtr.Zero, enumerator = IntPtr.Zero, child = IntPtr.Zero, array = IntPtr.Zero;
         IntPtr[] pidls = new IntPtr[files.Length];
@@ -183,6 +250,14 @@ public static class ConverterShellSmokeV2 {
             Guid commandId = new Guid("a08ce4d0-fa25-44ab-b57c-c7b1c323e0b9");
             Check(activate(ref clsid, ref factoryId, out factory));
             Check(((CreateInstance)Slot(factory, 3, typeof(CreateInstance)))(factory, IntPtr.Zero, ref commandId, out parent));
+            for (int index = 0; index < files.Length; index++) {
+                uint attributes;
+                Check(SHParseDisplayName(files[index], IntPtr.Zero, out pidls[index], 0, out attributes));
+            }
+            Check(SHCreateShellItemArrayFromIDLists((uint)pidls.Length, pidls, out array));
+            uint parentState;
+            Check(((GetState)Slot(parent, 7, typeof(GetState)))(parent, array, 1, out parentState));
+            if (parentState != 0) throw new Exception("Selezione Invoke non valida");
             Check(((EnumCommands)Slot(parent, 10, typeof(EnumCommands)))(parent, out enumerator));
             var next = (NextCommand)Slot(enumerator, 3, typeof(NextCommand));
             for (int index = 0; ; index++) {
@@ -190,14 +265,13 @@ public static class ConverterShellSmokeV2 {
                 if (child != IntPtr.Zero) { Marshal.Release(child); child = IntPtr.Zero; }
                 Check(next(enumerator, 1, out child, out fetched));
                 if (fetched != 1) throw new Exception("Sottocomando mancante");
-                if (!custom || Title(child) == "Impostazioni personalizzate…") break;
+                string title = Title(child);
+                if ((requested == "mp3" && title == "MP3") ||
+                    (requested == "custom" && title == "Impostazioni personalizzate…") ||
+                    (requested == "pdf-bulk" && title == "PDF (Bulk)") ||
+                    (requested == "pdf-merge" && title == "PDF (Merge)")) break;
                 if (index >= 127) throw new Exception("Troppi sottocomandi");
             }
-            for (int index = 0; index < files.Length; index++) {
-                uint attributes;
-                Check(SHParseDisplayName(files[index], IntPtr.Zero, out pidls[index], 0, out attributes));
-            }
-            Check(SHCreateShellItemArrayFromIDLists((uint)pidls.Length, pidls, out array));
             Check(((InvokeCommand)Slot(child, 8, typeof(InvokeCommand)))(child, array, IntPtr.Zero));
             var elapsed = System.Diagnostics.Stopwatch.StartNew();
             while (!System.IO.File.Exists(capture) && elapsed.ElapsedMilliseconds < 5000) System.Threading.Thread.Sleep(50);
@@ -235,8 +309,10 @@ public static class ConverterShellSmokeV2 {
             const string custom = "Impostazioni personalizzate…";
             bool keyAvailable = ApiKeyPresent();
             Expect("Audio + video", Visible(command, audio, video), new string[]{"MP3", "WAV", "FLAC", "AAC", "OGG", "Opus", "AIFF", "M4A", "WMA", "AC3", "AU", "CAF", custom});
-            Expect("PNG + PDF", Visible(command, supported, pdf), new string[]{"PNG", "JPEG", "PDF · comprimi", "TXT · OCR / testo PDF", custom});
-            Expect("DOCX + PNG", Visible(command, document, supported), new string[]{"PDF", custom});
+            Expect("PNG + PDF", Visible(command, supported, pdf), new string[]{"PNG", "JPEG", "PDF (Bulk)", "PDF (Merge)", "TXT · OCR / testo PDF", custom});
+            Expect("DOCX + PNG", Visible(command, document, supported), new string[]{"PDF (Bulk)", "PDF (Merge)", custom});
+            Expect("DOCX + PNG + PDF", Visible(command, document, supported, pdf), new string[]{"PDF (Bulk)", "PDF (Merge)", custom});
+            Expect("Due PDF", Visible(command, pdf, pdf), new string[]{"PNG", "JPEG", "PDF (Bulk)", "PDF (Merge)", "TXT", "Word (DOCX) · testo", "HTML · testo", custom});
             Expect("PNG + audio", Visible(command, supported, audio), keyAvailable ? new string[]{"TXT · audio OpenAI / immagini OCR", custom} : new string[]{});
             Expect("Testo", Visible(command, text), new string[]{"PDF", custom});
             Expect("Testo + audio", Visible(command, text, audio), new string[]{});
@@ -248,13 +324,14 @@ public static class ConverterShellSmokeV2 {
             Expect("Audio e mpga", Visible(command, audio, mpga), audioFormats.ToArray());
             Expect("PDF", Visible(command, pdf), new string[]{"PNG", "JPEG", "PDF · comprimi", "TXT", "Word (DOCX) · testo", "HTML · testo", custom});
             Expect("Audio + PDF", Visible(command, audio, pdf), keyAvailable ? new string[]{"TXT con OpenAI", custom} : new string[]{});
-            Expect("Excel e CSV", Visible(command, spreadsheet, csv), new string[]{"PDF", "CSV", "XLSX", custom});
+            Expect("Excel e CSV", Visible(command, spreadsheet, csv), new string[]{"PDF (Bulk)", "PDF (Merge)", "CSV", "XLSX", custom});
             Expect("HTML", Visible(command, html), new string[]{"PDF", custom});
-            Expect("HTML e Excel", Visible(command, html, spreadsheet), new string[]{"PDF", custom});
+            Expect("HTML e Excel", Visible(command, html, spreadsheet), new string[]{"PDF (Bulk)", "PDF (Merge)", custom});
             Expect("QOI", Visible(command, qoi), Visible(command, supported));
             Expect("AVIF", Visible(command, avif), Visible(command, supported));
             Expect("HEIF", Visible(command, heif), Visible(command, supported));
             Expect("Sconosciuto", Visible(command, unsupported), new string[]{});
+            ValidatePdfActions(command, supported, pdf, audio);
             Marshal.Release(command); command = IntPtr.Zero;
             Marshal.Release(factory); factory = IntPtr.Zero;
             if (unload() != 0) throw new Exception("Oggetti COM non rilasciati");
@@ -270,7 +347,7 @@ public static class ConverterShellSmokeV2 {
 '@
 }
 $token = [Guid]::NewGuid().ToString('N')
-$supported = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.png"
+$supported = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token città & mare.png"
 $unsupported = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.unknown"
 $audio = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.wav"
 $video = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.mp4"
@@ -291,26 +368,32 @@ try {
     New-Item -ItemType Directory -Path $directory | Out-Null
     [ConverterShellSmokeV2]::Run($library, $supported, $unsupported, $audio, $video, $pdf, $document, $text, $mpga, $directory, $spreadsheet, $csv, $html, $qoi, $avif, $heif)
     if ($InvokeCaptureFile) {
-        foreach ($custom in @($false, $true)) {
+        foreach ($case in @(
+            @{ Command = 'mp3'; Files = @($audio, $video); Prefix = @('--quick', '--target', 'mp3', '--selection-file') },
+            @{ Command = 'custom'; Files = @($audio, $video); Prefix = @('--selection-file') },
+            @{ Command = 'pdf-bulk'; Files = @($document, $supported, $pdf); Prefix = @('--quick', '--target', 'pdf', '--pdf-batch', 'bulk', '--selection-file') },
+            @{ Command = 'pdf-merge'; Files = @($pdf, $supported, $document); Prefix = @('--target', 'pdf', '--pdf-batch', 'merge', '--selection-file') }
+        )) {
             if (Test-Path -LiteralPath $InvokeCaptureFile) { throw 'Il file di cattura deve essere assente prima del test.' }
-            [ConverterShellSmokeV2]::CaptureInvoke($library, $InvokeCaptureFile, [string[]]@($audio, $video), $custom)
+            [ConverterShellSmokeV2]::CaptureInvoke($library, $InvokeCaptureFile, [string[]]$case.Files, $case.Command)
             $captured = [IO.File]::ReadAllLines($InvokeCaptureFile)
-            if ($custom) {
-                if ($captured.Count -ne 2 -or $captured[0] -ne '--selection-file') { throw 'Invoke custom deve aprire GUI senza --quick.' }
-                $request = $captured[1]
-            } else {
-                if ($captured.Count -ne 5 -or $captured[0] -ne '--quick' -or $captured[1] -ne '--target' -or $captured[2] -ne 'mp3' -or $captured[3] -ne '--selection-file') { throw 'Invoke rapido non valido.' }
-                $request = $captured[4]
+            if ($captured.Count -ne $case.Prefix.Count + 1) { throw ('Numero argomenti Invoke non valido: ' + $case.Command) }
+            for ($index = 0; $index -lt $case.Prefix.Count; $index++) {
+                if ($captured[$index] -cne $case.Prefix[$index]) { throw ('Argomento Invoke non valido: ' + $case.Command) }
             }
+            $request = $captured[-1]
             try {
                 $selection = [IO.File]::ReadAllText($request) | ConvertFrom-Json
-                if ($selection.Count -ne 2 -or $selection[0] -ne $audio -or $selection[1] -ne $video) { throw 'Selezione batch non conservata.' }
+                if ($selection.Count -ne $case.Files.Count) { throw 'Numero file batch non conservato.' }
+                for ($index = 0; $index -lt $case.Files.Count; $index++) {
+                    if ($selection[$index] -cne $case.Files[$index]) { throw 'Ordine o percorso batch non conservato.' }
+                }
             } finally {
                 if ($request -like (Join-Path ([IO.Path]::GetTempPath()) 'the-converter-selection-*.json')) { Remove-Item -LiteralPath $request -Force }
                 Remove-Item -LiteralPath $InvokeCaptureFile -Force
             }
         }
-        Write-Output 'Invoke smoke test OK: MP3 usa --quick --target mp3; personalizzate apre GUI; JSON batch conservato.'
+        Write-Output 'Invoke smoke test OK: MP3 e PDF Bulk rapidi; PDF Merge apre GUI senza --quick; personalizzate e ordine/percorso JSON conservati.'
     }
 } finally {
     foreach ($file in $testFiles) {

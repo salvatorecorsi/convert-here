@@ -24,7 +24,7 @@ With Poppler, export PDF pages to PNG/JPEG, extract embedded text as TXT, or rec
 
 With Tesseract, recognize text in images as TXT, or enable local OCR for PDFs to create TXT, DOCX or HTML from scanned pages. PDF OCR is off by default and also uses Poppler. Select installed language models, such as ita+eng, and the PDF page DPI. Keep models in the engine's tessdata directory. Processing stays on your PC without OpenAI or API charges. Recognized text may contain errors and should be reviewed; OCR does not create a searchable PDF.
 
-Compress PDFs losslessly, split them into one file per page, or merge several PDFs in your chosen order without external engines. Use the list arrows in the options window to reorder files. Compression does not resample images or produce a file larger than its source; file size may remain unchanged. Splitting and merging omit bookmarks, tags and document metadata, and reject interactive forms. These operations reject encrypted or signed PDFs. Compression preserves the catalog and forms and does not remove metadata.
+Compress PDFs losslessly or split them into one file per page. For multiple PDF-compatible files, PDF (Bulk) queues separate results; PDF (Merge) prepares supported images, PDFs, Word/Office, Excel/CSV and HTML to create one PDF. Drag individual pages to interleave sources, or use the arrows or Alt+up/down. PDFs and native images need no external merge engine; documents still require LibreOffice and HEIC/AVIF needs libheif. Audio and video are excluded. Compression does not resample images or produce a file larger than its source. Splitting and merging omit bookmarks, tags and document metadata, and reject interactive forms. These operations reject encrypted or signed PDFs; compression preserves the catalog and forms and does not remove metadata.
 
 With LibreOffice, convert compatible Word documents, other documents, spreadsheets and presentations to PDF; export XLS/XLSX/XLSM/ODS to CSV; or create Excel XLSX files from CSV. CSV export contains only the first sheet, using UTF-8 and double quotes. It preserves displayed values without formatting or formulas. Choose commas, semicolons, tabs or pipes for both import and export; commas are the default. Input CSV files must use UTF-8. Expressions beginning with = are imported as text, and quoted fields preserve identifiers with leading zeros.
 
@@ -34,7 +34,7 @@ Format conversion runs on your PC. Audio is uploaded only when you select OpenAI
 
 Speech transcription creates a TXT file with automatic language detection or an optional language selection. It is not directly available for video files. Review the result because recognition errors are possible. Requests already sent may incur costs even if you cancel the job.
 
-Limitations: free editing of PDF page content is not available. OCR recognizes text without reconstructing graphics or layout. Animated GIFs, multipage TIFFs and HEIC/AVIF containers use their first frame or image. Each image produces its own PDF, which can then be merged with other PDFs. Office document layout depends on LibreOffice and available fonts. The modern context menu requires Windows 11 x64. The application UI is Italian.
+Limitations: free editing of PDF page content is not available. OCR recognizes text without reconstructing graphics or layout. Animated GIFs, multipage TIFFs and HEIC/AVIF containers use their first frame or image. PDF (Bulk) keeps separate results; PDF (Merge) includes every prepared page once, up to 10,000 pages. Office document layout depends on LibreOffice and available fonts. The modern context menu requires Windows 11 x64. The application UI is Italian.
 
 ## Product features
 
@@ -53,7 +53,7 @@ Excel to first-sheet CSV and UTF-8 CSV to XLSX, with four delimiters and optiona
 Word and simple HTML to PDF with optional LibreOffice; JavaScript is not executed
 HEIC/HEIF and AVIF input and HEIC/AVIF output with optional libheif
 Local OCR for images and scanned PDFs with optional Tesseract and language models
-Lossless PDF compression, one-page splitting and merging in list order
+Separate PDF Bulk outputs or one PDF Merge with individual page drag and drop
 Preserve original files and use numbered output names for existing files
 Local format conversion; audio is sent to OpenAI only for requested transcription
 Optional audio-to-text transcription with your OpenAI API key and separate API charges

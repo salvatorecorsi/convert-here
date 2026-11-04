@@ -4,7 +4,9 @@ Queste verifiche accompagnano la preparazione Store di Corsivo. Non equivalgono 
 
 ## Verifiche della revisione corrente
 
-Il modello espone 44 destinazioni e 93 estensioni riconosciute. Sul codice dell'interfaccia integrata sono passati tutti i sei controlli richiesti: formattazione, Clippy con `--all-targets -- -D warnings` e test per app e DLL. I test sono **195 per l'app e 5 per la DLL**, senza test ignorati. Sono compilati entrambi gli eseguibili release; una conversione reale dalla CLI release verifica anche l'alias `jpeg`.
+Il modello espone 44 destinazioni e 93 estensioni riconosciute. Sul codice dell'interfaccia integrata sono passati tutti i sei controlli richiesti: formattazione, Clippy con `--all-targets -- -D warnings` e test per app e DLL. I test sono **226 per l'app e 5 per la DLL**, senza test ignorati. Sono compilati entrambi gli eseguibili release; una conversione reale dalla CLI release verifica anche l'alias `jpeg`.
+
+Le prove PDF (Bulk) e PDF (Merge) verificano la selezione multipla compatibile, la distinzione fra coda per file ed editor interattivo, i GUID storici e gli argomenti di avvio dei comandi Explorer. I test dell'editor simulano trascinamenti su piu frame, frecce da tastiera, intercalazione fra sorgenti e visualizzazione di 10.000 pagine. I test del motore controllano snapshot privati, ordine completo senza duplicati, immagini e PDF multipagina mescolati, documenti/HTML con LibreOffice, collisioni dei nomi, cancellazione e rifiuto di cifratura, firme e campi modulo. Nessun PDF intermedio viene pubblicato nella destinazione.
 
 La suite comprende Excel/CSV, HTML in PDF, ricostruzione del testo PDF in Word/HTML, OCR locale, HEIC/AVIF e operazioni PDF. Le prove locali usano FFmpeg/FFprobe e Poppler del progetto, LibreOffice 26.8.2, Tesseract con i modelli ita/eng e libheif estratti nelle cartelle di validazione, senza installazione nel sistema. Le copie di validazione non fanno parte dei pacchetti pubblici; FFmpeg e Poppler restano esclusi dal pacchetto Store.
 
@@ -26,7 +28,13 @@ I test dei probe PDF usano processi fixture Rust nativi: l'avvio di PowerShell s
 
 Il restyle mantiene egui con superfici che simulano l'aspetto Mica: il bonus Mica nativo non e applicato. Sono state verificate a schermo la finestra principale, le opzioni, la pagina Strumenti, i temi chiaro/scuro e una conversione WebM reale che prosegue dopo un errore su un altro file. Le [catture native](store-assets/README.md) usano preferenze e coda isolate; non attestano la certificazione o l'installazione MSIX del candidato finale.
 
-## Pacchetti GitHub Convert Here 0.2.0
+## Pacchetti GitHub Convert Here 0.3.0
+
+La build 0.3.0 di app, CLI e DLL Explorer e stata completata, compresa la validazione MakeAppx dell'identita locale unsigned. La DLL release supera lo smoke COM e la cattura degli avvii Bulk/Merge con helper isolato, senza registrazione. La CLI release unisce PNG, PDF multipagina e PNG in un solo PDF di quattro pagine: `pdfinfo` e `pdftoppm` verificano numero e ordine, un secondo salvataggio conserva il primo risultato con un nome distinto e gli hash degli originali restano invariati. Non sono state usate la coda o le preferenze personali.
+
+Una prova della finestra nativa, con preferenze e coda isolate, prepara cinque pagine da due immagini e un PDF di tre pagine. Trascinamenti in entrambe le direzioni intercalano immagini e pagine PDF; frecce e Alt+freccia cambiano lo stesso ordine. Il PDF unico salvato contiene cinque pagine nell'ordine scelto, verificato con `pdfinfo` e `pdftotext`. I test di regressione coprono anche pressione e primo movimento ricevuti nello stesso frame, senza agganciare per errore la maniglia sotto il puntatore finale.
+
+## Pacchetti GitHub Convert Here 0.2.0 (storico)
 
 Versione Cargo e metadati nativi sono aggiornati alla 0.2.0; i due eseguibili mostrano ProductName `Convert Here`. Sono stati generati `ConvertHere-0.2.0-windows-x64-setup.exe`, `ConvertHere-0.2.0-windows-x64-portable.zip` e `SHA256SUMS.txt`. Il packaging pubblico applica la lista esplicita dei binari consentiti e include gli avvisi delle dipendenze, senza motori esterni o certificati. Il setup pubblico offre il menu classico; l'identita MSIX unsigned usata nella build locale non e distribuita. AppId, CLSID, binari interni e percorsi dei dati restano compatibili con gli aggiornamenti. Il setup e stato compilato e ispezionato, senza installarlo sul PC di lavoro.
 
