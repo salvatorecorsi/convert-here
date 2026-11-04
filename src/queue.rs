@@ -18,6 +18,11 @@ use std::{
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
+const COMPLETED_RETENTION_MS: u64 = 7 * 24 * 60 * 60 * 1_000;
+const CANCELLED_RETENTION_MS: u64 = COMPLETED_RETENTION_MS;
+const FAILED_RETENTION_MS: u64 = 30 * 24 * 60 * 60 * 1_000;
+const MAX_TERMINAL_JOBS: usize = 300;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum JobState {
     Queued,
@@ -265,6 +270,12 @@ fn records(root: &Path) -> Result<(Vec<StoredJob>, Vec<String>)> {
         if path.is_file() {
             match load(root, &id) {
                 Ok(job) => jobs.push(job),
+                Err(error)
+                    if error.chain().any(|cause| {
+                        cause
+                            .downcast_ref::<std::io::Error>()
+                            .is_some_and(|error| error.kind() == std::io::ErrorKind::NotFound)
+                    }) => {}
                 Err(error) => {
                     warning = Some(match quarantine_record(&path) {
                         Ok(target) => format!(
@@ -286,6 +297,7 @@ fn records(root: &Path) -> Result<(Vec<StoredJob>, Vec<String>)> {
                     ))
                 }
                 Ok(false) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
                 Err(error) => {
                     warning = Some(format!(
                         "{id}: impossibile controllare i record della coda: {error}"
@@ -302,6 +314,124 @@ fn records(root: &Path) -> Result<(Vec<StoredJob>, Vec<String>)> {
     });
     warnings.sort();
     Ok((jobs, warnings))
+}
+
+fn cleanup_terminal_jobs(root: &Path, at: u64) -> Result<usize> {
+    let root = fs::canonicalize(root)?;
+    let mut terminal: Vec<_> = records(&root)?
+        .0
+        .into_iter()
+        .filter(|job| job.view.state.is_terminal())
+        .collect();
+    terminal.sort_by(|left, right| {
+        (right.updated_at, right.submitted_at, &right.view.id).cmp(&(
+            left.updated_at,
+            left.submitted_at,
+            &left.view.id,
+        ))
+    });
+    let mut removed = 0;
+    for (index, job) in terminal.iter().enumerate() {
+        let retention = match job.view.state {
+            JobState::Completed => COMPLETED_RETENTION_MS,
+            JobState::Cancelled => CANCELLED_RETENTION_MS,
+            JobState::Failed => FAILED_RETENTION_MS,
+            _ => continue,
+        };
+        let expired = job.updated_at != 0 && at.saturating_sub(job.updated_at) > retention;
+        if !expired && index < MAX_TERMINAL_JOBS {
+            continue;
+        }
+        match remove_terminal_job(&root, job) {
+            Ok(true) => removed += 1,
+            Ok(false) => {}
+            Err(error) => eprintln!("Impossibile pulire il lavoro {}: {error:#}", job.view.id),
+        }
+    }
+    Ok(removed)
+}
+
+fn reparse_or_symlink(metadata: &fs::Metadata) -> bool {
+    if metadata.file_type().is_symlink() {
+        return true;
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        metadata.file_attributes() & 0x400 != 0
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
+
+fn inside_job_directory(path: &Path, directory: &Path) -> Result<bool> {
+    if !path.is_absolute() {
+        bail!("Percorso salvato nel lavoro non assoluto");
+    }
+    if path.starts_with(directory) {
+        return Ok(true);
+    }
+    // A missing output still has an existing parent; canonicalizing ancestors
+    // handles Windows case differences and aliases without requiring the file.
+    Ok(path.ancestors().any(|ancestor| {
+        fs::canonicalize(ancestor).is_ok_and(|resolved| resolved.starts_with(directory))
+    }))
+}
+
+fn remove_terminal_job(root: &Path, candidate: &StoredJob) -> Result<bool> {
+    let directory = job_dir(root, &candidate.view.id)?;
+    let metadata = fs::symlink_metadata(&directory)?;
+    if !metadata.is_dir()
+        || reparse_or_symlink(&metadata)
+        || fs::canonicalize(&directory)?.parent() != Some(root)
+    {
+        bail!("La cartella del lavoro non è una sottocartella locale della coda");
+    }
+    let record_path = directory.join("job.json");
+    let record_metadata = fs::symlink_metadata(&record_path)?;
+    if !record_metadata.is_file() || reparse_or_symlink(&record_metadata) {
+        bail!("Il record del lavoro non è un file locale della coda");
+    }
+    let job = load(root, &candidate.view.id)?;
+    if !job.view.state.is_terminal() || job.updated_at != candidate.updated_at {
+        return Ok(false);
+    }
+    for path in std::iter::once(&job.view.input)
+        .chain(std::iter::once(&job.plan.input))
+        .chain(job.view.outputs.iter())
+        .chain(job.plan.outputs.iter().map(|output| &output.path))
+    {
+        if inside_job_directory(path, &directory)? {
+            bail!("La cartella contiene un originale o una destinazione: conservata");
+        }
+    }
+    if job.view.state == JobState::Failed {
+        for preview in &job.previews {
+            preview
+                .remove()
+                .context("Impossibile rimuovere il segnaposto del lavoro fallito")?;
+        }
+    }
+    let cancel = directory.join("cancel");
+    match fs::symlink_metadata(&cancel) {
+        Ok(metadata) if metadata.is_file() && !reparse_or_symlink(&metadata) => {
+            fs::remove_file(cancel)?
+        }
+        Ok(_) => bail!("Il segnale di annullamento è stato sostituito: lavoro conservato"),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error.into()),
+    }
+    fs::remove_file(record_path)?;
+    // Never recurse: quarantine records, unexpected files and foreign content
+    // survive even when the terminal job itself has expired.
+    match fs::remove_dir(directory) {
+        Ok(()) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::DirectoryNotEmpty => {}
+        Err(error) => return Err(error.into()),
+    }
+    Ok(true)
 }
 
 /// Snapshot without worker/dispatch locks; unreadable records are preserved separately.
@@ -535,6 +665,9 @@ fn run_worker_with_store(
                 }
             }
         }
+        if let Err(error) = cleanup_terminal_jobs(root, now()) {
+            eprintln!("Impossibile pulire la cronologia della coda: {error:#}");
+        }
     }
     let mut skipped = BTreeSet::new();
     loop {
@@ -544,6 +677,9 @@ fn run_worker_with_store(
             .into_iter()
             .find(|job| job.view.state == JobState::Queued && !skipped.contains(&job.view.id));
         let Some(mut job) = next else {
+            if let Err(error) = cleanup_terminal_jobs(root, now()) {
+                eprintln!("Impossibile pulire la cronologia della coda: {error:#}");
+            }
             // Release worker ownership while enqueue is excluded. This closes the empty-queue
             // handoff race: a submitter will either be seen here or start the next worker.
             drop(worker);
@@ -1205,5 +1341,241 @@ mod tests {
             fs::read(invalid.join("job.json.unreadable")).unwrap(),
             b"corrupt record"
         );
+    }
+
+    fn history_record(
+        root: &Path,
+        template: &StoredJob,
+        id: &str,
+        state: JobState,
+        updated_at: u64,
+    ) -> StoredJob {
+        let mut job: StoredJob =
+            serde_json::from_value(serde_json::to_value(template).unwrap()).unwrap();
+        job.view.id = id.into();
+        job.view.state = state;
+        job.previews.clear();
+        job.updated_at = updated_at;
+        job.submitted_at = updated_at;
+        store(root, &job).unwrap();
+        job
+    }
+
+    #[test]
+    fn history_cleanup_obeys_state_ages_and_keeps_active_jobs_outputs_and_unknown_dates() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("queue");
+        let queued = queued_image(&root, &directory.path().join("source.png"));
+        let template = load(&root, &queued.id).unwrap();
+        let at = 2_000_000_000_000;
+        let day = 24 * 60 * 60 * 1_000;
+        for (id, state, age) in [
+            ("job-old-completed", JobState::Completed, 8 * day),
+            ("job-old-cancelled", JobState::Cancelled, 8 * day),
+            ("job-old-failed", JobState::Failed, 31 * day),
+            ("job-recent-failed", JobState::Failed, 8 * day),
+            ("job-recent-completed", JobState::Completed, 6 * day),
+            ("job-old-queued", JobState::Queued, 100 * day),
+            ("job-old-running", JobState::Running, 100 * day),
+        ] {
+            history_record(&root, &template, id, state, at - age);
+        }
+        history_record(&root, &template, "job-unknown-date", JobState::Completed, 0);
+        let original = fs::read(&queued.input).unwrap();
+        fs::write(&queued.outputs[0], b"keep converted output").unwrap();
+        assert_eq!(cleanup_terminal_jobs(&root, at).unwrap(), 3);
+        for id in ["job-old-completed", "job-old-cancelled", "job-old-failed"] {
+            assert!(!root.join(id).exists());
+        }
+        for id in [
+            "job-recent-failed",
+            "job-recent-completed",
+            "job-old-queued",
+            "job-old-running",
+            "job-unknown-date",
+        ] {
+            assert!(root.join(id).join("job.json").is_file());
+        }
+        assert_eq!(fs::read(&queued.input).unwrap(), original);
+        assert_eq!(
+            fs::read(&queued.outputs[0]).unwrap(),
+            b"keep converted output"
+        );
+        assert!(template.plan.outputs[0].marker.is_file());
+        assert!(PendingLink::path_for(&queued.outputs[0]).is_file());
+    }
+
+    #[test]
+    fn history_cleanup_caps_terminal_records_without_counting_active_jobs() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("queue");
+        let queued = queued_image(&root, &directory.path().join("source.png"));
+        let template = load(&root, &queued.id).unwrap();
+        for index in 0..MAX_TERMINAL_JOBS + 5 {
+            let mut job = history_record(
+                &root,
+                &template,
+                &format!("job-history-{index:04}"),
+                JobState::Completed,
+                0,
+            );
+            job.submitted_at = index as u64;
+            store(&root, &job).unwrap();
+        }
+        assert_eq!(cleanup_terminal_jobs(&root, now()).unwrap(), 5);
+        let jobs = records(&root).unwrap().0;
+        assert_eq!(
+            jobs.iter()
+                .filter(|job| job.view.state.is_terminal())
+                .count(),
+            MAX_TERMINAL_JOBS
+        );
+        assert_eq!(
+            load(&root, &queued.id).unwrap().view.state,
+            JobState::Queued
+        );
+        for index in 0..5 {
+            assert!(!root.join(format!("job-history-{index:04}")).exists());
+        }
+        assert!(root.join("job-history-0005/job.json").is_file());
+    }
+
+    #[test]
+    fn history_cleanup_preserves_quarantines_foreign_files_and_files_declared_inside_job_dirs() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("queue");
+        let queued = queued_image(&root, &directory.path().join("source.png"));
+        let template = load(&root, &queued.id).unwrap();
+        let at = 2_000_000_000_000;
+        for id in ["job-quarantine", "job-foreign", "job-output", "job-input"] {
+            history_record(&root, &template, id, JobState::Completed, 1);
+        }
+        fs::write(
+            root.join("job-quarantine/job.json.unreadable"),
+            b"preserve corrupt evidence",
+        )
+        .unwrap();
+        fs::write(root.join("job-foreign/notes.txt"), b"foreign notes").unwrap();
+        let mut output_job = load(&root, "job-output").unwrap();
+        output_job.plan.outputs[0].path = fs::canonicalize(root.join("job-output"))
+            .unwrap()
+            .join("result.jpg");
+        fs::write(&output_job.plan.outputs[0].path, b"protected output").unwrap();
+        store(&root, &output_job).unwrap();
+        let mut input_job = load(&root, "job-input").unwrap();
+        input_job.view.input = fs::canonicalize(root.join("job-input"))
+            .unwrap()
+            .join("source.png");
+        fs::write(&input_job.view.input, b"protected original").unwrap();
+        store(&root, &input_job).unwrap();
+        assert_eq!(cleanup_terminal_jobs(&root, at).unwrap(), 2);
+        assert!(!root.join("job-quarantine/job.json").exists());
+        assert!(!root.join("job-foreign/job.json").exists());
+        assert_eq!(
+            fs::read(root.join("job-quarantine/job.json.unreadable")).unwrap(),
+            b"preserve corrupt evidence"
+        );
+        assert_eq!(
+            fs::read(root.join("job-foreign/notes.txt")).unwrap(),
+            b"foreign notes"
+        );
+        assert_eq!(
+            fs::read(&output_job.plan.outputs[0].path).unwrap(),
+            b"protected output"
+        );
+        assert_eq!(
+            fs::read(&input_job.view.input).unwrap(),
+            b"protected original"
+        );
+        assert!(root.join("job-output/job.json").is_file());
+        assert!(root.join("job-input/job.json").is_file());
+        assert_eq!(records(&root).unwrap().1.len(), 1);
+    }
+
+    #[test]
+    fn failed_history_removes_only_owned_previews_and_keeps_metadata_on_preview_failure() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("queue");
+        let owned = queued_image(&root, &directory.path().join("owned.png"));
+        let replaced = queued_image(&root, &directory.path().join("replaced.png"));
+        for job in [&owned, &replaced] {
+            let mut record = load(&root, &job.id).unwrap();
+            record.view.state = JobState::Failed;
+            record.updated_at = 1;
+            store(&root, &record).unwrap();
+        }
+        let foreign_link = PendingLink::path_for(&replaced.outputs[0]);
+        fs::write(&foreign_link, b"replaced by another program").unwrap();
+        assert_eq!(cleanup_terminal_jobs(&root, now()).unwrap(), 1);
+        assert!(!root.join(&owned.id).exists());
+        assert!(!PendingLink::path_for(&owned.outputs[0]).exists());
+        assert!(root.join(&replaced.id).join("job.json").is_file());
+        assert_eq!(
+            fs::read(foreign_link).unwrap(),
+            b"replaced by another program"
+        );
+    }
+
+    #[test]
+    fn worker_cleans_old_history_at_startup_and_again_when_the_queue_becomes_empty() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("queue");
+        let queued = queued_image(&root, &directory.path().join("source.png"));
+        let template = load(&root, &queued.id).unwrap();
+        history_record(&root, &template, "job-old-history", JobState::Completed, 1);
+        run_worker_with_store(&root, None, |root, job| {
+            assert!(!root.join("job-old-history").exists());
+            if job.view.state == JobState::Completed {
+                let mut old: StoredJob =
+                    serde_json::from_value(serde_json::to_value(job).unwrap()).unwrap();
+                old.updated_at = 1;
+                return store(root, &old);
+            }
+            store(root, job)
+        })
+        .unwrap();
+        assert!(!root.join(&queued.id).exists());
+        assert!(image::open(&queued.outputs[0]).is_ok());
+        assert!(queued.input.is_file());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn history_cleanup_rejects_junctions_and_leaves_the_external_directory_intact() {
+        use std::os::windows::process::CommandExt;
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("queue");
+        let queued = queued_image(&root, &directory.path().join("source.png"));
+        let template = load(&root, &queued.id).unwrap();
+        let outside = directory.path().join("outside");
+        fs::create_dir(&outside).unwrap();
+        let mut job: StoredJob =
+            serde_json::from_value(serde_json::to_value(template).unwrap()).unwrap();
+        job.view.id = "job-junction".into();
+        job.view.state = JobState::Completed;
+        job.updated_at = 1;
+        fs::write(outside.join("job.json"), serde_json::to_vec(&job).unwrap()).unwrap();
+        fs::write(outside.join("keep.txt"), b"outside queue").unwrap();
+        let link = root.join("job-junction");
+        let result = Command::new("cmd.exe")
+            .args(["/d", "/c", "mklink", "/J"])
+            .arg(&link)
+            .arg(&outside)
+            .creation_flags(0x08000000)
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        assert!(remove_terminal_job(&fs::canonicalize(&root).unwrap(), &job).is_err());
+        cleanup_terminal_jobs(&root, now()).unwrap();
+        assert!(outside.join("job.json").is_file());
+        assert_eq!(
+            fs::read(outside.join("keep.txt")).unwrap(),
+            b"outside queue"
+        );
+        fs::remove_dir(link).unwrap();
     }
 }

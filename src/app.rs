@@ -1824,25 +1824,85 @@ impl Drop for ConverterApp {
 
 const QUEUE_REFRESH: std::time::Duration = std::time::Duration::from_millis(500);
 
-#[derive(Default)]
+fn background_reader<T: Send + 'static>(
+    mut read: impl FnMut() -> anyhow::Result<T> + Send + 'static,
+) -> (mpsc::SyncSender<()>, mpsc::Receiver<Result<T, String>>) {
+    let (requests, triggers) = mpsc::sync_channel(1);
+    let (results, snapshots) = mpsc::sync_channel(1);
+    std::thread::spawn(move || {
+        while triggers.recv().is_ok() {
+            let snapshot = read().map_err(|error| format!("{error:#}"));
+            if results.send(snapshot).is_err() {
+                break;
+            }
+        }
+    });
+    (requests, snapshots)
+}
+
+fn poll_background<T>(
+    requests: &mpsc::SyncSender<()>,
+    snapshots: &mpsc::Receiver<Result<T, String>>,
+    last_refresh: &mut Option<std::time::Instant>,
+) -> Option<Result<T, String>> {
+    let mut latest = None;
+    loop {
+        match snapshots.try_recv() {
+            Ok(snapshot) => latest = Some(snapshot),
+            Err(mpsc::TryRecvError::Empty) => break,
+            Err(mpsc::TryRecvError::Disconnected) => {
+                if latest.is_none() {
+                    latest = Some(Err(
+                        "La lettura in background della coda è stata interrotta".into(),
+                    ));
+                }
+                break;
+            }
+        }
+    }
+    if last_refresh.is_none_or(|time| time.elapsed() >= QUEUE_REFRESH) {
+        *last_refresh = Some(std::time::Instant::now());
+        // One pending request is enough; a slow disk must not create a backlog.
+        let _ = requests.try_send(());
+    }
+    latest
+}
+
+type QueueSnapshot = (Vec<QueueJob>, Vec<String>);
+
 struct QuickQueueView {
     jobs: Vec<QueueJob>,
     last_refresh: Option<std::time::Instant>,
     error: Option<String>,
     action_error: Option<String>,
     warnings: Vec<String>,
+    requests: mpsc::SyncSender<()>,
+    snapshots: mpsc::Receiver<Result<QueueSnapshot, String>>,
+}
+
+impl Default for QuickQueueView {
+    fn default() -> Self {
+        let (requests, snapshots) = background_reader(queue::list_jobs_with_warnings);
+        Self {
+            jobs: Vec::new(),
+            last_refresh: None,
+            error: None,
+            action_error: None,
+            warnings: Vec::new(),
+            requests,
+            snapshots,
+        }
+    }
 }
 
 impl QuickQueueView {
     fn refresh(&mut self) {
-        if self
-            .last_refresh
-            .is_some_and(|time| time.elapsed() < QUEUE_REFRESH)
-        {
+        let Some(snapshot) =
+            poll_background(&self.requests, &self.snapshots, &mut self.last_refresh)
+        else {
             return;
-        }
-        self.last_refresh = Some(std::time::Instant::now());
-        match queue::list_jobs_with_warnings() {
+        };
+        match snapshot {
             Ok((jobs, warnings)) => {
                 self.jobs = jobs;
                 self.warnings = warnings;
@@ -2029,10 +2089,14 @@ struct QueueStatusApp {
     error: Option<String>,
     action_error: Option<String>,
     cancel_sent: bool,
+    requests: mpsc::SyncSender<()>,
+    snapshots: mpsc::Receiver<Result<QueueJob, String>>,
 }
 
 impl QueueStatusApp {
     fn new(id: String) -> Self {
+        let requested_id = id.clone();
+        let (requests, snapshots) = background_reader(move || queue::get_job(&requested_id));
         Self {
             id,
             job: None,
@@ -2040,18 +2104,18 @@ impl QueueStatusApp {
             error: None,
             action_error: None,
             cancel_sent: false,
+            requests,
+            snapshots,
         }
     }
 
     fn refresh(&mut self) {
-        if self
-            .last_refresh
-            .is_some_and(|time| time.elapsed() < QUEUE_REFRESH)
-        {
+        let Some(snapshot) =
+            poll_background(&self.requests, &self.snapshots, &mut self.last_refresh)
+        else {
             return;
-        }
-        self.last_refresh = Some(std::time::Instant::now());
-        match queue::get_job(&self.id) {
+        };
+        match snapshot {
             Ok(job) => {
                 self.job = Some(job);
                 self.error = None;
@@ -2361,5 +2425,56 @@ fn transcription_language_label(language: Option<&str>) -> &str {
             .iter()
             .find(|(value, _)| *value == code)
             .map_or(code, |(_, label)| *label),
+    }
+}
+
+#[cfg(test)]
+mod queue_reader_tests {
+    use super::*;
+
+    #[test]
+    fn slow_queue_io_runs_off_the_ui_thread_and_polling_remains_nonblocking() {
+        let ui_thread = std::thread::current().id();
+        let (started, ready) = mpsc::channel();
+        let (release, gate) = mpsc::channel();
+        let (requests, snapshots) = background_reader(move || {
+            assert_ne!(std::thread::current().id(), ui_thread);
+            started.send(()).unwrap();
+            gate.recv().unwrap();
+            Ok(17)
+        });
+        let mut last_refresh = None;
+        assert!(poll_background(&requests, &snapshots, &mut last_refresh).is_none());
+        ready
+            .recv_timeout(std::time::Duration::from_secs(2))
+            .unwrap();
+        assert!(poll_background(&requests, &snapshots, &mut last_refresh).is_none());
+        release.send(()).unwrap();
+        assert_eq!(
+            snapshots
+                .recv_timeout(std::time::Duration::from_secs(2))
+                .unwrap()
+                .unwrap(),
+            17
+        );
+    }
+
+    #[test]
+    fn closing_a_queue_view_disconnects_and_releases_its_reader() {
+        let (lifetime, released) = mpsc::channel::<()>();
+        let (requests, snapshots) = background_reader(move || Ok(lifetime.clone()));
+        requests.send(()).unwrap();
+        drop(
+            snapshots
+                .recv_timeout(std::time::Duration::from_secs(2))
+                .unwrap()
+                .unwrap(),
+        );
+        drop(requests);
+        drop(snapshots);
+        assert!(matches!(
+            released.recv_timeout(std::time::Duration::from_secs(2)),
+            Err(mpsc::RecvTimeoutError::Disconnected)
+        ));
     }
 }
