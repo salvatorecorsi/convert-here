@@ -1,8 +1,12 @@
 # Microsoft Store: preparazione della submission
 
-Nuova preparazione al 4 novembre 2026: applicazione **0.3.2**, pacchetto Store **1.0.2.0**, editore pubblico previsto **Salvatore Corsi**. La richiesta di cambio e stata salvata nell'account **Individual**; Verification Summary mostra **In Progress**, con **Email Verification In Progress** ed **Employment/Business Not Started**, senza azioni disponibili. Il nome attivo resta **Corsivo** fino all'approvazione Microsoft: **il cambio non e ancora approvato**. La nuova versione **non e stata inviata** e non ha ancora commit, checksum o validazione documentati.
+Stato al 4 novembre 2026: [Convert Here **0.3.2**](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.2) e pubblicata come latest su GitHub dal commit `8f7532bf9d16f80ef65b5229dba93929e11c1d82`. Il nome editore **Salvatore Corsi** e approvato: Verification Summary **Authorized**, account **Active** e Public Info Publisher Name **Salvatore Corsi**. Il MSIX Store **1.0.2.0** e stato caricato e salvato, risulta **Validated** e ha sostituito il precedente 1.0.1.0. La **Submission 1**, ID **1152921505702314630**, e stata nuovamente inviata il **4 novembre 2026** ed e **In certification**. **Lo Store non e ancora pubblicato.**
 
-Prima dell'invio del nuovo MSIX occorre confermare il `PublisherDisplayName` approvato nel portale e allineare la configurazione locale, mantenendo `Name`, `Publisher`, identita preview e percorsi tecnici. Il prodotto resta **9NPKPPCBNBM8**. La precedente certificazione e stata ritirata: **Submission 1**, ID **1152921505702314630**, e ora **In draft**, con tutte le sezioni Complete e il vecchio MSIX 1.0.1.0 ancora Validated. Le prove della 0.3.1 seguenti non attestano il nuovo 1.0.2.0.
+Il prodotto resta **9NPKPPCBNBM8**, `Name` **SalvatoreCorsi.ConvertHere** e `Publisher` **CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17**; identita e GUID tecnici non cambiano. Il nuovo `ConvertHere-1.0.2.0-x64-store.msix` e di **6165973 byte**, SHA-256 `c6d655b58156e4a14e13653a0f5115f3bffc2ba5ff086dbe435bc34440a053b7`, generato dal commit pulito `8f7532bf9d16f80ef65b5229dba93929e11c1d82` e verificato prima del caricamento.
+
+Tutte le sei sezioni erano **Complete** prima del nuovo invio. La timeline mostra **Submission Complete**, **Pre-processing In progress**, **Certification Not started**, **Publishing Not started**. Restano prezzo gratuito, tutti i 240 mercati selezionati e pubblicazione automatica appena il prodotto supera la certificazione.
+
+La [privacy 0.3.2](https://github.com/salvatorecorsi/convert-here/blob/v0.3.2/docs/privacy.md) e pubblica verificata e salvata, con persistenza confermata al ricaricamento. Additional Testing Information di **1977 caratteri**, aggiornate alle versioni 0.3.2 / 1.0.2.0, sono salvate e rilette. I campi telefono e indirizzo restano vuoti. Le schede riutilizzano le tre catture native 0.3.1 perche l'interfaccia e identica; non sono nuove catture della 0.3.2.
 
 ## Stato della 0.3.1 prima del ritiro della certificazione
 
@@ -51,10 +55,10 @@ Il menu moderno usa la DLL `IExplorerCommand`, COM surrogate e `windows.fileExpl
 | Nome prodotto riservato | **Convert Here**, prenotazione confermata dal proprietario il 4 novembre 2026. |
 | `Package/Identity/@Name` | `SalvatoreCorsi.ConvertHere`, dalla schermata Product identity fornita dal proprietario. |
 | `Package/Identity/@Publisher` | `CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17`, dalla stessa schermata. Non sostituirlo con un `CN=CORSIVO` presunto. |
-| Publisher display name | Richiesto **Salvatore Corsi** per la 0.3.2; verifica **In Progress / Email Verification**. Il valore attivo nel portale resta **Corsivo** fino all'approvazione. |
+| Publisher display name | **Salvatore Corsi**, approvato; profilo **Authorized**, account **Active** e nome pubblico confermato in Legal info. |
 | Store ID | `9NPKPPCBNBM8`; l'identificativo non attesta la pubblicazione dell'app. |
 | Titolare e contatto | **Salvatore Corsi**, **salvo@salvatorecorsi.com**. |
-| Informativa privacy | [Bozza 0.3.2](privacy.md) con titolare e contatto reali; la [privacy 0.3.1](https://github.com/salvatorecorsi/convert-here/blob/v0.3.1/docs/privacy.md) resta l'URL verificato e salvato nella precedente submission. |
+| Informativa privacy | [Versione 0.3.2](https://github.com/salvatorecorsi/convert-here/blob/v0.3.2/docs/privacy.md), pubblica verificata e salvata nelle Properties; titolare e contatto reali nell'informativa IT/EN. |
 | Supporto | **salvo@salvatorecorsi.com** oppure [pagina contatti](https://www.salvatorecorsi.com/contatti/), gia pubblici. Per PC il campo e facoltativo, ma consigliato. |
 | Prezzo, mercati e calendario | Scelte confermate dal proprietario e salvate: **Gratuita**, **tutti i 240 mercati disponibili**, **pubblicazione appena approvata**. |
 | Licenza applicazione Store | Il campo Additional license terms puo rimanere vuoto per usare gli Standard Application License Terms; termini diversi vanno inseriti esplicitamente. Questo non assegna una licenza open source al repository. |
@@ -71,7 +75,7 @@ L'anteprima si genera senza account o certificato:
 .\scripts\build-store-package.ps1
 ```
 
-La configurazione locale dell'identita e in `packaging/store/identity.partner-center.json`; per il nuovo candidato deve essere allineata a **Salvatore Corsi** come `PublisherDisplayName` soltanto dopo la conferma del valore in Partner Center, mantenendo `Name` e `Publisher` indicati sopra. Per una nuova configurazione, copiare `packaging/store/identity.partner-center.example.json` e sostituire i placeholder con i valori reali. Per generare il MSIX unsigned destinato alla submission:
+La configurazione locale dell'identita e in `packaging/store/identity.partner-center.json`; e allineata a **Salvatore Corsi** come `PublisherDisplayName`, ora confermato in Partner Center, mantenendo `Name` e `Publisher` indicati sopra. Per una nuova configurazione, copiare `packaging/store/identity.partner-center.example.json` e sostituire i placeholder con i valori reali. Per generare il MSIX unsigned destinato alla submission:
 
 ```powershell
 .\scripts\build-store-package.ps1 -ForSubmission -IdentityConfig .\packaging\store\identity.partner-center.json
@@ -83,7 +87,7 @@ In alternativa, aprire [Actions → Microsoft Store package → Run workflow](ht
 
 [Windows checks](https://github.com/salvatorecorsi/convert-here/actions/workflows/windows-ci.yml) esegue automaticamente formattazione, test Rust e fixture PowerShell. Una pipeline verde verifica queste operazioni; non sostituisce la certificazione Microsoft o il collaudo dell'installazione su Windows 11.
 
-- Versione Store del nuovo candidato in preparazione: `1.0.2.0`, distinta dalla versione applicazione Rust `0.3.2` e maggiore del precedente upload `1.0.1.0`. Il primo segmento Store deve essere maggiore di zero; il quarto rimane zero. Ogni segmento e al massimo 65535. [Versioni dei pacchetti](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/app-package-requirements#version-numbering-for-windows-10-and-11-packages).
+- Versione Store del candidato caricato e inviato: `1.0.2.0`, distinta dalla versione applicazione Rust `0.3.2` e maggiore del precedente upload `1.0.1.0`. Il primo segmento Store deve essere maggiore di zero; il quarto rimane zero. Ogni segmento e al massimo 65535. [Versioni dei pacchetti](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/app-package-requirements#version-numbering-for-windows-10-and-11-packages).
 - Nome e Publisher devono corrispondere esattamente ai dati Partner Center, comprese maiuscole e punteggiatura. Il builder ricompila gli eseguibili con il manifest dedicato al pacchetto completo, senza l'elemento di identita sparse dell'installer EXE.
 - La UI e attualmente in italiano. La scheda inglese e una traduzione della descrizione, non una traduzione dell'interfaccia. Non dichiarare supporto UI inglese finche non implementato e verificato.
 - Target previsto: Windows 11 desktop x64 per il menu moderno. Il limite OS e quello effettivamente impostato e collaudato nel manifest Store; non promettere ARM64 nativo.
@@ -111,7 +115,7 @@ Non aggiungere `unvirtualizedResources` per abitudine ereditandolo dal pacchetto
 
 ## Verifiche documentate della precedente 0.3.1
 
-Le caselle seguenti documentano il precedente candidato 1.0.1.0 e le schede della 0.3.1 salvate nel portale. Non attestano build, validazione o invio del nuovo 1.0.2.0 con l'editore previsto. Lo [stato delle verifiche](store-validation.md) distingue le due preparazioni.
+Le caselle seguenti documentano esclusivamente il precedente candidato 1.0.1.0 e le schede della 0.3.1 salvate nel portale. Per build, validazione e invio del 1.0.2.0 valgono il riepilogo corrente sopra e lo [stato delle verifiche](store-validation.md).
 
 - [x] Identita reale Partner Center e contatto confermati.
 - [x] Informativa privacy IT/EN e schede locali aggiornate alla 0.3.1.
@@ -128,11 +132,11 @@ Il Windows App Certification Kit non e stato eseguito sul nuovo candidato. Micro
 
 Per il CSV attendere l'esportazione del prodotto reale da Partner Center: preservare colonne Field, ID e Type; trasferire i testi preparati nei campi della lingua corretta. Non inventare un template con ID presunti. [Importazione/esportazione delle schede](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/import-and-export-store-listings).
 
-## Note per il certificatore: bozza per 0.3.2
+## Note per il certificatore: riferimento per 0.3.2
 
-La precedente submission 1.0.1.0 contiene istruzioni di test di 1977 caratteri. Il testo seguente e la bozza per la nuova 0.3.2, non ancora inviata; non attesta un collaudo d'installazione del nuovo MSIX.
+Nel portale sono state salvate e rilette Additional Testing Information di 1977 caratteri per 0.3.2 / 1.0.2.0. Il riferimento esteso seguente descrive le procedure dell'app; non attesta un collaudo d'installazione del MSIX.
 
-> Convert Here 0.3.2 / Store package 1.0.2.0. Intended publisher: Salvatore Corsi; developer: Salvatore Corsi. The UI is Italian. The software is free, with no subscriptions, in-app purchases or usage-based charges. Conversion and OCR run locally and need no app account or login. Target: Windows 11 x64.
+> Convert Here 0.3.2 / Store package 1.0.2.0. Publisher: Salvatore Corsi; developer: Salvatore Corsi. The UI is Italian. The software is free, with no subscriptions, in-app purchases or usage-based charges. Conversion and OCR run locally and need no app account or login. Target: Windows 11 x64.
 >
 > Native test: launch Convert Here from Start, use Aggiungi file or drop a PNG/JPEG, select another image format or PDF, then Converti file. Outputs use the selected folder or the source folder; existing files are preserved. PDF compression, splitting and merging need no external engine. Use unsigned, unencrypted PDFs without interactive forms.
 >

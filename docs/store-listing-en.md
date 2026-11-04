@@ -1,6 +1,6 @@
 # Microsoft Store listing — English (en-US)
 
-Draft for Convert Here **0.3.2**, Store package **1.0.2.0**: the new candidate is in preparation and has not been submitted. Intended publisher: **Salvatore Corsi**; the Microsoft account display-name change still needs verification. Developer: **Salvatore Corsi**. The owner confirmed reservation of **Convert Here** in Partner Center on 4 November 2026. This listing is translated; the application UI is currently Italian. Do not copy this preamble into public listing fields.
+Texts for Convert Here **0.3.2**, Store package **1.0.2.0**, uploaded and Validated; the submission was sent again on 4 November 2026 and is **In certification**, not yet published. Publisher and developer: **Salvatore Corsi**, approved with account Active and verification Authorized. The three native 0.3.1 screenshots are reused because the UI is identical. The application UI is Italian. Do not copy this preamble into public listing fields.
 
 ## Short description
 
@@ -91,8 +91,8 @@ Leave blank for the first Microsoft Store submission. Add release-specific notes
 
 ## Submission references
 
-Data controller and developer: **Salvatore Corsi**; intended publisher: **Salvatore Corsi**. Privacy and support contact: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Public privacy statement](https://github.com/salvatorecorsi/convert-here/blob/master/docs/privacy.md). Reserved name: **Convert Here**. See the [submission procedure](store-submission.md) for licensing, identity and current status.
+Data controller and developer: **Salvatore Corsi**; publisher: **Salvatore Corsi**. Privacy and support contact: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Public privacy statement](https://github.com/salvatorecorsi/convert-here/blob/v0.3.2/docs/privacy.md). Reserved name: **Convert Here**. See the [submission procedure](store-submission.md) for licensing, identity and current status.
 
-These texts are prepared for the new candidate and still need to be applied to the submission. They do not attest its upload or an update to the Partner Center listings.
+The Partner Center listings are Complete and included in the 1.0.2.0 submission sent for certification; this status does not attest Store publication.
 
 Description: 10,000 characters maximum; short description: 1,000 maximum (this draft is below 270); up to 20 features of 200 characters each; release notes: 1,500 maximum, empty for the first submission. [Official MSIX listing limits](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).

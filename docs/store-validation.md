@@ -2,9 +2,23 @@
 
 Queste verifiche accompagnano la preparazione Store di Convert Here, sviluppato da Salvatore Corsi. Non equivalgono alla certificazione Microsoft e non sostituiscono l'identita reale di Partner Center.
 
-## Preparazione corrente 0.3.2 / Store 1.0.2.0
+## Verifiche correnti 0.3.2 / Store 1.0.2.0
 
-La nuova versione e in preparazione con editore pubblico previsto **Salvatore Corsi**. La richiesta e stata salvata nell'account **Individual**, ma Verification Summary mostra **In Progress**, con **Email Verification In Progress** ed **Employment/Business Not Started**, e il nome attivo resta **Corsivo** fino all'approvazione Microsoft. Non sono ancora attestati nuova build, commit, checksum, validazione o invio del 1.0.2.0. La precedente certificazione e stata ritirata; Submission 1 e **In draft**, con tutte le sezioni Complete e il vecchio 1.0.1.0 ancora Validated. Le verifiche della 0.3.1 documentate sotto restano riferite esclusivamente ai relativi artefatti.
+La [release GitHub 0.3.2](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.2) e pubblicata come latest dal **4 novembre 2026, 16:25:31 UTC**, commit `8f7532bf9d16f80ef65b5229dba93929e11c1d82`. Sono superati formattazione Rust, Clippy rigoroso e test `--all-targets` per app e DLL, oltre alle fixture PowerShell 7 e 5.1. Il job `verify` del [run Windows checks 41866571328](https://github.com/salvatorecorsi/convert-here/actions/runs/41866571328) e **SUCCESS**; questo riferimento attesta il job, non uno stato complessivo del workflow non ancora registrato.
+
+L'audit degli artefatti pubblici e superato; i digest GitHub corrispondono ai file verificati. L'inventario Windows contiene **236 avvisi di dipendenze**.
+
+| Artefatto | Byte | SHA-256 |
+| --- | ---: | --- |
+| `ConvertHere-0.3.2-windows-x64-setup.exe` | 10163126 | `dec0ede6e386ad456788af2ec6a6ed8800e337ff1247efffa09fad1fb19a2381` |
+| `ConvertHere-0.3.2-windows-x64-portable.zip` | 12531010 | `f3da01da13f49145539207c278e6ba9f97591aa6ebbb233e1dabf3a1eea6a097` |
+| `SHA256SUMS.txt` | 217 | `a7292610164549002626c5a57cfbfcac1d00c6c9b3cbcd9d6f193bc0cc720fcf` |
+
+Il MSIX `ConvertHere-1.0.2.0-x64-store.msix` e di **6165973 byte**, SHA-256 `c6d655b58156e4a14e13653a0f5115f3bffc2ba5ff086dbe435bc34440a053b7`, generato dal medesimo commit con working tree pulita. L'audit Store verifica **236 avvisi**, **56 elementi payload**, **58 voci ZIP**, hash, manifest/layout, architettura x64, compatibilita CRT statica e ABI COM reale senza registrazione. I report immutabili descrivono lo stato al momento dell'audit, prima dell'upload.
+
+Il nome **Salvatore Corsi** e approvato: Verification Summary **Authorized**, account **Active**, Public Info Publisher Name **Salvatore Corsi**. Nel portale resta soltanto il nuovo 1.0.2.0 **Validated** dopo il salvataggio e il ricaricamento; il precedente 1.0.1.0 e stato sostituito automaticamente. La privacy fissata alla 0.3.2 e pubblica verificata e salvata; le istruzioni di test di **1977 caratteri** riportano 0.3.2 / 1.0.2.0 e persistono al ricaricamento. Telefono e indirizzo restano vuoti. Le tre schermate native 0.3.1 sono riutilizzate perche l'interfaccia e identica.
+
+La **Submission 1**, ID **1152921505702314630** del prodotto **9NPKPPCBNBM8**, e stata nuovamente inviata il **4 novembre 2026** ed e **In certification**. Tutte le sei sezioni erano Complete prima dell'invio; la timeline verificata mostra **Submission Complete**, **Pre-processing In progress**, **Certification Not started**, **Publishing Not started**. Il prodotto resta gratuito in tutti i 240 mercati selezionati, con pubblicazione automatica dopo il superamento della certificazione. **Lo Store non e ancora pubblicato.** Non sono attestati installazione del MSIX o WACK della 1.0.2.0.
 
 ## Verifiche della 0.3.1 prima del ritiro della certificazione
 
@@ -72,4 +86,4 @@ Il report WACK locale della precedente preview **1.0.1.0**, eseguito con kit 10.
 
 **Il precedente report WACK riguarda una preview distinta e non viene dichiarato superato.** Microsoft considera il WACK un controllo locale deprecato e facoltativo: non e stato eseguito sul nuovo candidato e il suo esito non garantirebbe l'approvazione Store. Installazione/aggiornamento/disinstallazione, menu registrato e motori opzionali del MSIX finale restano senza un collaudo su ambiente pulito. [Validazione locale MSIX](https://learn.microsoft.com/en-us/windows/msix/package/packaging-uwp-apps#validate-your-app-package-locally).
 
-Il precedente pacchetto 1.0.1.0 con editore **Corsivo** resta Validated, ma la certificazione e stata ritirata e la submission e ora **In draft**. La nuova 0.3.2 / 1.0.2.0 con editore richiesto **Salvatore Corsi** e in preparazione e non e stata inviata. Verification Summary resta **In Progress / Email Verification**; il nuovo nome non e ancora approvato. Vedi la [procedura di submission](store-submission.md).
+Il precedente 1.0.1.0 con editore **Corsivo** e stato sostituito dal 1.0.2.0. Il nuovo nome **Salvatore Corsi** e approvato, il pacchetto 1.0.2.0 e Validated e la submission e **In certification** dal 4 novembre 2026; la pubblicazione Store non e ancora iniziata. Vedi la [procedura di submission](store-submission.md).

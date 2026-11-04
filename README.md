@@ -2,11 +2,11 @@
 
 Sviluppato da **Salvatore Corsi**: versione Rust per Windows di [Final Converter](https://github.com/salvatorecorsi/final-converter). Conversioni di formato locali, OCR sul PC, selezioni multiple e integrazione con Esplora file. Convert Here e gratuito, senza abbonamenti, acquisti in-app o costi a consumo. Nessun pagamento richiesto per continuare a usarlo.
 
-Il nome pubblico e **Convert Here**, riservato anche in Microsoft Partner Center; il repository canonico e [salvatorecorsi/convert-here](https://github.com/salvatorecorsi/convert-here). Per compatibilita restano invariati i nomi tecnici degli eseguibili e dei crate, le cartelle dati e gli identificativi COM/MSIX. Le release precedenti possono ancora mostrare il nome The Converter. [Novita della versione 0.3.1](docs/release-notes-0.3.1.md). La nuova **0.3.2**, con editore previsto **Salvatore Corsi**, e in preparazione.
+Il nome pubblico e **Convert Here**, riservato anche in Microsoft Partner Center; il repository canonico e [salvatorecorsi/convert-here](https://github.com/salvatorecorsi/convert-here). Per compatibilita restano invariati i nomi tecnici degli eseguibili e dei crate, le cartelle dati e gli identificativi COM/MSIX. Le release precedenti possono ancora mostrare il nome The Converter. [Novita della versione 0.3.2](docs/release-notes-0.3.2.md).
 
 ## Preparazione Microsoft Store
 
-La distribuzione Store usa un **MSIX completo** con il menu di Windows 11 dichiarato nel pacchetto. Editore previsto per la **0.3.2**: **Salvatore Corsi**, anche autore del codice. La richiesta del nuovo nome e stata salvata nell'account Individual; la verifica Microsoft e **In Progress / Email Verification** e il nome attivo resta **Corsivo** fino all'approvazione. L'account GitHub che ospita il sorgente resta indipendente dall'identita dell'editore Microsoft.
+La distribuzione Store usa un **MSIX completo** con il menu di Windows 11 dichiarato nel pacchetto. Editore pubblico e autore del codice: **Salvatore Corsi**. Il nome editore e approvato da Microsoft; il profilo risulta **Authorized** e l'account **Active**. L'account GitHub che ospita il sorgente resta indipendente dall'identita dell'editore Microsoft.
 
 La build di anteprima e separata dalla release GitHub e non contiene certificati privati o motori esterni. Le immagini nei formati nativi e le immagini in PDF funzionano subito, come compressione, divisione e unione dei PDF. Audio/video richiedono FFmpeg; esportazione PDF in immagini o testo incorporato richiede Poppler; Office, Excel/CSV e HTML in PDF richiedono LibreOffice. HEIC/HEIF e AVIF richiedono libheif, mentre OCR richiede Tesseract con i modelli delle lingue e, per i PDF, anche Poppler. I motori si selezionano in **Strumenti**. Questi requisiti sono dichiarati anche all'inizio delle schede Store.
 
@@ -16,9 +16,7 @@ La build di anteprima e separata dalla release GitHub e non contiene certificati
 
 La preview usa un'identita di sviluppo e **non va caricata nello Store**. Per il pacchetto definitivo occorrono i dati esatti dell'Identita prodotto in Partner Center, la versione Store e il nome editore effettivamente confermato nel portale. Il modello e in `packaging/store/identity.partner-center.example.json`; la procedura e in [docs/store-submission.md](docs/store-submission.md).
 
-La nuova applicazione **0.3.2** e il candidato Store **1.0.2.0**, con editore previsto **Salvatore Corsi**, sono in preparazione e **non sono ancora stati inviati**. Le schede [italiana](docs/store-listing-it.md) e [inglese](docs/store-listing-en.md) e l'[informativa privacy](docs/privacy.md) sono predisposte per questa versione. La precedente certificazione e stata ritirata: Submission 1 e **In draft**, con il vecchio MSIX 1.0.1.0 ancora Validated.
-
-Stato documentato prima del ritiro della certificazione della **0.3.1**, con editore **Corsivo**: Le schede [italiana](docs/store-listing-it.md) e [inglese](docs/store-listing-en.md) sono salvate come Complete, ciascuna con tre catture della 0.3.1; la UI resta italiana. Il pacchetto Store **1.0.1.0**, applicazione **0.3.1**, e caricato e **Validated**, con Packages Complete. L'[informativa privacy della release](https://github.com/salvatorecorsi/convert-here/blob/v0.3.1/docs/privacy.md) e verificata e salvata nello Store. Age ratings e **Complete**, con classificazioni 3+. La submission e stata inviata il **4 novembre 2026** e risulta **In certification**; la pubblicazione non e ancora iniziata. L'app e gratuita in tutti i 240 mercati selezionati, con pubblicazione automatica appena supera la certificazione. Microsoft firma il MSIX dopo la certificazione: la build non importa certificati e non invia automaticamente l'app a Partner Center.
+La [release GitHub 0.3.2](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.2) e pubblicata come latest. Il pacchetto Store **1.0.2.0** e caricato, salvato e **Validated**; ha sostituito il precedente 1.0.1.0. La **Submission 1** e stata nuovamente inviata il **4 novembre 2026** ed e **In certification**, con pre-elaborazione in corso e certificazione/pubblicazione non ancora iniziate. L'app resta gratuita in tutti i 240 mercati selezionati, con pubblicazione automatica appena supera la certificazione. Lo Store non e ancora pubblicato. La [privacy 0.3.2](https://github.com/salvatorecorsi/convert-here/blob/v0.3.2/docs/privacy.md) e verificata e salvata; le tre schermate native 0.3.1 sono riutilizzate perche l'interfaccia e identica.
 
 Gli esiti dei test e i controlli Store ancora da completare sono raccolti in [store-validation.md](docs/store-validation.md).
 
@@ -26,7 +24,7 @@ Su GitHub Actions, **Windows checks** verifica codice e fixture su push e pull r
 
 ## Scarica e installa
 
-Scarica la [release 0.3.1 per Windows x64](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.1) e avvia `ConvertHere-0.3.1-windows-x64-setup.exe`. Il setup richiede Windows 10 build 19041 o successivo, x64. L'installer aggiunge il programma e il disinstaller per il tuo utente; la voce **Converti in** del menu contestuale e facoltativa e selezionata per default. Non richiede privilegi amministrativi.
+Scarica la [release 0.3.2 per Windows x64](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.2) e avvia `ConvertHere-0.3.2-windows-x64-setup.exe`. Il setup richiede Windows 10 build 19041 o successivo, x64. L'installer aggiunge il programma e il disinstaller per il tuo utente; la voce **Converti in** del menu contestuale e facoltativa e selezionata per default. Non richiede privilegi amministrativi.
 
 Il setup è leggero. L'opzione consigliata scarica FFmpeg e Poppler direttamente dai distributori originali (circa 160 MB, con verifica SHA-256). Servono per audio, video e PDF; le conversioni di immagini e immagini in PDF funzionano anche senza questi download. Per riprovare o installare i motori in seguito, nel menu Start trovi **Installa o aggiorna motori di conversione**.
 
@@ -34,7 +32,7 @@ Su Windows 11 il menu della distribuzione GitHub compare in **Mostra altre opzio
 
 Per rimuovere il programma usa **Impostazioni Windows → App → App installate → Convert Here → Disinstalla**, oppure il collegamento nel menu Start. Le preferenze e i file convertiti restano conservati. Se Windows mantiene caricata la DLL del menu, la pulizia viene completata al successivo accesso senza riavviare Esplora file durante il lavoro.
 
-È disponibile anche `ConvertHere-0.3.1-windows-x64-portable.zip` nella [release 0.3.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.1): estrailo in una cartella stabile, esegui `scripts/install-runtime-tools.ps1 -InstallDirectory <cartella>` per i motori e, se desideri il menu, `scripts/install-context-menu.ps1 -Mode Classic -InstallDirectory <cartella>`. Verifica i download con il file `SHA256SUMS.txt` della stessa release.
+È disponibile anche `ConvertHere-0.3.2-windows-x64-portable.zip` nella [release 0.3.2](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.2): estrailo in una cartella stabile, esegui `scripts/install-runtime-tools.ps1 -InstallDirectory <cartella>` per i motori e, se desideri il menu, `scripts/install-context-menu.ps1 -Mode Classic -InstallDirectory <cartella>`. Verifica i download con il file `SHA256SUMS.txt` della stessa release.
 
 ## Uso quotidiano
 
@@ -167,7 +165,7 @@ Per preparare gli artefatti pubblici, dopo la build:
 .\scripts\prepare-public-release.ps1 -CompilerPath C:\Percorso\InnoSetup\ISCC.exe
 ```
 
-Lo staging pubblico usa una lista esplicita di file e una verifica che rifiuta motori esterni o DLL aggiuntive. Per la versione 0.3.1 la cartella e `dist/releases/v0.3.1/`, con `ConvertHere-0.3.1-windows-x64-setup.exe`, `ConvertHere-0.3.1-windows-x64-portable.zip` e `SHA256SUMS.txt`. Gli avvisi delle dipendenze Rust e dei font sono inclusi in entrambi gli artefatti.
+Lo staging pubblico usa una lista esplicita di file e una verifica che rifiuta motori esterni o DLL aggiuntive. Per la versione 0.3.2 la cartella e `dist/releases/v0.3.2/`, con `ConvertHere-0.3.2-windows-x64-setup.exe`, `ConvertHere-0.3.2-windows-x64-portable.zip` e `SHA256SUMS.txt`. Gli avvisi delle dipendenze Rust e dei font sono inclusi in entrambi gli artefatti.
 
 Per una distribuzione con il menu moderno, usa `prepare-public-release.ps1 -RequireModernMenu` dopo una build firmata con un certificato di produzione. Il comando include MSIX e loghi esterni, oppure si interrompe se manca una firma attendibile. Il relativo setup abilita per default la voce diretta su Windows 11 e la rimuove durante la disinstallazione. Non importa certificati di prova: la procedura locale e i requisiti di firma sono descritti in [docs/windows-integration.md](docs/windows-integration.md).
 

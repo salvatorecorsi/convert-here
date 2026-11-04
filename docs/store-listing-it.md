@@ -1,6 +1,6 @@
 # Scheda Microsoft Store — italiano (it-IT)
 
-Bozza per Convert Here **0.3.2**, pacchetto Store **1.0.2.0**: nuovo candidato in preparazione, non ancora inviato. Editore previsto: **Salvatore Corsi**; il cambio del nome nel profilo Microsoft e ancora da verificare. Sviluppatore: **Salvatore Corsi**. Il proprietario ha confermato la prenotazione del nome **Convert Here** in Partner Center il 4 novembre 2026. Non copiare questo preambolo nei campi pubblici.
+Testi per Convert Here **0.3.2**, pacchetto Store **1.0.2.0**, caricato e Validated; submission nuovamente inviata il 4 novembre 2026 e **In certification**, non ancora pubblicata. Editore e sviluppatore: **Salvatore Corsi**, nome approvato con account Active e verifica Authorized. Si riutilizzano le tre schermate native 0.3.1 perche la UI e identica. Non copiare questo preambolo nei campi pubblici.
 
 ## Descrizione breve
 
@@ -91,8 +91,8 @@ Lasciare vuoto per la prima submission Store. Preparare una nota specifica solta
 
 ## Riferimenti submission
 
-Titolare e sviluppatore: **Salvatore Corsi**; editore previsto: **Salvatore Corsi**. Contatto privacy e supporto: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Informativa privacy pubblica](https://github.com/salvatorecorsi/convert-here/blob/master/docs/privacy.md). Nome riservato: **Convert Here**. Per licenza, identita e stato operativo vedere la [procedura di submission](store-submission.md).
+Titolare e sviluppatore: **Salvatore Corsi**; editore: **Salvatore Corsi**. Contatto privacy e supporto: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Informativa privacy pubblica](https://github.com/salvatorecorsi/convert-here/blob/v0.3.2/docs/privacy.md). Nome riservato: **Convert Here**. Per licenza, identita e stato operativo vedere la [procedura di submission](store-submission.md).
 
-Questi testi sono predisposti per il nuovo candidato e devono ancora essere applicati alla submission; non attestano il suo caricamento o l'aggiornamento delle schede in Partner Center.
+Le schede nel portale sono Complete e incluse nella submission 1.0.2.0 inviata per certificazione; questo stato non attesta la pubblicazione Store.
 
 Descrizione entro 10.000 caratteri; breve entro 1.000 (qui meno di 270); massimo 20 funzionalita da 200 caratteri; novita massimo 1.500, vuote alla prima submission. [Limiti ufficiali dei campi MSIX](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).

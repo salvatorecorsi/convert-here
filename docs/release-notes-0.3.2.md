@@ -1,12 +1,12 @@
 # Convert Here 0.3.2 — Salvatore Corsi
 
-La versione allinea il nome editore dell'app, dell'installer, dei manifest e dell'informativa a **Salvatore Corsi**, senza aggiungere nuove funzioni di conversione.
+La versione allinea il nome editore dell'app, dell'installer, dei manifest e dell'informativa a **Salvatore Corsi**, senza aggiungere nuove funzioni di conversione. La [release GitHub 0.3.2](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.2) e pubblicata dal 4 novembre 2026.
 
 Convert Here e gratuito, senza abbonamenti, acquisti in-app o costi a consumo. Nessun pagamento richiesto per continuare a usarlo. Conversioni di formato e OCR vengono elaborati sul PC; restano disponibili 44 formati di destinazione e 93 estensioni di ingresso nelle categorie compatibili.
 
 I nomi tecnici degli eseguibili e dei crate, le cartelle dati, le identita dei pacchetti, gli alias e i GUID restano invariati per compatibilita. Gli artefatti gia pubblicati della 0.3.1 restano immutati.
 
-Il nuovo pacchetto Store **1.0.2.0** e in preparazione e non e stato inviato. **Salvatore Corsi** e il nome pubblico richiesto: la verifica Microsoft e **In Progress / Email Verification** e il nome attivo nel portale resta **Corsivo** fino all'approvazione. La precedente submission 1.0.1.0 e stata ritirata dalla certificazione ed e tornata In draft.
+Il pacchetto Store **1.0.2.0** e stato generato, verificato, caricato e salvato come **Validated**, sostituendo il precedente 1.0.1.0. Il nome pubblico **Salvatore Corsi** e approvato, con account Active e verifica Authorized. La submission e stata nuovamente inviata il 4 novembre 2026 ed e **In certification**, con pre-elaborazione in corso; certificazione e pubblicazione non sono ancora iniziate. Lo Store non e ancora pubblicato e avviera la pubblicazione automaticamente dopo il superamento della certificazione.
 
 FFmpeg, Poppler, LibreOffice, Tesseract e libheif restano motori locali opzionali selezionati dall'utente, non inclusi nei pacchetti pubblici. HTML puo leggere risorse collegate locali o remote; i link ai siti dei motori si aprono nel browser su richiesta.
 
