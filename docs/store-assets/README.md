@@ -1,10 +1,9 @@
 # Materiale visivo Store
 
-- `store-icon-300.png`: icona prodotto trasparente 300 x 300, riproducibile dalla sorgente `assets/app.svg` con `scripts/render-app-icon.ps1`.
-- `01-conversione-immagini.png`: finestra principale chiara con due immagini dimostrative, 1062 x 790.
-- `02-conversione-scura.png`: tema scuro durante una vera conversione WebM, con un errore su un secondo file dimostrativo danneggiato, 1536 x 912.
-- `04-strumenti.png`: pagina Strumenti con aspetto e motori, 1062 x 790.
+- `store-icon-300.png`: icona prodotto PNG trasparente 300 × 300, riproducibile dalla sorgente `assets/app.svg` con `scripts/render-app-icon.ps1`.
+- [0.3.0/01-conversione-immagini.png](0.3.0/01-conversione-immagini.png): cattura corrente della conversione immagini completata, PNG 1538 × 911.
+- [0.3.0/02-pdf-merge.png](0.3.0/02-pdf-merge.png): cattura corrente dell'ordinamento delle singole pagine in PDF Merge, PNG 1538 × 911.
 
-Le catture native su Windows mostrano il codice dell'interfaccia integrata, eseguito con preferenze e coda di prova isolate. Usano soltanto file dimostrativi, senza documenti o chiavi API dell'utente. I PNG conservano i pixel della finestra; non sono mockup e non attestano l'installazione o la certificazione del pacchetto MSIX. I motori rilevati appartengono al PC di prova e non al pacchetto Store.
+Il [registro della 0.3.0](0.3.0/README.md) riporta commit UI, isolamento di preferenze e coda, dimensioni, hash SHA-256 e didascalie italiane e inglesi. Le catture native usano soltanto file dimostrativi senza dati personali; i PNG conservano i pixel decodificati dei JPEG acquisiti, senza ridimensionamenti o ritocchi. Non attestano l'installazione o la certificazione del pacchetto MSIX. La UI è italiana anche nelle immagini usate per la scheda inglese.
 
-Ricontrollare le immagini sul candidato Store, il nome riservato e le descrizioni prima del caricamento. E possibile usare le stesse catture nella scheda inglese, dichiarando che l'interfaccia dell'app e italiana.
+I file precedenti restano nella cartella principale come storico: `01-conversione-immagini.png` (1062 × 790), `02-conversione-scura.png` (1536 × 912) e `04-strumenti.png` (1062 × 790). Nonostante l'estensione `.png`, il loro contenuto è JPEG/JFIF. Le catture 01 e 04 sono inoltre più strette del minimo desktop di 1366 pixel. Usare le nuove catture della 0.3.0 per i caricamenti Store; lo storico non documenta PDF Merge. I motori visibili nello storico appartengono al PC di prova e non al pacchetto Store.
