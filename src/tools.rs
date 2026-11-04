@@ -10,6 +10,7 @@ pub struct ToolPaths {
     pub ffprobe: Option<PathBuf>,
     pub pdftoppm: Option<PathBuf>,
     pub pdftotext: Option<PathBuf>,
+    pub pdfinfo: Option<PathBuf>,
     pub soffice: Option<PathBuf>,
     pub tesseract: Option<PathBuf>,
     pub heif_enc: Option<PathBuf>,
@@ -23,6 +24,7 @@ impl ToolPaths {
             ffprobe: find_tool("ffprobe"),
             pdftoppm: find_tool("pdftoppm"),
             pdftotext: find_tool("pdftotext"),
+            pdfinfo: find_tool("pdfinfo"),
             soffice: find_tool("soffice"),
             tesseract: find_tool("tesseract"),
             heif_enc: find_tool("heif-enc"),
@@ -45,8 +47,6 @@ impl ToolPaths {
             let companion = match key.as_str() {
                 "ffmpeg" => "ffprobe",
                 "ffprobe" => "ffmpeg",
-                "pdftoppm" => "pdftotext",
-                "pdftotext" => "pdftoppm",
                 "heif-enc" => "heif-dec",
                 "heif-dec" => "heif-enc",
                 _ => continue,
@@ -61,6 +61,23 @@ impl ToolPaths {
                 }
             }
         }
+        // Keep Poppler metadata and rendering in the same installation. A
+        // manually selected companion always wins. With several explicit
+        // installations, the renderer is the anchor for unspecified tools.
+        if let Some(anchor) = ["pdftoppm", "pdftotext", "pdfinfo"]
+            .into_iter()
+            .filter_map(|key| overrides.get(key))
+            .find(|path| executable_available(path))
+            .and_then(|path| path.parent())
+        {
+            for companion in ["pdftoppm", "pdftotext", "pdfinfo"] {
+                if !overrides.contains_key(companion) {
+                    // Also clear a stale discovered tool when this installation
+                    // lacks it, rather than silently mixing Poppler versions.
+                    self.set(companion, anchor.join(executable_name(companion)));
+                }
+            }
+        }
     }
 
     fn set(&mut self, key: &str, path: PathBuf) {
@@ -70,6 +87,7 @@ impl ToolPaths {
             "ffprobe" => self.ffprobe = path,
             "pdftoppm" => self.pdftoppm = path,
             "pdftotext" => self.pdftotext = path,
+            "pdfinfo" => self.pdfinfo = path,
             "soffice" => self.soffice = path,
             "tesseract" => self.tesseract = path,
             "heif-enc" => self.heif_enc = path,
@@ -379,6 +397,88 @@ mod tests {
         assert_eq!(tools.ffprobe, Some(manual));
     }
 
+    #[test]
+    fn selecting_any_poppler_tool_picks_all_three_companions() {
+        let directory = tempfile::tempdir().unwrap();
+        for name in ["pdftoppm", "pdftotext", "pdfinfo"] {
+            std::fs::write(directory.path().join(executable_name(name)), []).unwrap();
+        }
+        for selected in ["pdftoppm", "pdftotext", "pdfinfo"] {
+            let mut tools = ToolPaths::default();
+            tools.apply_overrides(&BTreeMap::from([(
+                selected.to_owned(),
+                directory.path().join(executable_name(selected)),
+            )]));
+            assert_eq!(
+                tools.pdftoppm,
+                Some(directory.path().join(executable_name("pdftoppm")))
+            );
+            assert_eq!(
+                tools.pdftotext,
+                Some(directory.path().join(executable_name("pdftotext")))
+            );
+            assert_eq!(
+                tools.pdfinfo,
+                Some(directory.path().join(executable_name("pdfinfo")))
+            );
+        }
+    }
+
+    #[test]
+    fn explicit_poppler_paths_win_and_metadata_follows_the_renderer_installation() {
+        let renderer = tempfile::tempdir().unwrap();
+        let text = tempfile::tempdir().unwrap();
+        for directory in [renderer.path(), text.path()] {
+            for name in ["pdftoppm", "pdftotext", "pdfinfo"] {
+                std::fs::write(directory.join(executable_name(name)), []).unwrap();
+            }
+        }
+        let mut overrides = BTreeMap::from([
+            (
+                "pdftoppm".into(),
+                renderer.path().join(executable_name("pdftoppm")),
+            ),
+            (
+                "pdftotext".into(),
+                text.path().join(executable_name("pdftotext")),
+            ),
+        ]);
+        let mut tools = ToolPaths::default();
+        tools.apply_overrides(&overrides);
+        assert_eq!(
+            tools.pdftotext,
+            Some(text.path().join(executable_name("pdftotext")))
+        );
+        assert_eq!(
+            tools.pdfinfo,
+            Some(renderer.path().join(executable_name("pdfinfo")))
+        );
+        overrides.insert(
+            "pdfinfo".into(),
+            text.path().join(executable_name("pdfinfo")),
+        );
+        tools.apply_overrides(&overrides);
+        assert_eq!(
+            tools.pdfinfo,
+            Some(text.path().join(executable_name("pdfinfo")))
+        );
+    }
+
+    #[test]
+    fn selecting_a_poppler_installation_clears_stale_companions_from_other_builds() {
+        let directory = tempfile::tempdir().unwrap();
+        let renderer = directory.path().join(executable_name("pdftoppm"));
+        std::fs::write(&renderer, []).unwrap();
+        let mut tools = ToolPaths {
+            pdftotext: Some(PathBuf::from("another-build/pdftotext.exe")),
+            pdfinfo: Some(PathBuf::from("another-build/pdfinfo.exe")),
+            ..Default::default()
+        };
+        tools.apply_overrides(&BTreeMap::from([("pdftoppm".into(), renderer)]));
+        assert!(tools.pdfinfo.is_none());
+        assert!(tools.pdftotext.is_none());
+    }
+
     #[cfg(windows)]
     #[test]
     fn windows_tools_accept_custom_exes_but_never_batch_or_script_files() {
@@ -397,10 +497,12 @@ mod tests {
             let mut tools = ToolPaths::default();
             tools.apply_overrides(&BTreeMap::from([
                 ("ffmpeg".into(), path.clone()),
-                ("ffprobe".into(), path),
+                ("ffprobe".into(), path.clone()),
+                ("pdfinfo".into(), path),
             ]));
             assert!(tools.ffmpeg.is_none());
             assert!(tools.ffprobe.is_none());
+            assert!(tools.pdfinfo.is_none());
             assert!(
                 tools
                     .missing_for(MediaKind::Audio, OutputFormat::Mp3)

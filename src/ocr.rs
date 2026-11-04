@@ -98,7 +98,7 @@ pub(crate) fn extract_text(
                     .args(["-f", &page.to_string(), "-l", &page.to_string()])
                     .arg(input)
                     .arg(&image_base);
-                run_process(render, cancel, None, progress)?;
+                run_process(render, cancel, None, progress).map_err(crate::engine::pdf_error)?;
                 cancelled(cancel)?;
                 let recognized = recognize_image(
                     &image_path,

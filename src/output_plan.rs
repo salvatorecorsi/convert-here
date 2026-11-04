@@ -280,12 +280,18 @@ pub fn prepare(
                 || plan.settings.format == OutputFormat::Pdf
                     && plan.settings.pdf.action == PdfAction::Split)
         {
-            let document = lopdf::Document::load(&plan.input)
-                .context("Impossibile leggere le pagine del PDF")?;
-            if document.is_encrypted() {
-                bail!("Il PDF è protetto: sbloccalo prima della conversione");
-            }
-            let count = document.get_pages().len();
+            let count = if matches!(plan.settings.format, OutputFormat::Png | OutputFormat::Jpg) {
+                super::pdf_page_count(&plan.input, tools, &AtomicBool::new(false))?
+            } else {
+                // Splitting has a stricter document-operation policy; it still
+                // rejects all encrypted PDFs, including owner-only protection.
+                let document = lopdf::Document::load(&plan.input)
+                    .context("Impossibile leggere le pagine del PDF")?;
+                if document.is_encrypted() {
+                    bail!("Il PDF è protetto: sbloccalo prima della conversione");
+                }
+                document.get_pages().len()
+            };
             if count == 0 || count > MAX_OUTPUTS {
                 bail!("Il PDF deve contenere da 1 a {MAX_OUTPUTS} pagine");
             }

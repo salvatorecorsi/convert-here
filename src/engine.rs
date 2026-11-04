@@ -10,7 +10,7 @@ use std::{
     fs,
     io::{BufRead, BufReader, Read, Write},
     path::{Path, PathBuf},
-    process::{Child, Command, Stdio},
+    process::{Child, Command, ExitStatus, Stdio},
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc,
@@ -588,6 +588,173 @@ fn duration(input: &Path, tools: &ToolPaths, cancel: &AtomicBool) -> Option<f64>
     }
 }
 
+const PDF_PROBE_TIMEOUT: Duration = Duration::from_secs(5);
+const PDF_PROBE_STDOUT_LIMIT: usize = 64 * 1024;
+const PDF_PROBE_STDERR_LIMIT: usize = 8 * 1024;
+const PDF_OPEN_PASSWORD_ERROR: &str =
+    "Il PDF richiede una password di apertura: sbloccalo prima della conversione";
+
+/// Count pages with the renderer's companion tool before reserving output names.
+/// Native parsing is a fallback only when pdfinfo is unavailable.
+pub fn pdf_page_count(input: &Path, tools: &ToolPaths, cancel: &AtomicBool) -> Result<usize> {
+    cancelled(cancel)?;
+    let input = fs::canonicalize(input).context("Impossibile leggere le pagine del PDF")?;
+    if !input.is_file() {
+        bail!("Impossibile leggere le pagine del PDF: seleziona un file");
+    }
+    let count = if let Some(executable) = tools
+        .pdfinfo
+        .as_ref()
+        .filter(|path| crate::tools::executable_available(path))
+    {
+        let mut command = Command::new(executable);
+        command.args(["-enc", "UTF-8"]).arg(&input);
+        let output = run_pdf_probe(command, cancel, PDF_PROBE_TIMEOUT)?;
+        if !output.status.success() {
+            let diagnostic = String::from_utf8_lossy(&output.stderr);
+            return Err(pdf_error(anyhow::anyhow!(
+                "Impossibile leggere le pagine del PDF: {}",
+                if diagnostic.trim().is_empty() {
+                    "pdfinfo si è interrotto"
+                } else {
+                    diagnostic.trim()
+                }
+            )));
+        }
+        parse_pdf_page_count(&output.stdout)?
+    } else {
+        let document = Document::load(&input).context("Impossibile leggere le pagine del PDF")?;
+        cancelled(cancel)?;
+        let count = document.get_pages().len();
+        // lopdf 0.38 retains Encrypt even after authenticating an empty user
+        // password. Such owner-protected documents still have readable pages.
+        if document.is_encrypted() && count == 0 {
+            bail!("{PDF_OPEN_PASSWORD_ERROR}");
+        }
+        count
+    };
+    cancelled(cancel)?;
+    if count == 0 || count > 10_000 {
+        bail!("Il PDF deve contenere da 1 a 10000 pagine");
+    }
+    Ok(count)
+}
+
+/// Poppler reports opening-password failures in English for all PDF exports.
+pub(crate) fn pdf_error(error: anyhow::Error) -> anyhow::Error {
+    if format!("{error:#}")
+        .to_ascii_lowercase()
+        .contains("incorrect password")
+    {
+        anyhow::anyhow!(PDF_OPEN_PASSWORD_ERROR)
+    } else {
+        error
+    }
+}
+
+fn parse_pdf_page_count(stdout: &[u8]) -> Result<usize> {
+    let text = String::from_utf8_lossy(stdout);
+    // Info dictionary values precede the real Pages field and can contain line
+    // breaks. Taking the last field avoids mistaking a title's text for a count.
+    text.lines()
+        .rev()
+        .find_map(|line| line.strip_prefix("Pages:"))
+        .and_then(|value| value.trim().parse::<usize>().ok())
+        .context("Impossibile leggere le pagine del PDF: risposta pdfinfo non valida")
+}
+
+#[derive(Debug)]
+struct PdfProbeOutput {
+    status: ExitStatus,
+    stdout: Vec<u8>,
+    stderr: Vec<u8>,
+}
+
+fn read_probe_tail(mut reader: impl Read, limit: usize) -> std::io::Result<Vec<u8>> {
+    let mut tail = Vec::new();
+    let mut buffer = [0u8; 4096];
+    loop {
+        match reader.read(&mut buffer) {
+            Ok(0) => return Ok(tail),
+            Ok(count) => {
+                tail.extend_from_slice(&buffer[..count]);
+                if tail.len() > limit {
+                    tail.drain(..tail.len() - limit);
+                }
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(error) => return Err(error),
+        }
+    }
+}
+
+/// Drain both pipes while polling the process. Reading only after exit can
+/// deadlock on large PDF metadata; retaining only tails keeps memory bounded.
+fn run_pdf_probe(
+    mut command: Command,
+    cancel: &AtomicBool,
+    timeout: Duration,
+) -> Result<PdfProbeOutput> {
+    cancelled(cancel)?;
+    hidden(&mut command)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let mut child = command
+        .spawn()
+        .context("Impossibile avviare il conteggio PDF")?;
+    let job = match ProcessJob::attach(&child) {
+        Ok(job) => job,
+        Err(error) => {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(error).context("Impossibile isolare il processo di conteggio PDF");
+        }
+    };
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
+    let stdout_reader = thread::spawn(move || read_probe_tail(stdout, PDF_PROBE_STDOUT_LIMIT));
+    let stderr_reader = thread::spawn(move || read_probe_tail(stderr, PDF_PROBE_STDERR_LIMIT));
+    let started = std::time::Instant::now();
+    let result = loop {
+        if let Err(error) = cancelled(cancel) {
+            break Err(error);
+        }
+        match child.try_wait() {
+            Ok(Some(status)) => break Ok(status),
+            Ok(None) => {}
+            Err(error) => break Err(error.into()),
+        }
+        if started.elapsed() >= timeout {
+            break Err(anyhow::anyhow!(
+                "Il conteggio delle pagine PDF ha superato il tempo massimo"
+            ));
+        }
+        thread::sleep(Duration::from_millis(30));
+    };
+    if result.is_err() {
+        job.terminate();
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+    // Close the Windows job before joining readers: helpers may inherit pipes.
+    drop(job);
+    let stdout = stdout_reader.join();
+    let stderr = stderr_reader.join();
+    let status = result?;
+    let stdout = stdout
+        .map_err(|_| anyhow::anyhow!("Lettura del conteggio PDF interrotta"))?
+        .context("Impossibile leggere il conteggio PDF")?;
+    let stderr = stderr
+        .map_err(|_| anyhow::anyhow!("Lettura della diagnostica PDF interrotta"))?
+        .context("Impossibile leggere la diagnostica PDF")?;
+    Ok(PdfProbeOutput {
+        status,
+        stdout,
+        stderr,
+    })
+}
+
 fn convert_media(
     input: &Path,
     dir: &Path,
@@ -940,7 +1107,7 @@ fn convert_pdf(
         fraction: 0.05,
         message: "Rendering di tutte le pagine PDF…".into(),
     });
-    run_process(cmd, cancel, None, progress)?;
+    run_process(cmd, cancel, None, progress).map_err(pdf_error)?;
     let mut pages: Vec<PathBuf> = fs::read_dir(stage.path())?
         .filter_map(|e| e.ok().map(|e| e.path()))
         .filter(|p| p.extension().and_then(|e| e.to_str()) == Some(s.format.extension()))
@@ -985,6 +1152,118 @@ fn convert_pdf(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn pdfinfo_count_uses_the_real_field_after_metadata_and_rejects_invalid_numbers() {
+        assert_eq!(
+            parse_pdf_page_count(
+                b"Title: Invoice\r\nPages: 9999\r\nPages:           12\r\nEncrypted: no\r\n"
+            )
+            .unwrap(),
+            12
+        );
+        for response in [
+            b"Page count: 12".as_slice(),
+            b"Pages: -1",
+            b"Pages: 12 extra",
+            b"Pages: 999999999999999999999999999999999999999999999",
+        ] {
+            assert!(parse_pdf_page_count(response).is_err());
+        }
+    }
+
+    #[cfg(windows)]
+    fn pdf_probe_test_command(script: &str) -> Command {
+        let root = std::env::var_os("SystemRoot").unwrap();
+        let mut command = Command::new(
+            PathBuf::from(root).join("System32/WindowsPowerShell/v1.0/powershell.exe"),
+        );
+        command.args([
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            script,
+        ]);
+        command
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn pdf_probe_drains_large_metadata_and_keeps_both_streams_bounded() {
+        let command = pdf_probe_test_command(
+            r#"[Console]::Out.Write(('x' * 262144)); [Console]::Out.WriteLine("`nPages: 12"); [Console]::Error.Write(('e' * 131072))"#,
+        );
+        let output = run_pdf_probe(command, &AtomicBool::new(false), PDF_PROBE_TIMEOUT).unwrap();
+        assert!(output.status.success());
+        assert_eq!(output.stdout.len(), PDF_PROBE_STDOUT_LIMIT);
+        assert_eq!(output.stderr.len(), PDF_PROBE_STDERR_LIMIT);
+        assert_eq!(parse_pdf_page_count(&output.stdout).unwrap(), 12);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn pdf_probe_timeout_and_cancellation_do_not_wait_for_a_silent_tool() {
+        let start = std::time::Instant::now();
+        let result = run_pdf_probe(
+            pdf_probe_test_command("Start-Sleep -Seconds 30"),
+            &AtomicBool::new(false),
+            Duration::from_millis(150),
+        );
+        assert!(result.unwrap_err().to_string().contains("tempo massimo"));
+        assert!(start.elapsed() < Duration::from_secs(3));
+        let cancel = AtomicBool::new(false);
+        let start = std::time::Instant::now();
+        std::thread::scope(|scope| {
+            scope.spawn(|| {
+                thread::sleep(Duration::from_millis(150));
+                cancel.store(true, Ordering::Relaxed);
+            });
+            let result = run_pdf_probe(
+                pdf_probe_test_command("Start-Sleep -Seconds 30"),
+                &cancel,
+                PDF_PROBE_TIMEOUT,
+            );
+            assert!(result.unwrap_err().to_string().contains("annullata"));
+        });
+        assert!(start.elapsed() < Duration::from_secs(3));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn pdf_probe_closes_its_job_and_terminates_descendants_on_cancellation() {
+        use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
+        use windows_sys::Win32::System::Threading::{
+            OpenProcess, PROCESS_SYNCHRONIZE, WaitForSingleObject,
+        };
+        let directory = tempfile::tempdir().unwrap();
+        let child_pid = directory.path().join("child.pid");
+        let quoted_path = child_pid.to_string_lossy().replace('\'', "''");
+        let command = pdf_probe_test_command(&format!(
+            "$helper = Start-Process -FilePath $env:ComSpec -ArgumentList '/d /c ping -n 30 127.0.0.1 > nul' -WindowStyle Hidden -PassThru; [IO.File]::WriteAllText('{quoted_path}', [string]$helper.Id); Start-Sleep -Seconds 30"
+        ));
+        let cancel = AtomicBool::new(false);
+        std::thread::scope(|scope| {
+            scope.spawn(|| {
+                let started = std::time::Instant::now();
+                while !child_pid.is_file() && started.elapsed() < Duration::from_secs(4) {
+                    thread::sleep(Duration::from_millis(20));
+                }
+                cancel.store(true, Ordering::Relaxed);
+            });
+            let result = run_pdf_probe(command, &cancel, PDF_PROBE_TIMEOUT);
+            assert!(result.unwrap_err().to_string().contains("annullata"));
+        });
+        let pid: u32 = fs::read_to_string(child_pid).unwrap().parse().unwrap();
+        unsafe {
+            let process = OpenProcess(PROCESS_SYNCHRONIZE, 0, pid);
+            if !process.is_null() {
+                let process = OwnedHandle::from_raw_handle(process);
+                assert_eq!(WaitForSingleObject(process.as_raw_handle(), 1000), 0);
+            }
+        }
+    }
+
     #[cfg(windows)]
     #[test]
     fn stored_probe_script_is_not_executed() {

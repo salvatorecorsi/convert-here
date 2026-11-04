@@ -200,7 +200,7 @@ fn embedded_pdf_text(
         fraction: 0.1,
         message: "Estrazione del testo incorporato nel PDF…".into(),
     });
-    run_process(cmd, cancel, None, progress)?;
+    run_process(cmd, cancel, None, progress).map_err(crate::engine::pdf_error)?;
     cancelled(cancel)?;
     if text.as_file().metadata()?.len() > MAX_EXTRACTED_TEXT_BYTES {
         bail!("Il testo estratto dal PDF supera il limite di 64 MB");
