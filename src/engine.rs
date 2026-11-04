@@ -794,6 +794,53 @@ fn vp9_policy(stored_quality: u8) -> (u8, u8) {
     )
 }
 
+const VIDEO_WITHOUT_AUDIO_ERROR: &str = "Il video non contiene una traccia audio da estrarre";
+
+fn audio_stream_presence(success: bool, stdout: &[u8]) -> Option<bool> {
+    if !success {
+        return None;
+    }
+    let output = std::str::from_utf8(stdout).ok()?.trim();
+    if output.is_empty() {
+        Some(false)
+    } else {
+        output.parse::<u32>().ok().map(|_| true)
+    }
+}
+
+fn has_audio_stream(input: &Path, tools: &ToolPaths, cancel: &AtomicBool) -> Result<Option<bool>> {
+    cancelled(cancel)?;
+    let Some(executable) = tools
+        .ffprobe
+        .as_ref()
+        .filter(|path| crate::tools::executable_available(path))
+    else {
+        return Ok(None);
+    };
+    let mut command = Command::new(executable);
+    command
+        .args([
+            "-v",
+            "error",
+            "-protocol_whitelist",
+            "file,pipe",
+            "-select_streams",
+            "a:0",
+            "-show_entries",
+            "stream=index",
+            "-of",
+            "csv=p=0",
+        ])
+        .arg(input);
+    // Reuse the protected bounded runner. Probe failures fall back to FFmpeg;
+    // cancellation must propagate rather than be treated as an unknown result.
+    let output = run_pdf_probe(command, cancel, Duration::from_secs(5));
+    cancelled(cancel)?;
+    Ok(output
+        .ok()
+        .and_then(|output| audio_stream_presence(output.status.success(), &output.stdout)))
+}
+
 fn convert_media(
     input: &Path,
     dir: &Path,
@@ -802,8 +849,23 @@ fn convert_media(
     cancel: &AtomicBool,
     progress: &mut impl FnMut(Progress),
 ) -> Result<PathBuf> {
+    let extracting_audio =
+        MediaKind::from_path(input) == MediaKind::Video && s.format.kind() == MediaKind::Audio;
+    let audio_stream = if extracting_audio {
+        has_audio_stream(input, tools, cancel)?
+    } else {
+        None
+    };
+    if audio_stream == Some(false) {
+        bail!("{VIDEO_WITHOUT_AUDIO_ERROR}");
+    }
     let temp = temporary(dir, s.format.extension())?;
-    let mut duration = duration(input, tools, cancel);
+    // Do not launch the same failing/timed-out optional probe a second time.
+    let mut duration = if extracting_audio && audio_stream.is_none() {
+        None
+    } else {
+        duration(input, tools, cancel)
+    };
     cancelled(cancel)?;
     let start = s.video.trim_start.unwrap_or(0.);
     if let Some(end) = s.video.trim_end {
@@ -992,7 +1054,17 @@ fn convert_media(
         }
     }
     cmd.arg(temp.path());
-    run_process(cmd, cancel, duration, progress)?;
+    run_process(cmd, cancel, duration, progress).map_err(|error| {
+        if extracting_audio
+            && format!("{error:#}")
+                .to_ascii_lowercase()
+                .contains("matches no streams")
+        {
+            anyhow::anyhow!(VIDEO_WITHOUT_AUDIO_ERROR)
+        } else {
+            error
+        }
+    })?;
     cancelled(cancel)?;
     commit(temp, dir, &stem(input), s.format.extension())
 }
@@ -1204,6 +1276,29 @@ fn convert_pdf(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn audio_probe_presence_distinguishes_confirmed_absence_from_unknown_results() {
+        assert_eq!(audio_stream_presence(true, b"\r\n "), Some(false));
+        assert_eq!(audio_stream_presence(true, b"0\n"), Some(true));
+        assert_eq!(audio_stream_presence(true, b"12\r\n"), Some(true));
+        for output in [b"error".as_slice(), b"-1", b"0\n1", &[0xff]] {
+            assert_eq!(audio_stream_presence(true, output), None);
+        }
+        assert_eq!(audio_stream_presence(false, b""), None);
+        assert_eq!(audio_stream_presence(false, b"0"), None);
+    }
+
+    #[test]
+    fn cancelled_audio_probe_does_not_return_an_unknown_result() {
+        let error = has_audio_stream(
+            Path::new("input.mp4"),
+            &ToolPaths::default(),
+            &AtomicBool::new(true),
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("annullata"));
+    }
 
     #[test]
     fn vp9_policy_keeps_quality_order_and_valid_codec_limits() {
