@@ -165,6 +165,8 @@ begin
   { PowerShell also treats smart apostrophes as delimiters, even in an ASCII literal. }
   StringChangeEx(Escaped, #$2018, #$2018#$2018, True);
   StringChangeEx(Escaped, #$2019, #$2019#$2019, True);
+  StringChangeEx(Escaped, #$201A, #$201A#$201A, True);
+  StringChangeEx(Escaped, #$201B, #$201B#$201B, True);
   Result := '''' + Escaped + '''';
 end;
 
