@@ -785,6 +785,15 @@ fn run_pdf_probe(
     })
 }
 
+/// The app's shared quality scale is H.264-oriented. VP9 needs a higher CQ
+/// value; retain the saved setting while selecting a practical encoding speed.
+fn vp9_policy(stored_quality: u8) -> (u8, u8) {
+    (
+        stored_quality.saturating_add(9).min(63),
+        if stored_quality <= 18 { 2 } else { 4 },
+    )
+}
+
 fn convert_media(
     input: &Path,
     dir: &Path,
@@ -867,13 +876,20 @@ fn convert_media(
         cmd.args(["-map", "0:v:0", "-map", "0:a:0?"]);
         match s.format {
             OutputFormat::Webm => {
+                let (crf, cpu_used) = vp9_policy(s.video.crf);
                 cmd.args([
                     "-c:v",
                     "libvpx-vp9",
                     "-b:v",
                     "0",
                     "-crf",
-                    &s.video.crf.to_string(),
+                    &crf.to_string(),
+                    "-row-mt",
+                    "1",
+                    "-deadline",
+                    "good",
+                    "-cpu-used",
+                    &cpu_used.to_string(),
                     "-c:a",
                     "libopus",
                 ]);
@@ -1188,6 +1204,20 @@ fn convert_pdf(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn vp9_policy_keeps_quality_order_and_valid_codec_limits() {
+        let high = vp9_policy(18);
+        let balanced = vp9_policy(23);
+        let compact = vp9_policy(28);
+        assert_eq!((high.0, balanced.0, compact.0), (27, 32, 37));
+        assert!(high.1 < balanced.1);
+        assert_eq!(balanced.1, compact.1);
+        let mapped: Vec<_> = (0..=u8::MAX).map(|quality| vp9_policy(quality).0).collect();
+        assert!(mapped.windows(2).all(|pair| pair[0] <= pair[1]));
+        assert!(mapped.iter().all(|quality| *quality <= 63));
+        assert_eq!(vp9_policy(u8::MAX).0, 63);
+    }
 
     #[test]
     fn adopting_staged_files_never_accepts_an_original_outside_the_staging_directory() {

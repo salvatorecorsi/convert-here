@@ -444,7 +444,7 @@ fn ffmpeg_video_targets_h265_and_audio_extraction() {
                 "-v",
                 "error",
                 "-show_entries",
-                "stream=codec_name:format=duration",
+                "stream=codec_name,codec_type,width,height:format=duration",
                 "-of",
                 "json",
             ])
@@ -454,6 +454,43 @@ fn ffmpeg_video_targets_h265_and_audio_extraction() {
         assert!(info.status.success(), "{}", format.label());
         let json: serde_json::Value = serde_json::from_slice(&info.stdout).unwrap();
         assert!(!json["streams"].as_array().unwrap().is_empty());
+        if format == OutputFormat::Webm {
+            let streams = json["streams"].as_array().unwrap();
+            let video = streams
+                .iter()
+                .find(|stream| stream["codec_type"] == "video")
+                .unwrap();
+            let audio = streams
+                .iter()
+                .find(|stream| stream["codec_type"] == "audio")
+                .unwrap();
+            assert_eq!(video["codec_name"], "vp9");
+            assert_eq!(audio["codec_name"], "opus");
+            assert_eq!(video["width"], 128);
+            assert_eq!(video["height"], 96);
+            let mut decode = Command::new(ffmpeg);
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                decode.creation_flags(0x08000000);
+            }
+            let decoded = decode
+                .args(["-v", "error", "-nostdin", "-i"])
+                .arg(&output[0])
+                .args(["-f", "null", "-"])
+                .output()
+                .unwrap();
+            assert!(
+                decoded.status.success(),
+                "{}",
+                String::from_utf8_lossy(&decoded.stderr)
+            );
+            assert!(
+                decoded.stderr.is_empty(),
+                "{}",
+                String::from_utf8_lossy(&decoded.stderr)
+            );
+        }
         let duration = json["format"]["duration"]
             .as_str()
             .unwrap()
@@ -491,6 +528,170 @@ fn ffmpeg_video_targets_h265_and_audio_extraction() {
         .unwrap();
     assert!(info.status.success());
     assert_eq!(String::from_utf8_lossy(&info.stdout).trim(), "hevc");
+}
+
+#[test]
+fn webm_presets_preserve_streams_frames_and_control_quality_size_tradeoff() {
+    use std::process::Command;
+
+    fn command(executable: &Path) -> Command {
+        let mut command = Command::new(executable);
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            command.creation_flags(0x08000000);
+        }
+        command
+    }
+
+    let tools = ToolPaths::discover();
+    let (Some(ffmpeg), Some(ffprobe)) = (&tools.ffmpeg, &tools.ffprobe) else {
+        eprintln!("FFmpeg/FFprobe unavailable; WebM preset fixture skipped");
+        return;
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let input = dir.path().join("webm-presets.mkv");
+    let generated = command(ffmpeg)
+        .args([
+            "-hide_banner",
+            "-nostdin",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=size=320x180:rate=24",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:sample_rate=48000",
+            "-t",
+            "1.5",
+            "-c:v",
+            "ffv1",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "pcm_s16le",
+            "-ac",
+            "2",
+            "-shortest",
+        ])
+        .arg(&input)
+        .output()
+        .unwrap();
+    assert!(
+        generated.status.success(),
+        "{}",
+        String::from_utf8_lossy(&generated.stderr)
+    );
+    let original = fs::read(&input).unwrap();
+    let mut sizes = Vec::new();
+    let mut distortion = Vec::new();
+    // These are the app's compact, balanced and high-quality preset values.
+    for (quality, bitrate) in [(28, 128), (23, 192), (18, 320)] {
+        let mut conversion = settings(OutputFormat::Webm);
+        conversion.video.crf = quality;
+        conversion.audio.bitrate_kbps = bitrate;
+        let output = convert(&input, &conversion, &tools, &AtomicBool::new(false), |_| {}).unwrap();
+        let probe = command(ffprobe)
+            .args([
+                "-v",
+                "error",
+                "-count_frames",
+                "-show_entries",
+                "stream=codec_name,codec_type,width,height,nb_read_frames:format=duration",
+                "-of",
+                "json",
+            ])
+            .arg(&output[0])
+            .output()
+            .unwrap();
+        assert!(
+            probe.status.success(),
+            "{}",
+            String::from_utf8_lossy(&probe.stderr)
+        );
+        let info: serde_json::Value = serde_json::from_slice(&probe.stdout).unwrap();
+        let streams = info["streams"].as_array().unwrap();
+        let video = streams
+            .iter()
+            .find(|stream| stream["codec_type"] == "video")
+            .unwrap();
+        let audio = streams
+            .iter()
+            .find(|stream| stream["codec_type"] == "audio")
+            .unwrap();
+        assert_eq!(video["codec_name"], "vp9");
+        assert_eq!(audio["codec_name"], "opus");
+        assert_eq!(video["width"], 320);
+        assert_eq!(video["height"], 180);
+        assert_eq!(video["nb_read_frames"], "36");
+        let duration = info["format"]["duration"]
+            .as_str()
+            .unwrap()
+            .parse::<f64>()
+            .unwrap();
+        assert!((duration - 1.5).abs() < 0.08, "duration {duration}");
+        let decoded = command(ffmpeg)
+            .args(["-v", "error", "-nostdin", "-i"])
+            .arg(&output[0])
+            .args(["-f", "null", "-"])
+            .output()
+            .unwrap();
+        assert!(
+            decoded.status.success(),
+            "{}",
+            String::from_utf8_lossy(&decoded.stderr)
+        );
+        assert!(
+            decoded.stderr.is_empty(),
+            "{}",
+            String::from_utf8_lossy(&decoded.stderr)
+        );
+        sizes.push(fs::metadata(&output[0]).unwrap().len());
+        // Compare decoded pixels with the lossless source rather than merely
+        // asserting constructed arguments. No timing assertion depends on CI CPU.
+        let psnr = command(ffmpeg)
+            .args(["-hide_banner", "-nostdin", "-loglevel", "info", "-i"])
+            .arg(&input)
+            .arg("-i")
+            .arg(&output[0])
+            .args([
+                "-filter_complex",
+                "[0:v]setpts=PTS-STARTPTS[ref];[1:v]setpts=PTS-STARTPTS[dist];[ref][dist]psnr",
+                "-an",
+                "-f",
+                "null",
+                "-",
+            ])
+            .output()
+            .unwrap();
+        assert!(
+            psnr.status.success(),
+            "{}",
+            String::from_utf8_lossy(&psnr.stderr)
+        );
+        let diagnostic = String::from_utf8_lossy(&psnr.stderr);
+        let average = diagnostic
+            .lines()
+            .find_map(|line| {
+                line.split_once("average:")
+                    .and_then(|(_, tail)| tail.split_whitespace().next())
+                    .and_then(|value| value.parse::<f64>().ok())
+            })
+            .unwrap_or_else(|| panic!("PSNR result missing: {diagnostic}"));
+        distortion.push(average);
+    }
+    assert!(
+        sizes[0] < sizes[1] && sizes[1] < sizes[2],
+        "controlled preset sizes: {sizes:?}"
+    );
+    assert!(
+        distortion[0] < distortion[1] && distortion[1] < distortion[2],
+        "controlled preset PSNR: {distortion:?}"
+    );
+    assert_eq!(fs::read(input).unwrap(), original);
 }
 
 #[test]
