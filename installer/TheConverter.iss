@@ -317,14 +317,23 @@ end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   LibraryPath: String;
+  ModernInstalled: Boolean;
 begin
   if CurUninstallStep = usUninstall then
   begin
-    { Appx must be removed while its manifest, scripts and external files exist.
-      Failure stops uninstallation before the file-removal phase. }
+    ModernInstalled := GetIniString('Integration', 'ModernMenuInstalled', '0', ExpandConstant('{app}\installer-state.ini')) = '1';
+    { A registered modern menu must be removed before deleting its external files;
+      classic-only installations must still uninstall when PowerShell is blocked. }
     if IsWindows11 then
+    begin
       if not RunScript('uninstall-context-menu.ps1', '-Mode Modern -InstallDirectory ' + Quoted(ExpandConstant('{app}'))) then
-        RaiseException(CustomMessage('ModernRemovalFailed'));
+      begin
+        if ModernInstalled then
+          RaiseException(CustomMessage('ModernRemovalFailed'))
+        else
+          Log('Rimozione del menu moderno non riuscita, ma non risulta installato da questa copia: la disinstallazione continua.');
+      end;
+    end;
     SetIniString('Integration', 'ModernMenuInstalled', '0', ExpandConstant('{app}\installer-state.ini'));
     UnregisterClassic;
   end;
