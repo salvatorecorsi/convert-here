@@ -12,7 +12,7 @@ Le schede IT (59) ed EN (4) sono **Complete**, ciascuna con tre catture 0.3.1, d
 
 La QA nativa 0.3.1 ha completato due PNG in JPEG con zero errori e PDF Merge da tre sorgenti per cinque pagine, con riordino tramite trascinamento e risultato verificato tramite `pdfinfo` e `pdftotext`. Le [catture e il registro](store-assets/0.3.1/README.md) documentano la sessione isolata. **Il MSIX Store non e stato installato e il WACK non e stato eseguito**; questi esiti non vengono dedotti dalle prove native o dalla validazione del portale.
 
-**IARC resta In Progress**, con anteprima 3+ e consenso non dato. **Nessun invio per certificazione o pubblicazione Store e stato eseguito.** I risultati storici seguenti appartengono soltanto alle revisioni e agli artefatti indicati.
+**Age ratings e Complete**, con classificazioni IARC/Microsoft/PEGI 3+, dopo accettazione e salvataggio su consenso esplicito del proprietario. La **Submission 1**, ID **1152921505702314630** del prodotto **9NPKPPCBNBM8**, e stata inviata il **4 novembre 2026** e risulta **In certification**. Timeline verificata: **Submission Complete**, **Pre-processing In progress**, **Certification Not started**, **Publishing Not started**. Il prodotto resta gratuito in tutti i 240 mercati selezionati, con pubblicazione automatica appena supera la certificazione. **Non e ancora pubblicato nello Store.** I risultati storici seguenti appartengono soltanto alle revisioni e agli artefatti indicati.
 
 ## Verifiche della 0.3.0 (storico)
 
@@ -68,4 +68,4 @@ Il report WACK locale della precedente preview **1.0.1.0**, eseguito con kit 10.
 
 **Il precedente report WACK riguarda una preview distinta e non viene dichiarato superato.** Microsoft considera il WACK un controllo locale deprecato e facoltativo: non e stato eseguito sul nuovo candidato e il suo esito non garantirebbe l'approvazione Store. Installazione/aggiornamento/disinstallazione, menu registrato e motori opzionali del MSIX finale restano senza un collaudo su ambiente pulito. [Validazione locale MSIX](https://learn.microsoft.com/en-us/windows/msix/package/packaging-uwp-apps#validate-your-app-package-locally).
 
-Identita Corsivo, Store ID e contatto reale sono documentati. Il pacchetto 1.0.1.0 e caricato e validato, mentre IARC non e stato accettato e nessun invio per certificazione e stato eseguito. Vedi la [procedura di submission](store-submission.md).
+Identita Corsivo, Store ID e contatto reale sono documentati. Il pacchetto 1.0.1.0 e caricato e validato; IARC e completato e la submission e **In certification** dal 4 novembre 2026. La pubblicazione non e ancora iniziata; e impostata automaticamente dopo il superamento della certificazione. Vedi la [procedura di submission](store-submission.md).

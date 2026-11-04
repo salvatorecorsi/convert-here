@@ -1,6 +1,6 @@
 # Microsoft Store: preparazione della submission
 
-Stato al 4 novembre 2026: **Convert Here 0.3.1** e [pubblicata su GitHub](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.1), dal commit `884cb2c610a9197d8b4853f0fa741dbe9035b5ed`. Il candidato Store **1.0.1.0** e stato caricato e risulta **Validated**, con **Packages: Complete**. Il prodotto resta **9NPKPPCBNBM8**, [pagina Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8), `Name` **SalvatoreCorsi.ConvertHere**, `Publisher` **CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17**, `PublisherDisplayName` **Corsivo**. Titolare, autore e sviluppatore: **Salvatore Corsi**; contatto pubblico: **salvo@salvatorecorsi.com**, dalla [pagina contatti](https://www.salvatorecorsi.com/contatti/). IARC resta **In Progress**, con anteprima 3+ e consenso non dato. **Nessun invio per certificazione o pubblicazione Store e stato eseguito.**
+Stato al 4 novembre 2026: **Convert Here 0.3.1** e [pubblicata su GitHub](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.1), dal commit `884cb2c610a9197d8b4853f0fa741dbe9035b5ed`. Il candidato Store **1.0.1.0** e stato caricato e risulta **Validated**, con **Packages: Complete**. Il prodotto resta **9NPKPPCBNBM8**, [pagina Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8), `Name` **SalvatoreCorsi.ConvertHere**, `Publisher` **CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17**, `PublisherDisplayName` **Corsivo**. Titolare, autore e sviluppatore: **Salvatore Corsi**; contatto pubblico: **salvo@salvatorecorsi.com**, dalla [pagina contatti](https://www.salvatorecorsi.com/contatti/). IARC e stato accettato su consenso esplicito del proprietario; Age ratings risulta **Complete**, con classificazioni IARC/Microsoft/PEGI 3+. La submission e stata inviata il **4 novembre 2026** e risulta **In certification**. **La pubblicazione Store non e ancora iniziata.**
 
 ## Stato corrente 0.3.1 / Store 1.0.1.0
 
@@ -9,7 +9,8 @@ Stato al 4 novembre 2026: **Convert Here 0.3.1** e [pubblicata su GitHub](https:
 - **Properties:** **Complete**; dichiarazione delle funzionalita AI generative non selezionata e [privacy della 0.3.1](https://github.com/salvatorecorsi/convert-here/blob/v0.3.1/docs/privacy.md) pubblica verificata e salvata.
 - **Submission options:** **Complete**; motivazione `runFullTrust` di 424 caratteri e Additional Testing Information di 1977 caratteri salvate, con persistenza verificata.
 - **Prezzo e disponibilita:** gratuita, tutti i 240 mercati disponibili, pubblicazione appena approvata.
-- **IARC e invio:** **In Progress**, anteprima 3+ non accettata; consenso non dato e nessun invio per certificazione. La validazione del pacchetto non equivale alla certificazione o a una prova d'installazione.
+- **Age ratings / IARC:** accettazione salvata su consenso esplicito del proprietario; **Complete**, classificazioni IARC/Microsoft/PEGI 3+.
+- **Invio:** **Submission 1**, ID **1152921505702314630**, inviata per certificazione il **4 novembre 2026**; stato complessivo **In certification**. Timeline: **Submission Complete**, **Pre-processing In progress**, **Certification Not started**, **Publishing Not started**. Il portale conferma l'avvio automatico della pubblicazione appena il prodotto supera la certificazione; non attesta ancora approvazione o disponibilita pubblica.
 
 ## Storico: candidato 1.0.0.0, applicazione 0.3.0
 
@@ -113,9 +114,9 @@ Il candidato 1.0.1.0 e le schede della 0.3.1 sono validati e salvati nel portale
 - [x] Candidato 1.0.1.0 verificato e caricato al posto del precedente 1.0.0.0; Packages **Complete**, file **Validated**.
 - [x] Schede IT/EN, Properties e Additional Testing Information aggiornate e salvate nel portale per la 0.3.1.
 - [x] Tre catture PNG della 0.3.1 con didascalie e logo 300 x 300 salvati in ciascuna scheda; prove native immagini e PDF Merge superate.
-- [ ] Questionario IARC finalizzato; l'anteprima 3+ precedente non costituisce accettazione o classificazione completata.
+- [x] Questionario IARC accettato e salvato su consenso esplicito del proprietario; Age ratings **Complete**, classificazioni 3+.
 - [ ] Eventuale collaudo installazione/aggiornamento/disinstallazione, menu moderno, coda e motori su ambiente pulito documentato per il candidato finale.
-- [ ] Submission inviata per certificazione; nessun invio e attestato al momento.
+- [x] Submission 1 inviata per certificazione il 4 novembre 2026; **In certification**, con pre-elaborazione in corso e pubblicazione non ancora iniziata.
 
 Il Windows App Certification Kit non e stato eseguito sul nuovo candidato. Microsoft descrive il WACK come controllo locale deprecato e facoltativo; il suo eventuale esito non garantisce l'approvazione Store. Il precedente report riguarda una preview distinta, come indicato nello [stato delle verifiche](store-validation.md). [Validazione locale MSIX](https://learn.microsoft.com/en-us/windows/msix/package/packaging-uwp-apps#validate-your-app-package-locally).
 

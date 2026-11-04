@@ -8,7 +8,7 @@ Application **0.3.1**, Store package **1.0.1.0**, is a free local file converter
 
 The current `ConvertHere-1.0.1.0-x64-store.msix` is **6165956 bytes**, SHA-256 `e5f63b0c59983ebde7209a1a2813a63c4df8941c1dc7d77f813bea91f5dfdfdd`, built from that clean commit. Partner Center reports **Packages: Complete / Validated** and replaced the earlier 1.0.0.0 automatically when the higher version was saved. Italian and English listings each contain three 0.3.1 screenshots with captions, the 300 x 300 logo, 15 features and seven keywords. Properties and Submission options are Complete, including the [versioned privacy URL](https://github.com/salvatorecorsi/convert-here/blob/v0.3.1/docs/privacy.md), 1977-character testing instructions and a 424-character `runFullTrust` reason. Pricing remains free in all 240 markets, with publication as soon as approved.
 
-**IARC is still In Progress**, with a 3+ preview and no acceptance consent given. **The submission has not been sent for certification.** The Store MSIX has not been installed or run through WACK. Earlier build reports remain immutable historical records; portal validation and native-app QA do not prove packaged installation or certification. See [submission status](../../docs/store-submission.md).
+**Age ratings is Complete**, with IARC/Microsoft/PEGI 3+ ratings, after the owner's explicit acceptance was saved. **Submission 1**, ID **1152921505702314630** for product **9NPKPPCBNBM8**, was submitted on **4 November 2026** and is **In certification**. The verified timeline shows **Submission Complete**, **Pre-processing In progress**, **Certification Not started**, and **Publishing Not started**. Publication will start automatically after certification passes; the app is not yet published in the Store. The Store MSIX has not been installed or run through WACK. Earlier build reports remain immutable historical records; portal validation and native-app QA do not prove packaged installation or certification. See [submission status](../../docs/store-submission.md).
 
 ## Preview build
 
@@ -53,7 +53,7 @@ A preliminary two-application package passed MakeAppx validation but WACK 1.0.1 
 
 The package declares only the implemented Italian UI language (`it-it`). An English Store listing is independent of application localization.
 
-The current package, listings, privacy URL, screenshots and capability explanation are saved in Partner Center. IARC acceptance and submission for certification remain incomplete. WACK is deprecated and optional; it has not been run on this Store candidate. Clean-machine app/menu/queue installation testing also remains unperformed. [Local package validation](https://learn.microsoft.com/en-us/windows/msix/package/packaging-uwp-apps#validate-your-app-package-locally).
+The current package, listings, privacy URL, screenshots and capability explanation are saved in Partner Center. IARC acceptance is complete and the submission has been sent for certification; publication is pending, with free availability in all 240 selected markets and automatic publication after certification passes. WACK is deprecated and optional; it has not been run on this Store candidate. Clean-machine app/menu/queue installation testing also remains unperformed. [Local package validation](https://learn.microsoft.com/en-us/windows/msix/package/packaging-uwp-apps#validate-your-app-package-locally).
 
 ## Microsoft references
 
