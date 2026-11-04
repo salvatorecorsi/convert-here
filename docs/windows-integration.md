@@ -1,6 +1,6 @@
 # Integrazione con Esplora file
 
-The Converter usa una DLL COM Rust con `IExplorerCommand`, lo stesso contratto di Windows per i comandi di Esplora file. Il sottomenu **Converti in** offre i formati compatibili con tutti i file selezionati: scegliere MP3, WAV, PDF o un altro formato avvia direttamente la conversione con le impostazioni salvate. L'ultima voce **Impostazioni personalizzate…** apre la finestra per modificare qualita e destinazione. La conversione viene eseguita in un processo separato da Esplora file.
+Convert Here usa una DLL COM Rust con `IExplorerCommand`, lo stesso contratto di Windows per i comandi di Esplora file. Il sottomenu **Converti in** offre i formati compatibili con tutti i file selezionati: scegliere MP3, WAV, PDF o un altro formato avvia direttamente la conversione con le impostazioni salvate. L'ultima voce **Impostazioni personalizzate…** apre la finestra per modificare qualita e destinazione. La conversione viene eseguita in un processo separato da Esplora file.
 
 Per i PDF la voce rapida **PDF · comprimi** applica sempre la compressione senza perdita, anche se nelle preferenze e rimasta selezionata un'altra operazione PDF. Le immagini convertite in PDF continuano a generare un PDF per immagine. **Dividi** e **Unisci** si scelgono esplicitamente nella finestra principale o nella CLI; non vengono avviati dal comando rapido PDF. L'unione segue l'ordine della lista nella finestra o dei percorsi nella CLI.
 
@@ -19,12 +19,12 @@ cargo build --release --manifest-path .\shell-extension\Cargo.toml
 .\scripts\build-release.ps1 -SkipBuild
 ```
 
-Il risultato e `dist\TheConverter\`: `the-converter.exe` e `the_converter_shell.dll` devono stare nella stessa cartella. Mantieni quella cartella in una posizione stabile prima di registrare il menu. La DLL x64 deve corrispondere all'architettura di Esplora file; il pacchetto corrente non e per Explorer ARM64.
+Il risultato e `dist\ConvertHere\`: `the-converter.exe` e `the_converter_shell.dll` devono stare nella stessa cartella. Questi nomi tecnici e gli identificativi COM/MSIX restano stabili dopo la rinomina pubblica. Mantieni quella cartella in una posizione stabile prima di registrare il menu. La DLL x64 deve corrispondere all'architettura di Esplora file; il pacchetto corrente non e per Explorer ARM64.
 
 ## Menu classico, senza privilegi amministrativi
 
 ```powershell
-.\scripts\install-context-menu.ps1 -Mode Classic -InstallDirectory .\dist\TheConverter
+.\scripts\install-context-menu.ps1 -Mode Classic -InstallDirectory .\dist\ConvertHere
 .\scripts\uninstall-context-menu.ps1 -Mode Classic
 ```
 
@@ -38,7 +38,7 @@ Il menu moderno richiede **package identity**, oltre a `IExplorerCommand`. La so
 
 ```powershell
 .\scripts\build-release.ps1 -CertificateThumbprint 'IMPRONTA_DEL_CERTIFICATO'
-.\scripts\install-context-menu.ps1 -Mode Modern -InstallDirectory .\dist\TheConverter
+.\scripts\install-context-menu.ps1 -Mode Modern -InstallDirectory .\dist\ConvertHere
 ```
 
 Non usare `-SkipBuild` per cambiare Publisher: gli eseguibili devono incorporare la stessa identita del pacchetto. Anche quando si riusano binari compilati, lo script controlla il manifest effettivamente incorporato prima di produrre la distribuzione.
@@ -64,7 +64,7 @@ La [procedura generale Microsoft per MSIX di test](https://learn.microsoft.com/e
 Questo passaggio e separato dall'installer: il setup **non importa certificati automaticamente** e non modifica Developer Mode. Verifica provenienza e impronta del certificato prima dell'importazione; la chiave privata `.pfx` resta riservata. Un certificato di test non e una firma di produzione e va rimosso dagli archivi in cui e stato importato quando non serve piu. La disinstallazione dell'app non rimuove la fiducia nel certificato. Vedi anche la [guida Microsoft alla fiducia dei certificati di sviluppo](https://learn.microsoft.com/en-us/windows/apps/dev-tools/winapp-cli/security#what-winapp-cert-install-grants).
 
 ```powershell
-.\scripts\uninstall-context-menu.ps1 -Mode Modern -InstallDirectory .\dist\TheConverter
+.\scripts\uninstall-context-menu.ps1 -Mode Modern -InstallDirectory .\dist\ConvertHere
 ```
 
 Questo rimuove il pacchetto identita dell'utente corrente soltanto se appartiene alla cartella indicata, lasciando applicazione e preferenze. Non rimuove certificati. Puoi registrare separatamente anche il menu classico, se desideri averlo in entrambi i menu.

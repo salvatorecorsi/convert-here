@@ -91,7 +91,7 @@ Lasciare vuoto per la prima submission Store. Preparare una nota specifica solta
 1. Converti in dal menu contestuale di Windows 11.
 2. La coda mostra formato, stato e destinazione dei file.
 3. Impostazioni di qualita e ridimensionamento per le immagini.
-4. Configura gli eseguibili opzionali nella finestra Strumenti.
+4. Configura gli eseguibili opzionali nella pagina Strumenti.
 
 ## Campi da completare
 

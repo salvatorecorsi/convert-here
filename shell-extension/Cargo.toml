@@ -1,9 +1,10 @@
 [package]
 name = "the-converter-shell"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 publish = false
-description = "Per-user Windows Explorer IExplorerCommand integration for The Converter"
+description = "Per-user Windows Explorer IExplorerCommand integration for Convert Here"
+repository = "https://github.com/salvatorecorsi/convert-here"
 
 [lib]
 name = "the_converter_shell"

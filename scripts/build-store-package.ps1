@@ -170,7 +170,7 @@ New-Item -ItemType Directory -Path (Join-Path $stage 'Docs') | Out-Null
 Copy-Item -LiteralPath $licenseSource -Destination (Join-Path $stage 'Docs\licenses') -Recurse
 Assert-StorePackageLayout -StageDirectory $stage -Identity $identity
 
-$fileName = if ($ForSubmission) { "TheConverter-$($identity.Version)-x64-store.msix" } else { "TheConverter-$($identity.Version)-x64-store-PREVIEW.msix" }
+$fileName = if ($ForSubmission) { "ConvertHere-$($identity.Version)-x64-store.msix" } else { "ConvertHere-$($identity.Version)-x64-store-PREVIEW.msix" }
 $package = Join-Path $runDirectory $fileName
 Write-Host 'Packing full MSIX with MakeAppx semantic validation enabled...'
 # /nv is deliberately absent: every manifest path must resolve inside this package.

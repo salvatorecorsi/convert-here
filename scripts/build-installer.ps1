@@ -8,7 +8,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $env:PSModulePath = (Join-Path $PSHOME 'Modules') + [IO.Path]::PathSeparator + $env:PSModulePath
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
-if (-not $SourceDirectory) { $SourceDirectory = Join-Path $root 'dist\TheConverter' }
+if (-not $SourceDirectory) { $SourceDirectory = Join-Path $root 'dist\ConvertHere' }
 if (-not $OutputDirectory) { $OutputDirectory = Join-Path $root 'dist\release' }
 $source = (Resolve-Path -LiteralPath $SourceDirectory).Path
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
@@ -61,6 +61,6 @@ if (Test-Path -LiteralPath $package -PathType Leaf) {
 # Those are downloaded directly from upstream by the selected installation task.
 & $compiler ('/DAppVersion=' + $Version) ('/DFileVersion=' + $fileVersion) ('/DSourceDir=' + $source) ('/DOutputPath=' + $output) ('/DModernMenuAvailable=' + $modern) (Join-Path $root 'installer\TheConverter.iss')
 if ($LASTEXITCODE -ne 0) { throw "Compilazione installer fallita (ISCC: $LASTEXITCODE)." }
-$artifact = Join-Path $output "TheConverter-$Version-windows-x64-setup.exe"
+$artifact = Join-Path $output "ConvertHere-$Version-windows-x64-setup.exe"
 if (-not (Test-Path -LiteralPath $artifact -PathType Leaf)) { throw 'ISCC non ha prodotto il setup atteso.' }
 Get-Item -LiteralPath $artifact | Select-Object FullName, Length

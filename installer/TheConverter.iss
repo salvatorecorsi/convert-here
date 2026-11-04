@@ -1,12 +1,12 @@
 ; Small, per-user installer. Conversion runtimes are obtained from their upstream publishers.
 #ifndef AppVersion
-  #define AppVersion "0.1.0"
+  #define AppVersion "0.2.0"
 #endif
 #ifndef FileVersion
-  #define FileVersion "0.1.0.0"
+  #define FileVersion "0.2.0.0"
 #endif
 #ifndef SourceDir
-  #define SourceDir "..\dist\TheConverter"
+  #define SourceDir "..\dist\ConvertHere"
 #endif
 #ifndef OutputPath
   #define OutputPath "..\dist\release"
@@ -14,7 +14,7 @@
 #ifndef ModernMenuAvailable
   #define ModernMenuAvailable "0"
 #endif
-#define RepositoryUrl "https://github.com/salvatorecorsi/the-converter"
+#define RepositoryUrl "https://github.com/salvatorecorsi/convert-here"
 #define ConverterClass "{67B51BA1-8A78-4B4B-A5F9-08A825BE91F8}"
 
 [Setup]
@@ -29,7 +29,9 @@ AppUpdatesURL={#RepositoryUrl}/releases
 VersionInfoVersion={#FileVersion}
 VersionInfoDescription=Convert Here Setup
 DefaultDirName={localappdata}\Programs\The Converter
-DefaultGroupName=The Converter
+; Keep the old application directory and remembered group when upgrading.
+DefaultGroupName=Convert Here
+UsePreviousGroup=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64os
 ArchitecturesInstallIn64BitMode=x64os
@@ -40,7 +42,7 @@ SetupIconFile=..\assets\app.ico
 UninstallDisplayIcon={app}\the-converter.exe
 UninstallDisplayName=Convert Here
 OutputDir={#OutputPath}
-OutputBaseFilename=TheConverter-{#AppVersion}-windows-x64-setup
+OutputBaseFilename=ConvertHere-{#AppVersion}-windows-x64-setup
 Compression=lzma2/max
 SolidCompression=yes
 CloseApplications=yes
@@ -67,7 +69,7 @@ italian.LaunchApp=Apri Convert Here
 italian.UninstallApp=Disinstalla Convert Here
 italian.InstallTools=Installa o aggiorna motori di conversione
 italian.DownloadingTools=Download e verifica dei motori di conversione...
-italian.ToolsFailed=Convert Here è installato, ma non è stato possibile scaricare FFmpeg e Poppler.%n%nLe conversioni di immagini restano disponibili. Per riprovare in seguito, apri "Installa o aggiorna motori di conversione" dalla cartella The Converter nel menu Start.%n%nVuoi riprovare il download adesso?
+italian.ToolsFailed=Convert Here è installato, ma non è stato possibile scaricare FFmpeg e Poppler.%n%nLe conversioni di immagini restano disponibili. Per riprovare in seguito, apri "Installa o aggiorna motori di conversione" nella cartella dell'app nel menu Start.%n%nVuoi riprovare il download adesso?
 italian.ModernFailed=Non è stato possibile registrare il menu moderno di Windows 11. Il pacchetto deve avere una firma attendibile su questo computer. Il menu classico resta disponibile se selezionato.%n%nConsulta docs\windows-integration.md per i dettagli.
 italian.ModernRemovalFailed=Non è stato possibile rimuovere il menu di Windows 11. La registrazione e i file applicazione sono conservati: riprova dopo aver chiuso le conversioni in corso. Consulta il registro del setup per i dettagli.
 italian.PendingCleanup=Il menu è stato rimosso. Windows sta ancora usando la DLL dell'estensione: la pulizia verrà ritentata al prossimo accesso, senza riavviare Esplora file.
@@ -80,7 +82,7 @@ english.LaunchApp=Open Convert Here
 english.UninstallApp=Uninstall Convert Here
 english.InstallTools=Install or update conversion engines
 english.DownloadingTools=Downloading and verifying conversion engines...
-english.ToolsFailed=Convert Here is installed, but FFmpeg and Poppler could not be downloaded.%n%nImage conversions remain available. To retry later, open "Install or update conversion engines" in the The Converter Start menu folder.%n%nRetry the download now?
+english.ToolsFailed=Convert Here is installed, but FFmpeg and Poppler could not be downloaded.%n%nImage conversions remain available. To retry later, open "Install or update conversion engines" in the app's Start menu folder.%n%nRetry the download now?
 english.ModernFailed=The modern Windows 11 menu could not be registered. The package must have a trusted signature on this computer. The classic menu remains available if selected.%n%nSee docs\windows-integration.md for details.
 english.ModernRemovalFailed=The Windows 11 menu could not be removed. Its registration and application files have been preserved: retry after closing any running conversions. See the setup log for details.
 english.PendingCleanup=The menu has been removed. Windows is still using the extension DLL: cleanup will be retried at your next sign-in without restarting File Explorer.
@@ -110,10 +112,10 @@ Source: "{#SourceDir}\Assets\*"; DestDir: "{app}\Assets"; Flags: ignoreversion r
 #endif
 
 [Icons]
-Name: "{group}\The Converter"; Filename: "{app}\the-converter.exe"
+Name: "{group}\Convert Here"; Filename: "{app}\the-converter.exe"
 Name: "{group}\{cm:InstallTools}"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -NoExit -ExecutionPolicy Bypass -File ""{app}\scripts\install-runtime-tools.ps1"" -InstallDirectory ""{app}"""; WorkingDir: "{app}"; IconFilename: "{app}\the-converter.exe"
 Name: "{group}\{cm:UninstallApp}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\The Converter"; Filename: "{app}\the-converter.exe"; Tasks: desktopicon
+Name: "{autodesktop}\Convert Here"; Filename: "{app}\the-converter.exe"; Tasks: desktopicon
 
 [Registry]
 ; Only private application keys. Uninstall removes them in code after checking ownership.

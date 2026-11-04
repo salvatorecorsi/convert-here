@@ -1,8 +1,10 @@
 [package]
 name = "the-converter"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 description = "Conversioni di audio, video, immagini e PDF, integrate in Windows"
+repository = "https://github.com/salvatorecorsi/convert-here"
+homepage = "https://github.com/salvatorecorsi/convert-here"
 authors = ["Salvatore Corsi"]
 build = "build.rs"
 default-run = "the-converter"

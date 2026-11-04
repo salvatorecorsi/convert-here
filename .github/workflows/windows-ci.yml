@@ -97,4 +97,11 @@ jobs:
       - name: Store packaging fixtures
         shell: pwsh
         run: ./scripts/test-store-package.ps1
+      - name: Release branding fixtures
+        shell: pwsh
+        run: |
+          ./scripts/test-release-branding.ps1
+          $windowsPowerShell = Join-Path $env:WINDIR 'System32/WindowsPowerShell/v1.0/powershell.exe'
+          & $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/test-release-branding.ps1
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
 

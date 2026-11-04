@@ -8,7 +8,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
-if (-not $DistributionDirectory) { $DistributionDirectory = Join-Path $root 'dist\TheConverter' }
+if (-not $DistributionDirectory) { $DistributionDirectory = Join-Path $root 'dist\ConvertHere' }
 $source = (Resolve-Path -LiteralPath $DistributionDirectory).Path
 if (-not $Version) {
     $match = [regex]::Match((Get-Content -LiteralPath (Join-Path $root 'Cargo.toml') -Raw), '(?m)^version\s*=\s*"([^"]+)"')
@@ -34,7 +34,7 @@ if ($RequireModernMenu -and -not $modernInfo) {
     throw 'La release con menu moderno richiede un pacchetto MSIX firmato attendibile. Nessun installer classico viene prodotto al suo posto.'
 }
 $variant = if ($modernInfo) { 'modern' } else { 'classic' }
-$stage = Join-Path $root "dist\public-stage\$Version\$variant\TheConverter"
+$stage = Join-Path $root "dist\public-stage\$Version\$variant\ConvertHere"
 $output = Join-Path $root "dist\releases\v$Version"
 New-Item -ItemType Directory -Force -Path $stage, $output | Out-Null
 # An explicit allowlist keeps local GPL runtime bundles and test artifacts out of public assets.
@@ -61,9 +61,9 @@ if ($modernInfo) {
 }
 & (Join-Path $root 'release-support\verify-thin-release.ps1') -SourceDirectory $stage
 & (Join-Path $PSScriptRoot 'build-installer.ps1') -SourceDirectory $stage -OutputDirectory $output -CompilerPath $CompilerPath -Version $Version
-$portable = Join-Path $output "TheConverter-$Version-windows-x64-portable.zip"
+$portable = Join-Path $output "ConvertHere-$Version-windows-x64-portable.zip"
 Compress-Archive -LiteralPath $stage -DestinationPath $portable -CompressionLevel Optimal -Force
-$setup = Join-Path $output "TheConverter-$Version-windows-x64-setup.exe"
+$setup = Join-Path $output "ConvertHere-$Version-windows-x64-setup.exe"
 $checksums = foreach ($path in @($setup, $portable)) {
     $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
     "$hash  $([IO.Path]::GetFileName($path))"

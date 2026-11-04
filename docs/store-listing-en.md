@@ -91,7 +91,7 @@ Leave blank for the first Microsoft Store submission. Add release-specific notes
 1. Converti in in the Windows 11 context menu. App UI shown in Italian.
 2. The queue shows file formats, status and destinations. App UI shown in Italian.
 3. Image quality and resizing settings. App UI shown in Italian.
-4. Configure optional executables in Strumenti. App UI shown in Italian.
+4. Configure optional executables on the Strumenti page. App UI shown in Italian.
 
 ## Fields still required
 

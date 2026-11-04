@@ -8,7 +8,7 @@ La cartella `option-ext-0.2.0` contiene il sorgente **non modificato** del compo
 
 `rust-runtime` conserva l'inventario copyright della libreria standard del toolchain usato per compilare e i testi di licenza che lo accompagnano. Tale inventario comprende anche componenti opzionali del runtime che potrebbero non essere usati dal binario Windows.
 
-Questi avvisi non assegnano una nuova licenza al codice originale di The Converter. L'autore del progetto resta titolare dei propri diritti.
+Questi avvisi non assegnano una nuova licenza al codice originale di Convert Here. L'autore del progetto resta titolare dei propri diritti.
 
 Per rigenerare l'inventario a partire dai lockfile:
 

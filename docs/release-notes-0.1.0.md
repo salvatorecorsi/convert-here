@@ -1,4 +1,6 @@
-# The Converter 0.1.0 — Windows x64
+# Convert Here — note storiche 0.1.0 (The Converter), Windows x64
+
+Questa versione e stata pubblicata con il nome **The Converter**. Gli artefatti, i checksum e le funzioni descritti qui restano quelli originali della 0.1.0. Il progetto prosegue come **Convert Here** nel repository [salvatorecorsi/convert-here](https://github.com/salvatorecorsi/convert-here); per la versione attuale vedi le [note 0.2.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.2.0).
 
 Prima release della riscrittura Rust di Final Converter, con conversioni locali e integrazione in Esplora file.
 

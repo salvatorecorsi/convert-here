@@ -218,7 +218,7 @@ fn client_builder() -> reqwest::ClientBuilder {
         .retry(reqwest::retry::never())
         .connect_timeout(Duration::from_secs(30))
         .timeout(Duration::from_secs(600))
-        .user_agent(concat!("TheConverter/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!("ConvertHere/", env!("CARGO_PKG_VERSION")))
 }
 
 /// Upload only after the caller explicitly selected audio -> TXT and configured a credential.

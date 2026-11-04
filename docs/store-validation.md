@@ -20,11 +20,15 @@ I 20 test del modulo di trascrizione usano fixture locali e server HTTP simulati
 
 La verifica completa comprende test e Clippy con `--all-targets` per app e DLL, formattazione Rust, sintassi PowerShell e fixture dell'installer con PowerShell 5.1 e 7. Il workflow Windows checks prepara FFmpeg e Poppler con archivi e hash fissati prima dei test, compila la DLL Explorer ed esegue smoke test COM e parita delle estensioni. LibreOffice, Tesseract e libheif restano motori aggiuntivi delle prove locali. La whitelist e confrontata fra core, DLL, script di registrazione e installer; i GUID dei vecchi comandi restano stabili. Queste verifiche non registrano il menu installato e non costituiscono una certificazione Store.
 
-La verifica finale PowerShell ha superato il parser di tutti i 20 script, i 6 casi della policy di disinstallazione e i 7 roundtrip degli apici sia con PowerShell 5.1 sia con PowerShell 7. Sono passati la parita delle 93 estensioni con due fixture negative, i 25 controlli del menu moderno e i 44 controlli Store, inclusa la validazione semantica MakeAppx. La DLL release supera lo smoke COM reale senza registrazione nel sistema; nessun installer e stato eseguito.
+La verifica finale PowerShell ha superato il parser di tutti i 21 script, i 6 casi della policy di disinstallazione e i 7 roundtrip degli apici sia con PowerShell 5.1 sia con PowerShell 7. Sono passati la parita delle 93 estensioni con due fixture negative, i 25 controlli del menu moderno e i 44 controlli Store, inclusa la validazione semantica MakeAppx. I 26 controlli del packaging Convert Here verificano nomi, struttura portable, checksum e compatibilita degli aggiornamenti in entrambe le versioni PowerShell. La DLL release supera lo smoke COM reale senza registrazione nel sistema; nessun installer e stato eseguito.
 
 I test dei probe PDF usano processi fixture Rust nativi: l'avvio di PowerShell sul runner CI non consuma piu il budget del probe. La cancellazione viene misurata dopo aver verificato vivo un discendente, del quale si trattiene l'handle fino alla verifica della terminazione. Limiti, timeout e comportamento del motore distribuito restano invariati.
 
 Il restyle mantiene egui con superfici che simulano l'aspetto Mica: il bonus Mica nativo non e applicato. Sono state verificate a schermo la finestra principale, le opzioni, la pagina Strumenti, i temi chiaro/scuro e una conversione WebM reale che prosegue dopo un errore su un altro file. Le [catture native](store-assets/README.md) usano preferenze e coda isolate; non attestano la certificazione o l'installazione MSIX del candidato finale.
+
+## Pacchetti GitHub Convert Here 0.2.0
+
+Versione Cargo e metadati nativi sono aggiornati alla 0.2.0; i due eseguibili mostrano ProductName `Convert Here`. Sono stati generati `ConvertHere-0.2.0-windows-x64-setup.exe`, `ConvertHere-0.2.0-windows-x64-portable.zip` e `SHA256SUMS.txt`. Il packaging pubblico applica la lista esplicita dei binari consentiti e include gli avvisi delle dipendenze, senza motori esterni o certificati. Il setup pubblico offre il menu classico; l'identita MSIX unsigned usata nella build locale non e distribuita. AppId, CLSID, binari interni e percorsi dei dati restano compatibili con gli aggiornamenti. Il setup e stato compilato e ispezionato, senza installarlo sul PC di lavoro.
 
 ## Verifiche storiche: migrazione GPT-Transcribe
 
@@ -56,7 +60,7 @@ L'autenticazione, l'accesso al modello e la qualita della trascrizione sul servi
 
 ## Pacchetti e certificazione
 
-Il workflow [Windows checks](https://github.com/salvatorecorsi/the-converter/actions/workflows/windows-ci.yml) ripete i controlli sui sorgenti pubblicati. Il workflow [Microsoft Store package](https://github.com/salvatorecorsi/the-converter/actions/workflows/microsoft-store.yml) produce separatamente il MSIX unsigned e il report con commit, stato della working tree e checksum. Verificare il run relativo al commit che si intende distribuire.
+Il workflow [Windows checks](https://github.com/salvatorecorsi/convert-here/actions/workflows/windows-ci.yml) ripete i controlli sui sorgenti pubblicati. Il workflow [Microsoft Store package](https://github.com/salvatorecorsi/convert-here/actions/workflows/microsoft-store.yml) produce separatamente il MSIX unsigned e il report con commit, stato della working tree e checksum. Verificare il run relativo al commit che si intende distribuire.
 
 La preview completa 1.0.2.0 precedente a Whisper e stata installata localmente con una copia firmata esclusivamente per il test, dopo un aggiornamento dalla preview 1.0.1.0. Al termine e stata rimossa ed e stata ripristinata l'integrazione sparse dell'installazione locale. Quella prova non certifica la successiva integrazione HTTP/Whisper.
 

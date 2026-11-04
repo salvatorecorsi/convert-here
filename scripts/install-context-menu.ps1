@@ -24,7 +24,7 @@ if ($Mode -eq 'Modern' -and $PSVersionTable.PSEdition -eq 'Core') {
 if (-not $InstallDirectory) {
     $adjacentApp = Join-Path $PSScriptRoot '..\the-converter.exe'
     if (Test-Path -LiteralPath $adjacentApp -PathType Leaf) { $InstallDirectory = Join-Path $PSScriptRoot '..' }
-    else { $InstallDirectory = Join-Path $PSScriptRoot '..\dist\TheConverter' }
+    else { $InstallDirectory = Join-Path $PSScriptRoot '..\dist\ConvertHere' }
 }
 $installPath = (Resolve-Path -LiteralPath $InstallDirectory).Path
 $executable = Join-Path $installPath 'the-converter.exe'

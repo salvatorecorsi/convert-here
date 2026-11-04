@@ -1,4 +1,4 @@
-# Full MSIX for Microsoft Store
+# Convert Here — full MSIX for Microsoft Store
 
 This packaging path targets **Windows 11 x64, build 22000 or later**, and contains one graphical application, the Explorer COM DLL, execution-alias metadata, app logos and third-party notices. It uses `packagedClassicApp`, a visible app-list entry and `runFullTrust`. It does not use sparse identity or external application content. The console CLI, FFmpeg, Poppler, LibreOffice and the PowerShell runtime downloader are excluded; terminal commands remain available in the separate portable/GitHub distribution.
 
@@ -40,6 +40,8 @@ Microsoft signs accepted Store submissions, so this build intentionally produces
 Each run returns the package path and produces `submission-report.json`, `SUBMISSION-REPORT.md`, `SHA256SUMS.txt`, tool logs and the exact package layout. The report records identity, both versions, source commit/dirty state, imported libraries, payload hashes and checks that were not performed. No account upload occurs.
 
 The GUI execution alias is `corsivo-the-converter-preview.exe` for preview and `corsivo-the-converter.exe` for submission. The application declares multiple-instance support so quick conversions, queue workers and status windows can run alongside an existing GUI without activation being redirected to it. `store-runtime.json` next to the executable contains only the matching `execution_alias`; the application uses this stable alias for queue placeholders across Store updates.
+
+Package names, execution aliases and COM CLSIDs remain stable technical identifiers across the public rename to Convert Here. The canonical source repository is [salvatorecorsi/convert-here](https://github.com/salvatorecorsi/convert-here).
 
 A preliminary two-application package passed MakeAppx validation but WACK 1.0.1 reported a failed optional Store application-count test: the Store does not support more than one declared application. That warning was not treated as a clean certification result. This layout therefore declares exactly one GUI application and has no CLI binary or console alias. MakeAppx also rejects multiple app-execution-alias extensions inside one application, and the alias schema has no per-alias executable override, so no unsupported workaround is used. Final WACK testing remains separate from package generation.
 

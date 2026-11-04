@@ -2,7 +2,7 @@
 
 Progetto **Corsivo**, sviluppato da **Salvatore Corsi**: versione Rust per Windows di [Final Converter](https://github.com/salvatorecorsi/final-converter). Conversioni di formato locali, selezioni multiple e integrazione con Esplora file. La trascrizione audio in TXT e facoltativa: usa OpenAI online con la chiave API dell'utente e invia l'audio solo quando viene richiesta.
 
-Il nome **Convert Here** e stato riservato in Microsoft Partner Center. Repository, nomi degli eseguibili e identificativi tecnici restano quelli esistenti per compatibilita. Le release precedenti possono ancora mostrare il nome The Converter.
+Il nome pubblico e **Convert Here**, riservato anche in Microsoft Partner Center; il repository canonico e [salvatorecorsi/convert-here](https://github.com/salvatorecorsi/convert-here). Per compatibilita restano invariati i nomi tecnici degli eseguibili e dei crate, le cartelle dati, la credenziale Windows e gli identificativi COM/MSIX. Le release precedenti possono ancora mostrare il nome The Converter. [Novita della versione 0.2.0](docs/release-notes-0.2.0.md).
 
 ## Preparazione Microsoft Store
 
@@ -24,15 +24,15 @@ Su GitHub Actions, **Windows checks** verifica codice e fixture su push e pull r
 
 ## Scarica e installa
 
-Scarica l'[ultima release Windows x64](https://github.com/salvatorecorsi/the-converter/releases/latest) e avvia il file `TheConverter-<versione>-windows-x64-setup.exe`. L'installer aggiunge il programma, il disinstaller e la voce **Converti in** del tasto destro per il tuo utente, senza richiedere privilegi amministrativi.
+Scarica l'[ultima release Windows x64](https://github.com/salvatorecorsi/convert-here/releases/latest) e avvia `ConvertHere-0.2.0-windows-x64-setup.exe`. Richiede Windows 10 build 19041 o successivo, x64. L'installer aggiunge il programma e il disinstaller per il tuo utente; la voce **Converti in** del menu contestuale e facoltativa e selezionata per default. Non richiede privilegi amministrativi.
 
 Il setup è leggero. L'opzione consigliata scarica FFmpeg e Poppler direttamente dai distributori originali (circa 160 MB, con verifica SHA-256). Servono per audio, video e PDF; le conversioni di immagini e immagini in PDF funzionano anche senza questi download. Per riprovare o installare i motori in seguito, nel menu Start trovi **Installa o aggiorna motori di conversione**.
 
-Su Windows 11 il menu incluso in questa release compare in **Mostra altre opzioni**. Il menu moderno richiede un'identità MSIX firmata attendibile ed è descritto in [windows-integration.md](docs/windows-integration.md); la release iniziale non include un pacchetto firmato.
+Su Windows 11 il menu incluso nella release GitHub 0.2.0 compare in **Mostra altre opzioni**. Gli artefatti pubblici non sono firmati Authenticode e non includono un'identita MSIX firmata attendibile per il menu moderno. Quel percorso resta separato ed e descritto in [windows-integration.md](docs/windows-integration.md).
 
 Per rimuovere il programma usa **Impostazioni Windows → App → App installate → Convert Here → Disinstalla**, oppure il collegamento nel menu Start. Le preferenze e i file convertiti restano conservati. Se Windows mantiene caricata la DLL del menu, la pulizia viene completata al successivo accesso senza riavviare Esplora file durante il lavoro.
 
-È disponibile anche l'archivio portable: estrailo in una cartella stabile, esegui `scripts/install-runtime-tools.ps1 -InstallDirectory <cartella>` per i motori e, se desideri il menu, `scripts/install-context-menu.ps1 -Mode Classic -InstallDirectory <cartella>`.
+È disponibile anche `ConvertHere-0.2.0-windows-x64-portable.zip`: estrailo in una cartella stabile, esegui `scripts/install-runtime-tools.ps1 -InstallDirectory <cartella>` per i motori e, se desideri il menu, `scripts/install-context-menu.ps1 -Mode Classic -InstallDirectory <cartella>`. Verifica i download con il file `SHA256SUMS.txt` della stessa release.
 
 ## Uso quotidiano
 
@@ -124,18 +124,18 @@ Il testo mantiene la lingua parlata, senza traduzione, timestamp o riconosciment
 
 ## Eseguibile e menu contestuale
 
-La distribuzione locale pronta è in `dist\TheConverter\`. Mantieni questa cartella in una posizione stabile: contiene applicazione, CLI, DLL Explorer e motori.
+La distribuzione locale pronta è in `dist\ConvertHere\`. Mantieni questa cartella in una posizione stabile: contiene applicazione, CLI, DLL Explorer e gli eventuali motori locali di sviluppo. Gli artefatti pubblici escludono i motori.
 
 Per installare il menu classico per il solo utente corrente, da PowerShell:
 
 ```powershell
-.\dist\TheConverter\scripts\install-context-menu.ps1 -Mode Classic
+.\dist\ConvertHere\scripts\install-context-menu.ps1 -Mode Classic
 ```
 
 Per rimuoverlo:
 
 ```powershell
-.\dist\TheConverter\scripts\uninstall-context-menu.ps1 -Mode Classic
+.\dist\ConvertHere\scripts\uninstall-context-menu.ps1 -Mode Classic
 ```
 
 Su Windows 11 il menu classico compare in **Mostra altre opzioni**. Il progetto include anche la DLL `IExplorerCommand` e un pacchetto MSIX sparse per il **menu moderno di Windows 11**. Per registrarlo serve prima una firma attendibile del pacchetto. La build non registra DLL, non installa pacchetti e non modifica l'archivio dei certificati. La procedura completa e lo stato di verifica sono in [docs/windows-integration.md](docs/windows-integration.md).
@@ -176,7 +176,7 @@ Per preparare gli artefatti pubblici, dopo la build:
 .\scripts\prepare-public-release.ps1 -CompilerPath C:\Percorso\InnoSetup\ISCC.exe
 ```
 
-Lo staging pubblico usa una lista esplicita di file e una verifica che rifiuta motori esterni o DLL aggiuntive. L'output in `dist/releases/v<versione>/` contiene setup, archivio portable e `SHA256SUMS.txt`. Gli avvisi delle dipendenze Rust e dei font sono inclusi in entrambi gli artefatti.
+Lo staging pubblico usa una lista esplicita di file e una verifica che rifiuta motori esterni o DLL aggiuntive. Per la versione 0.2.0, `dist/releases/v0.2.0/` contiene `ConvertHere-0.2.0-windows-x64-setup.exe`, `ConvertHere-0.2.0-windows-x64-portable.zip` e `SHA256SUMS.txt`. Gli avvisi delle dipendenze Rust e dei font sono inclusi in entrambi gli artefatti.
 
 Per una distribuzione con il menu moderno, usa `prepare-public-release.ps1 -RequireModernMenu` dopo una build firmata con un certificato di produzione. Il comando include MSIX e loghi esterni, oppure si interrompe se manca una firma attendibile. Il relativo setup abilita per default la voce diretta su Windows 11 e la rimuove durante la disinstallazione. Non importa certificati di prova: la procedura locale e i requisiti di firma sono descritti in [docs/windows-integration.md](docs/windows-integration.md).
 

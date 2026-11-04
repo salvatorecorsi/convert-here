@@ -1,6 +1,6 @@
 # Installer Windows di Convert Here
 
-`TheConverter.iss` genera l'installer di Convert Here con Inno Setup per Windows x64 (Windows 10 build 19041 o successivo), installato per l'utente corrente in `%LOCALAPPDATA%\Programs\The Converter`. La disinstallazione è disponibile nelle App installate di Windows come **Convert Here** e nel menu Start. Per compatibilita con gli aggiornamenti, il percorso di installazione, la cartella Start e i nomi dei collegamenti conservano il nome storico **The Converter**. Anche i nomi degli eseguibili, gli identificativi e i file del setup rimangono stabili.
+`TheConverter.iss` genera l'installer di Convert Here con Inno Setup per Windows x64 (Windows 10 build 19041 o successivo), installato per l'utente corrente in `%LOCALAPPDATA%\Programs\The Converter`. La disinstallazione è disponibile nelle App installate di Windows come **Convert Here** e nel menu Start. Le nuove installazioni usano il gruppo e i collegamenti **Convert Here**; un aggiornamento conserva il gruppo Start precedente e i vecchi collegamenti. Per compatibilita rimangono stabili il percorso di installazione, i nomi degli eseguibili e gli identificativi. Dalla versione 0.2.0 gli artefatti pubblici usano il prefisso `ConvertHere`.
 
 L'installer contiene l'applicazione Rust, la DLL di Esplora file, la CLI e la documentazione. Il task consigliato scarica FFmpeg e Poppler direttamente dai rispettivi distributori tramite `scripts/install-runtime-tools.ps1`, che verifica gli hash dei pacchetti. Nessun runtime Python, Node o Rust è richiesto per usare l'applicazione.
 
@@ -16,14 +16,14 @@ Serve Inno Setup 7 o successivo. Dopo la preparazione della distribuzione:
 .\scripts\build-installer.ps1 -CompilerPath C:\Percorso\ISCC.exe
 ```
 
-Lo script legge la versione da `Cargo.toml` e produce `dist\release\TheConverter-<versione>-windows-x64-setup.exe`. Accetta `-SourceDirectory`, `-OutputDirectory` e `-Version` per una pipeline di release.
+Lo script legge la versione da `Cargo.toml`, usa `dist\ConvertHere` come sorgente predefinita e produce `dist\release\ConvertHere-<versione>-windows-x64-setup.exe`. Accetta `-SourceDirectory`, `-OutputDirectory` e `-Version` per una pipeline di release. La preparazione pubblica raccoglie setup, portable e checksum in `dist\releases\v0.2.0\`. Il setup pubblico 0.2.0 non e firmato Authenticode e include il solo menu classico; il menu moderno richiede separatamente un MSIX con firma attendibile.
 
 Gli script eseguiti dal setup usano esplicitamente PowerShell x64, anche quando il compilatore genera un setup a 32 bit. Output, errori e codice di uscita sono inclusi nel log dell'installazione.
 
 Per una prova silenziosa senza download di motori:
 
 ```powershell
-.\TheConverter-0.1.0-windows-x64-setup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /TASKS="contextmenu" /LOG="install.log"
+.\ConvertHere-0.2.0-windows-x64-setup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /TASKS="contextmenu" /LOG="install.log"
 ```
 
 La disinstallazione conserva le preferenze, la coda e i file convertiti nelle loro cartelle. Rimuove il contenuto applicativo e la cartella privata `tools` nell'installazione. Non usare la cartella dell'applicazione o `tools` come cartella per salvare documenti personali.
