@@ -16,12 +16,26 @@ fn selection_offers_only_shared_routes_and_opt_in_transcription() {
         (
             &["song.WAV", "clip.mp4"],
             true,
-            &[Mp3, Wav, Flac, Aac, Ogg, Opus, Aiff],
+            &[Mp3, Wav, Flac, Aac, Ogg, Opus, Aiff, M4a, Wma, Ac3, Au, Caf],
         ),
         (&["song.wav", "report.pdf"], true, &[Txt]),
         (&["song.wav", "report.pdf"], false, &[]),
-        (&["report.pdf"], false, &[Png, Jpg, Txt]),
-        (&["photo.png", "report.pdf"], true, &[Png, Jpg]),
+        (&["report.pdf"], false, &[Png, Jpg, Txt, Docx, Html, Pdf]),
+        (&["report.xlsx", "data.csv"], false, &[Pdf, Csv, Xlsx]),
+        (&["report.xlsx", "notes.docx", "page.html"], false, &[Pdf]),
+        (&["page.HTM", "photo.qoi"], false, &[Pdf]),
+        (&["notes.docx"], false, &[Pdf]),
+        (&["photo.png", "report.pdf"], true, &[Png, Jpg, Pdf, Txt]),
+        (
+            &["photo.heic", "photo.AVIF"],
+            false,
+            &[
+                Png, Jpg, Webp, Bmp, Tiff, Gif, Ico, Pdf, Qoi, Tga, Farbfeld, OpenExr, Hdr, Pnm,
+                Avif, Heic, Txt,
+            ],
+        ),
+        (&["song.wav", "photo.heic"], true, &[Txt]),
+        (&["song.wav", "photo.heic"], false, &[]),
         (&["song.wav", "file.xyz"], true, &[]),
     ];
     for (inputs, enabled, expected) in cases {
@@ -44,6 +58,9 @@ fn unsupported_routes_are_rejected_before_tools_or_output_creation() {
         "photo.png",
         "report.pdf",
         "note.txt",
+        "data.csv",
+        "book.xlsx",
+        "page.html",
         "file.xyz",
     ];
     for name in inputs {
@@ -84,10 +101,68 @@ fn unsupported_routes_are_rejected_before_tools_or_output_creation() {
 }
 
 #[test]
+fn advertised_formats_have_unique_extensions_and_persist_without_loss() {
+    let mut extensions = std::collections::HashSet::new();
+    for format in OutputFormat::ALL {
+        assert!(extensions.insert(format.extension()), "duplicate {format}");
+        let json = serde_json::to_string(&ConversionSettings {
+            format,
+            ..Default::default()
+        })
+        .unwrap();
+        let loaded: ConversionSettings = serde_json::from_str(&json).unwrap();
+        assert_eq!(loaded.format, format);
+        assert_ne!(
+            MediaKind::from_path(Path::new(&format!("file.{}", format.extension()))),
+            MediaKind::Unknown
+        );
+    }
+}
+
+#[test]
+fn stale_ocr_language_only_blocks_routes_that_use_ocr() {
+    let dir = tempfile::tempdir().unwrap();
+    let input = dir.path().join("photo.png");
+    image::RgbImage::from_pixel(8, 8, image::Rgb([255, 255, 255]))
+        .save(&input)
+        .unwrap();
+    let mut settings = ConversionSettings {
+        format: OutputFormat::Png,
+        ..Default::default()
+    };
+    settings.ocr.language.clear();
+    assert!(
+        engine::convert(
+            &input,
+            &settings,
+            &ToolPaths::default(),
+            &AtomicBool::new(false),
+            |_| {}
+        )
+        .is_ok()
+    );
+    settings.format = OutputFormat::Txt;
+    settings.output_dir = Some(dir.path().join("not-created"));
+    let error = engine::prepare(&input, &settings, &ToolPaths::default()).unwrap_err();
+    assert!(error.to_string().contains("Lingua OCR"));
+    assert!(!settings.output_dir.unwrap().exists());
+}
+
+#[test]
 fn old_settings_load_without_a_key_or_transcription_configuration() {
     let settings: ConversionSettings =
         serde_json::from_str(r#"{"format":"Txt","audio":{"bitrate_kbps":192}}"#).unwrap();
     assert_eq!(settings.transcription.language, None);
+    assert_eq!(
+        settings.pdf.action,
+        the_converter::model::PdfAction::Compress
+    );
+    assert_eq!(
+        settings.csv.delimiter,
+        the_converter::model::CsvDelimiter::Comma
+    );
+    assert!(!settings.ocr.enabled);
+    assert_eq!(settings.ocr.language, "ita+eng");
     let json = serde_json::to_string(&settings).unwrap();
     assert!(!json.contains("api_key"));
     let saved_with_language: ConversionSettings =

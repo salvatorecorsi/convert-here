@@ -1,4 +1,4 @@
-The Converter
+Convert Here
 Corsivo - developed by Salvatore Corsi
 
 Converts images locally and integrates compatible conversions into the Windows

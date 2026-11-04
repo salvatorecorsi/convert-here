@@ -20,7 +20,7 @@ on:
       display_name:
         description: Reserved product display name
         type: string
-        default: The Converter
+        default: Convert Here
       store_version:
         description: Store version; major must be positive and fourth component zero
         type: string
@@ -87,7 +87,7 @@ jobs:
         shell: pwsh
         run: |
           @'
-          ## Corsivo — The Converter
+          ## Corsivo — Convert Here
           The MSIX is unsigned. Microsoft signs a Store submission after certification.
           Preview packages use a development identity and must not be submitted.
           Candidate packages still require a completed Store listing, public privacy policy,

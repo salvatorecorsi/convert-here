@@ -11,7 +11,7 @@ use std::{
     path::{Path, PathBuf},
     process::Command,
     ptr,
-    sync::atomic::{AtomicU32, AtomicUsize, Ordering},
+    sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -31,10 +31,16 @@ const ECS_DISABLED: u32 = 1;
 const ECS_HIDDEN: u32 = 2;
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 const MAX_SELECTION: u32 = 10_000;
-const UNKNOWN_SELECTION_MASK: u32 = u32::MAX;
-const SELECTION_CONTAINS_AUDIO: u32 = 1 << 31;
-const AUDIO_TARGETS: u32 = (1 << 7) - 1;
-const TEXT_TARGET: u32 = 1 << 20;
+const UNKNOWN_SELECTION_MASK: u64 = u64::MAX;
+const SELECTION_CONTAINS_AUDIO: u64 = 1 << 63;
+const SELECTION_CONTAINS_IMAGE: u64 = 1 << 62;
+const SELECTION_CONTAINS_PDF: u64 = 1 << 61;
+const AUDIO_TARGETS: u64 = ((1 << 7) - 1) | (((1 << 5) - 1) << 21);
+const VIDEO_TARGETS: u64 = AUDIO_TARGETS | (((1 << 6) - 1) << 7) | (((1 << 6) - 1) << 26);
+const IMAGE_TARGETS: u64 = (((1 << 8) - 1) << 12) | (((1 << 6) - 1) << 32) | (3 << 42) | (1 << 20);
+const PDF_TARGETS: u64 = (1 << 13) | (1 << 14) | (1 << 19) | (1 << 20) | (1 << 40) | (1 << 41);
+const SPREADSHEET_TARGETS: u64 = (1 << 19) | (1 << 38) | (1 << 39);
+const TEXT_TARGET: u64 = 1 << 20;
 const OPENAI_CREDENTIAL_TARGET: &str = "Corsivo.TheConverter.OpenAI";
 
 #[repr(C)]
@@ -130,17 +136,36 @@ const IID_IENUMEXPLORERCOMMAND: Guid = Guid {
 };
 
 // Keep these identifiers aligned with OutputFormat in the application core.
-const TARGETS: [&str; 21] = [
+const TARGETS: [&str; 44] = [
     "mp3", "wav", "flac", "aac", "ogg", "opus", "aiff", "mp4", "mkv", "mov", "webm", "avi", "gif",
-    "png", "jpg", "webp", "bmp", "tiff", "ico", "pdf", "txt",
+    "png", "jpg", "webp", "bmp", "tiff", "ico", "pdf", "txt", "m4a", "wma", "ac3", "au", "caf",
+    "mpeg", "wmv", "flv", "ts", "m4v", "3gp", "qoi", "tga", "ff", "exr", "hdr", "pnm", "csv",
+    "xlsx", "docx", "html", "avif", "heic",
 ];
-const ALL_TARGETS: u32 = (1 << TARGETS.len()) - 1;
+const ALL_TARGETS: u64 = (1 << TARGETS.len()) - 1;
 
-fn text_target_title(selection: u32) -> &'static str {
-    if selection != UNKNOWN_SELECTION_MASK && selection & SELECTION_CONTAINS_AUDIO != 0 {
+fn text_target_title(selection: u64) -> &'static str {
+    if selection == UNKNOWN_SELECTION_MASK {
+        return "TXT";
+    }
+    if selection & SELECTION_CONTAINS_AUDIO != 0 && selection & SELECTION_CONTAINS_IMAGE != 0 {
+        "TXT · audio OpenAI / immagini OCR"
+    } else if selection & SELECTION_CONTAINS_AUDIO != 0 {
         "TXT con OpenAI"
+    } else if selection & SELECTION_CONTAINS_IMAGE != 0 && selection & SELECTION_CONTAINS_PDF != 0 {
+        "TXT · OCR / testo PDF"
+    } else if selection & SELECTION_CONTAINS_IMAGE != 0 {
+        "TXT · OCR"
     } else {
         "TXT"
+    }
+}
+
+fn pdf_target_title(selection: u64) -> &'static str {
+    if selection != UNKNOWN_SELECTION_MASK && selection & SELECTION_CONTAINS_PDF != 0 {
+        "PDF · comprimi"
+    } else {
+        "PDF"
     }
 }
 
@@ -205,7 +230,7 @@ struct ExplorerObject {
     header: ComObject<ExplorerVtable>,
     target: Option<String>,
     parent: bool,
-    selection_mask: AtomicU32,
+    selection_mask: AtomicU64,
 }
 
 #[repr(C)]
@@ -221,7 +246,7 @@ struct EnumeratorVtable {
 struct EnumeratorObject {
     header: ComObject<EnumeratorVtable>,
     cursor: AtomicUsize,
-    mask: u32,
+    mask: u64,
 }
 
 static FACTORY_VTABLE: FactoryVtable = FactoryVtable {
@@ -277,11 +302,11 @@ fn allocate_command(target: Option<&str>, parent: bool) -> *mut c_void {
         },
         target: target.map(str::to_owned),
         parent,
-        selection_mask: AtomicU32::new(UNKNOWN_SELECTION_MASK),
+        selection_mask: AtomicU64::new(UNKNOWN_SELECTION_MASK),
     })) as *mut c_void
 }
 
-fn allocate_enumerator(cursor: usize, mask: u32) -> *mut c_void {
+fn allocate_enumerator(cursor: usize, mask: u64) -> *mut c_void {
     OBJECTS.fetch_add(1, Ordering::Relaxed);
     Box::into_raw(Box::new(EnumeratorObject {
         header: ComObject {
@@ -511,8 +536,13 @@ unsafe extern "system" fn explorer_title(
     } else if let Some(target) = command.target.as_deref() {
         let label = match target {
             "txt" => text_target_title(command.selection_mask.load(Ordering::Acquire)).to_owned(),
+            "pdf" => pdf_target_title(command.selection_mask.load(Ordering::Acquire)).to_owned(),
+            "docx" => "Word (DOCX) · testo".to_owned(),
+            "html" => "HTML · testo".to_owned(),
             "jpg" => "JPEG".to_owned(),
             "webp" => "WebP".to_owned(),
+            "ff" => "Farbfeld".to_owned(),
+            "exr" => "OpenEXR".to_owned(),
             "webm" => "WebM".to_owned(),
             "opus" => "Opus".to_owned(),
             other => other.to_uppercase(),
@@ -549,6 +579,15 @@ unsafe extern "system" fn explorer_icon(
         }
     }
 }
+fn target_guid_slot(target: Option<&str>) -> usize {
+    target
+        .and_then(|target| TARGETS.iter().position(|value| *value == target))
+        // The original settings command occupied slot 21. Preserve its GUID
+        // and the original format GUIDs when adding further targets.
+        .map(|index| if index >= 21 { index + 1 } else { index })
+        .unwrap_or(21)
+}
+
 unsafe extern "system" fn explorer_canonical(this: *mut c_void, out: *mut Guid) -> HResult {
     if out.is_null() {
         return E_POINTER;
@@ -556,12 +595,7 @@ unsafe extern "system" fn explorer_canonical(this: *mut c_void, out: *mut Guid) 
     *out = CLSID_CONVERTER;
     let command = &*(this as *mut ExplorerObject);
     if !command.parent {
-        let index = command
-            .target
-            .as_deref()
-            .and_then(|target| TARGETS.iter().position(|value| *value == target))
-            .unwrap_or(TARGETS.len());
-        (*out).d[7] ^= index as u8 + 1;
+        (*out).d[7] ^= target_guid_slot(command.target.as_deref()) as u8 + 1;
     }
     S_OK
 }
@@ -666,13 +700,14 @@ unsafe fn item_path(items: *mut c_void, index: u32) -> Result<PathBuf, HResult> 
     CoTaskMemFree(text as *const c_void);
     Ok(path)
 }
-fn target_mask(path: &Path, transcription_enabled: bool) -> u32 {
+fn target_mask(path: &Path, transcription_enabled: bool) -> u64 {
     let Some(extension) = path.extension().and_then(|s| s.to_str()) else {
         return 0;
     };
     match extension.to_ascii_lowercase().as_str() {
         "mp3" | "mpga" | "wav" | "flac" | "aac" | "m4a" | "ogg" | "opus" | "wma" | "aiff"
-        | "aif" | "alac" | "ape" => {
+        | "aif" | "alac" | "ape" | "m4b" | "mka" | "mp2" | "oga" | "weba" | "ac3" | "au"
+        | "caf" | "amr" | "dts" | "tta" | "voc" | "wv" | "tak" | "w64" | "aifc" | "ra" => {
             AUDIO_TARGETS
                 | if transcription_enabled {
                     TEXT_TARGET
@@ -681,13 +716,14 @@ fn target_mask(path: &Path, transcription_enabled: bool) -> u32 {
                 }
         }
         "mp4" | "mkv" | "mov" | "avi" | "webm" | "wmv" | "m4v" | "mpeg" | "mpg" | "ts" | "mts"
-        | "m2ts" | "3gp" | "flv" => (1 << 13) - 1,
-        "png" | "jpg" | "jpeg" | "webp" | "bmp" | "tif" | "tiff" | "gif" | "ico" => {
-            ((1 << 20) - 1) & !((1 << 12) - 1)
-        }
-        "pdf" => (1 << 13) | (1 << 14) | (1 << 20),
-        "doc" | "docx" | "odt" | "rtf" | "txt" | "xlsx" | "xls" | "ods" | "ppt" | "pptx"
-        | "odp" => 1 << 19,
+        | "m2ts" | "3gp" | "flv" | "asf" | "vob" | "ogv" | "m2v" | "mxf" | "f4v" | "divx"
+        | "3g2" | "m2t" | "mpe" | "mpv" => VIDEO_TARGETS,
+        "png" | "jpg" | "jpeg" | "webp" | "bmp" | "tif" | "tiff" | "gif" | "ico" | "qoi"
+        | "tga" | "ff" | "hdr" | "exr" | "pnm" | "pam" | "pbm" | "pgm" | "ppm" | "avif"
+        | "heic" | "heif" => IMAGE_TARGETS,
+        "pdf" => PDF_TARGETS,
+        "xls" | "xlsx" | "xlsm" | "ods" | "csv" => SPREADSHEET_TARGETS,
+        "html" | "htm" | "doc" | "docx" | "odt" | "rtf" | "txt" | "ppt" | "pptx" | "odp" => 1 << 19,
         _ => 0,
     }
 }
@@ -695,7 +731,7 @@ fn target_mask(path: &Path, transcription_enabled: bool) -> u32 {
 fn common_target_mask<'a>(
     paths: impl IntoIterator<Item = &'a Path>,
     transcription_enabled: bool,
-) -> u32 {
+) -> u64 {
     let mut paths = paths.into_iter();
     let Some(first) = paths.next() else {
         return 0;
@@ -760,15 +796,17 @@ unsafe extern "system" fn explorer_state(
     let transcription_enabled = needs_transcription_metadata(&paths, command.target.as_deref())
         && transcription_key_available();
     let mask = common_target_mask(paths.iter().map(PathBuf::as_path), transcription_enabled);
-    let contains_audio = paths
-        .iter()
-        .any(|path| target_mask(path, false) == AUDIO_TARGETS);
+    let mut metadata = 0;
+    for path in &paths {
+        match target_mask(path, false) {
+            AUDIO_TARGETS => metadata |= SELECTION_CONTAINS_AUDIO,
+            IMAGE_TARGETS => metadata |= SELECTION_CONTAINS_IMAGE,
+            PDF_TARGETS => metadata |= SELECTION_CONTAINS_PDF,
+            _ => {}
+        }
+    }
     command.selection_mask.store(
-        mask | if mask != 0 && contains_audio {
-            SELECTION_CONTAINS_AUDIO
-        } else {
-            0
-        },
+        mask | if mask != 0 { metadata } else { 0 },
         Ordering::Release,
     );
     if mask != 0 && required.is_none_or(|required| mask & required != 0) {
@@ -924,6 +962,11 @@ pub extern "system" fn DllCanUnloadNow() -> HResult {
 }
 
 #[cfg(test)]
+#[allow(dead_code)]
+#[path = "../../src/model.rs"]
+mod core_model;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -1055,7 +1098,7 @@ mod tests {
 
     #[test]
     fn target_intersections_match_conversion_capabilities() {
-        let formats = |mask: u32| {
+        let formats = |mask: u64| {
             TARGETS
                 .iter()
                 .enumerate()
@@ -1069,14 +1112,17 @@ mod tests {
         let document = target_mask(Path::new("testo.docx"), true);
         assert_eq!(
             formats(audio & video),
-            vec!["mp3", "wav", "flac", "aac", "ogg", "opus", "aiff"]
+            vec![
+                "mp3", "wav", "flac", "aac", "ogg", "opus", "aiff", "m4a", "wma", "ac3", "au",
+                "caf"
+            ]
         );
-        assert_eq!(formats(image & pdf), vec!["png", "jpg"]);
+        assert_eq!(formats(image & pdf), vec!["png", "jpg", "pdf", "txt"]);
         assert_eq!(formats(document & image), vec!["pdf"]);
         assert_eq!(audio & image, 0);
         assert_eq!(target_mask(Path::new("unknown.exe"), true), 0);
         for extension in [
-            "txt", "doc", "docx", "odt", "rtf", "xls", "xlsx", "ods", "ppt", "pptx", "odp",
+            "txt", "doc", "docx", "odt", "rtf", "ppt", "pptx", "odp", "html", "htm",
         ] {
             assert_eq!(
                 formats(target_mask(Path::new(&format!("file.{extension}")), true)),
@@ -1087,6 +1133,7 @@ mod tests {
         assert_eq!(audio_with_key, audio | TEXT_TARGET);
         assert_eq!(formats(audio_with_key & video), formats(audio)); // Video is never transcribed.
         assert_eq!(formats(audio_with_key & pdf), vec!["txt"]);
+        assert_eq!(formats(audio_with_key & image), vec!["txt"]);
         assert_eq!(audio & pdf, 0);
         let batch = [Path::new("testo.txt"), Path::new("foto.png")];
         assert_eq!(formats(common_target_mask(batch, true)), vec!["pdf"]);
@@ -1102,9 +1149,104 @@ mod tests {
         assert_eq!(text_target_title(UNKNOWN_SELECTION_MASK), "TXT");
         assert_eq!(text_target_title(TEXT_TARGET), "TXT");
         assert_eq!(
+            text_target_title(TEXT_TARGET | SELECTION_CONTAINS_IMAGE),
+            "TXT · OCR"
+        );
+        assert_eq!(
+            text_target_title(TEXT_TARGET | SELECTION_CONTAINS_IMAGE | SELECTION_CONTAINS_PDF),
+            "TXT · OCR / testo PDF"
+        );
+        assert_eq!(
+            text_target_title(TEXT_TARGET | SELECTION_CONTAINS_IMAGE | SELECTION_CONTAINS_AUDIO),
+            "TXT · audio OpenAI / immagini OCR"
+        );
+        assert_eq!(pdf_target_title(UNKNOWN_SELECTION_MASK), "PDF");
+        assert_eq!(pdf_target_title(SELECTION_CONTAINS_PDF), "PDF · comprimi");
+        assert_eq!(
             text_target_title(TEXT_TARGET | SELECTION_CONTAINS_AUDIO),
             "TXT con OpenAI"
         );
+    }
+
+    #[test]
+    fn all_registered_extensions_and_targets_match_the_application_core() {
+        let core_targets: Vec<_> = core_model::OutputFormat::ALL
+            .into_iter()
+            .map(core_model::OutputFormat::extension)
+            .collect();
+        assert_eq!(core_targets, TARGETS);
+        assert!(TARGETS.len() < 61); // The upper bits record input category metadata.
+        let registration = include_str!("../../scripts/install-context-menu.ps1");
+        let extensions: Vec<_> = registration
+            .lines()
+            .find(|line| line.starts_with("$classicExtensions ="))
+            .unwrap()
+            .split('\'')
+            .skip(1)
+            .step_by(2)
+            .collect();
+        let source = include_str!("../../src/model.rs");
+        let classification = source
+            .split("impl MediaKind {")
+            .nth(1)
+            .unwrap()
+            .split("#[derive")
+            .next()
+            .unwrap();
+        let mut core_extensions: Vec<_> = classification
+            .split('"')
+            .skip(1)
+            .step_by(2)
+            .filter(|extension| !extension.is_empty())
+            .collect();
+        let mut registered = extensions.clone();
+        core_extensions.sort_unstable();
+        registered.sort_unstable();
+        assert_eq!(
+            core_extensions, registered,
+            "Explorer input whitelist differs from the app"
+        );
+        for extension in extensions {
+            let path = PathBuf::from(format!("sample.{extension}"));
+            let kind = core_model::MediaKind::from_path(&path);
+            for enabled in [false, true] {
+                let expected = core_model::supported_formats(kind)
+                    .into_iter()
+                    .filter(|format| {
+                        enabled
+                            || kind != core_model::MediaKind::Audio
+                            || *format != core_model::OutputFormat::Txt
+                    })
+                    .fold(0u64, |mask, format| {
+                        mask | (1
+                            << TARGETS
+                                .iter()
+                                .position(|target| *target == format.extension())
+                                .unwrap())
+                    });
+                assert_eq!(
+                    target_mask(&path, enabled),
+                    expected,
+                    "{extension}, key={enabled}"
+                );
+            }
+        }
+        assert_ne!(target_mask(Path::new("sample.qoi"), false) & (1 << 37), 0);
+        assert_ne!(target_mask(Path::new("sample.pdf"), false) & (1 << 41), 0);
+    }
+
+    #[test]
+    fn canonical_identifiers_stay_stable_and_unique_when_formats_are_added() {
+        assert_eq!(target_guid_slot(None), 21);
+        let mut slots = std::collections::BTreeSet::new();
+        slots.insert(target_guid_slot(None));
+        for (index, target) in TARGETS.iter().enumerate() {
+            let slot = target_guid_slot(Some(target));
+            assert!(slots.insert(slot), "duplicate GUID for {target}");
+            if index < 21 {
+                assert_eq!(slot, index);
+            }
+        }
     }
 
     #[test]

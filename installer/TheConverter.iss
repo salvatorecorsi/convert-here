@@ -19,15 +19,15 @@
 
 [Setup]
 AppId={{441C8D1C-A78E-4D93-9221-2FA8B207E408}
-AppName=The Converter
+AppName=Convert Here
 AppVersion={#AppVersion}
-AppVerName=The Converter {#AppVersion}
+AppVerName=Convert Here {#AppVersion}
 AppPublisher=Corsivo
 AppPublisherURL={#RepositoryUrl}
 AppSupportURL={#RepositoryUrl}/issues
 AppUpdatesURL={#RepositoryUrl}/releases
 VersionInfoVersion={#FileVersion}
-VersionInfoDescription=The Converter Setup
+VersionInfoDescription=Convert Here Setup
 DefaultDirName={localappdata}\Programs\The Converter
 DefaultGroupName=The Converter
 PrivilegesRequired=lowest
@@ -38,7 +38,7 @@ DisableProgramGroupPage=yes
 WizardStyle=modern
 SetupIconFile=..\assets\app.ico
 UninstallDisplayIcon={app}\the-converter.exe
-UninstallDisplayName=The Converter
+UninstallDisplayName=Convert Here
 OutputDir={#OutputPath}
 OutputBaseFilename=TheConverter-{#AppVersion}-windows-x64-setup
 Compression=lzma2/max
@@ -63,11 +63,11 @@ italian.ContextMenu=Aggiungi il menu classico come compatibilita e ripiego (Wind
 italian.DownloadTools=Scarica FFmpeg e Poppler per audio, video e PDF (consigliato; circa 160 MB, richiede Internet)
 italian.ModernContextMenu=Aggiungi "Converti in" direttamente al menu di Windows 11
 italian.DesktopShortcut=Crea un collegamento sul desktop
-italian.LaunchApp=Apri The Converter
-italian.UninstallApp=Disinstalla The Converter
+italian.LaunchApp=Apri Convert Here
+italian.UninstallApp=Disinstalla Convert Here
 italian.InstallTools=Installa o aggiorna motori di conversione
 italian.DownloadingTools=Download e verifica dei motori di conversione...
-italian.ToolsFailed=The Converter è installato, ma non è stato possibile scaricare FFmpeg e Poppler.%n%nLe conversioni di immagini restano disponibili. Per riprovare in seguito, apri "Installa o aggiorna motori di conversione" dalla cartella The Converter nel menu Start.%n%nVuoi riprovare il download adesso?
+italian.ToolsFailed=Convert Here è installato, ma non è stato possibile scaricare FFmpeg e Poppler.%n%nLe conversioni di immagini restano disponibili. Per riprovare in seguito, apri "Installa o aggiorna motori di conversione" dalla cartella The Converter nel menu Start.%n%nVuoi riprovare il download adesso?
 italian.ModernFailed=Non è stato possibile registrare il menu moderno di Windows 11. Il pacchetto deve avere una firma attendibile su questo computer. Il menu classico resta disponibile se selezionato.%n%nConsulta docs\windows-integration.md per i dettagli.
 italian.ModernRemovalFailed=Non è stato possibile rimuovere il menu di Windows 11. La registrazione e i file applicazione sono conservati: riprova dopo aver chiuso le conversioni in corso. Consulta il registro del setup per i dettagli.
 italian.PendingCleanup=Il menu è stato rimosso. Windows sta ancora usando la DLL dell'estensione: la pulizia verrà ritentata al prossimo accesso, senza riavviare Esplora file.
@@ -76,11 +76,11 @@ english.ContextMenu=Add the classic menu for compatibility and fallback (Windows
 english.DownloadTools=Download FFmpeg and Poppler for audio, video and PDF (recommended; about 160 MB, requires Internet)
 english.ModernContextMenu=Add "Convert to" directly to the Windows 11 menu
 english.DesktopShortcut=Create a desktop shortcut
-english.LaunchApp=Open The Converter
-english.UninstallApp=Uninstall The Converter
+english.LaunchApp=Open Convert Here
+english.UninstallApp=Uninstall Convert Here
 english.InstallTools=Install or update conversion engines
 english.DownloadingTools=Downloading and verifying conversion engines...
-english.ToolsFailed=The Converter is installed, but FFmpeg and Poppler could not be downloaded.%n%nImage conversions remain available. To retry later, open "Install or update conversion engines" in the The Converter Start menu folder.%n%nRetry the download now?
+english.ToolsFailed=Convert Here is installed, but FFmpeg and Poppler could not be downloaded.%n%nImage conversions remain available. To retry later, open "Install or update conversion engines" in the The Converter Start menu folder.%n%nRetry the download now?
 english.ModernFailed=The modern Windows 11 menu could not be registered. The package must have a trusted signature on this computer. The classic menu remains available if selected.%n%nSee docs\windows-integration.md for details.
 english.ModernRemovalFailed=The Windows 11 menu could not be removed. Its registration and application files have been preserved: retry after closing any running conversions. See the setup log for details.
 english.PendingCleanup=The menu has been removed. Windows is still using the extension DLL: cleanup will be retried at your next sign-in without restarting File Explorer.
@@ -117,14 +117,14 @@ Name: "{autodesktop}\The Converter"; Filename: "{app}\the-converter.exe"; Tasks:
 
 [Registry]
 ; Only private application keys. Uninstall removes them in code after checking ownership.
-Root: HKCU; Subkey: "Software\Classes\CLSID\{{#ConverterClass}"; ValueType: string; ValueData: "The Converter Explorer Command"; Tasks: contextmenu
+Root: HKCU; Subkey: "Software\Classes\CLSID\{{#ConverterClass}"; ValueType: string; ValueData: "Convert Here Explorer Command"; Tasks: contextmenu
 Root: HKCU; Subkey: "Software\Classes\CLSID\{{#ConverterClass}\InprocServer32"; ValueType: string; ValueData: "{app}\the_converter_shell.dll"; Tasks: contextmenu
 Root: HKCU; Subkey: "Software\Classes\CLSID\{{#ConverterClass}\InprocServer32"; ValueType: string; ValueName: "ThreadingModel"; ValueData: "Apartment"; Tasks: contextmenu
 Root: HKCU; Subkey: "Software\Classes\*\shell\TheConverter"; ValueType: string; ValueName: "MUIVerb"; ValueData: "Converti in"; Tasks: contextmenu
 Root: HKCU; Subkey: "Software\Classes\*\shell\TheConverter"; ValueType: string; ValueName: "Icon"; ValueData: """{app}\the-converter.exe"",0"; Tasks: contextmenu
 Root: HKCU; Subkey: "Software\Classes\*\shell\TheConverter"; ValueType: string; ValueName: "ExplorerCommandHandler"; ValueData: "{{#ConverterClass}"; Tasks: contextmenu
 Root: HKCU; Subkey: "Software\Classes\*\shell\TheConverter"; ValueType: string; ValueName: "MultiSelectModel"; ValueData: "Player"; Tasks: contextmenu
-Root: HKCU; Subkey: "Software\Classes\*\shell\TheConverter"; ValueType: string; ValueName: "AppliesTo"; ValueData: "System.FileExtension:="".mp3"" OR System.FileExtension:="".mpga"" OR System.FileExtension:="".wav"" OR System.FileExtension:="".flac"" OR System.FileExtension:="".aac"" OR System.FileExtension:="".m4a"" OR System.FileExtension:="".ogg"" OR System.FileExtension:="".opus"" OR System.FileExtension:="".wma"" OR System.FileExtension:="".aiff"" OR System.FileExtension:="".aif"" OR System.FileExtension:="".alac"" OR System.FileExtension:="".ape"" OR System.FileExtension:="".mp4"" OR System.FileExtension:="".mkv"" OR System.FileExtension:="".mov"" OR System.FileExtension:="".avi"" OR System.FileExtension:="".webm"" OR System.FileExtension:="".wmv"" OR System.FileExtension:="".m4v"" OR System.FileExtension:="".mpeg"" OR System.FileExtension:="".mpg"" OR System.FileExtension:="".ts"" OR System.FileExtension:="".mts"" OR System.FileExtension:="".m2ts"" OR System.FileExtension:="".3gp"" OR System.FileExtension:="".flv"" OR System.FileExtension:="".png"" OR System.FileExtension:="".jpg"" OR System.FileExtension:="".jpeg"" OR System.FileExtension:="".webp"" OR System.FileExtension:="".bmp"" OR System.FileExtension:="".tif"" OR System.FileExtension:="".tiff"" OR System.FileExtension:="".gif"" OR System.FileExtension:="".ico"" OR System.FileExtension:="".pdf"" OR System.FileExtension:="".doc"" OR System.FileExtension:="".docx"" OR System.FileExtension:="".odt"" OR System.FileExtension:="".rtf"" OR System.FileExtension:="".txt"" OR System.FileExtension:="".xlsx"" OR System.FileExtension:="".xls"" OR System.FileExtension:="".ods"" OR System.FileExtension:="".ppt"" OR System.FileExtension:="".pptx"" OR System.FileExtension:="".odp"""; Tasks: contextmenu
+Root: HKCU; Subkey: "Software\Classes\*\shell\TheConverter"; ValueType: string; ValueName: "AppliesTo"; ValueData: "System.FileExtension:="".mp3"" OR System.FileExtension:="".mpga"" OR System.FileExtension:="".wav"" OR System.FileExtension:="".flac"" OR System.FileExtension:="".aac"" OR System.FileExtension:="".m4a"" OR System.FileExtension:="".ogg"" OR System.FileExtension:="".opus"" OR System.FileExtension:="".wma"" OR System.FileExtension:="".aiff"" OR System.FileExtension:="".aif"" OR System.FileExtension:="".alac"" OR System.FileExtension:="".ape"" OR System.FileExtension:="".m4b"" OR System.FileExtension:="".mka"" OR System.FileExtension:="".mp2"" OR System.FileExtension:="".oga"" OR System.FileExtension:="".weba"" OR System.FileExtension:="".ac3"" OR System.FileExtension:="".au"" OR System.FileExtension:="".caf"" OR System.FileExtension:="".amr"" OR System.FileExtension:="".dts"" OR System.FileExtension:="".tta"" OR System.FileExtension:="".voc"" OR System.FileExtension:="".wv"" OR System.FileExtension:="".tak"" OR System.FileExtension:="".w64"" OR System.FileExtension:="".aifc"" OR System.FileExtension:="".ra"" OR System.FileExtension:="".mp4"" OR System.FileExtension:="".mkv"" OR System.FileExtension:="".mov"" OR System.FileExtension:="".avi"" OR System.FileExtension:="".webm"" OR System.FileExtension:="".wmv"" OR System.FileExtension:="".m4v"" OR System.FileExtension:="".mpeg"" OR System.FileExtension:="".mpg"" OR System.FileExtension:="".ts"" OR System.FileExtension:="".mts"" OR System.FileExtension:="".m2ts"" OR System.FileExtension:="".3gp"" OR System.FileExtension:="".flv"" OR System.FileExtension:="".asf"" OR System.FileExtension:="".vob"" OR System.FileExtension:="".ogv"" OR System.FileExtension:="".m2v"" OR System.FileExtension:="".mxf"" OR System.FileExtension:="".f4v"" OR System.FileExtension:="".divx"" OR System.FileExtension:="".3g2"" OR System.FileExtension:="".m2t"" OR System.FileExtension:="".mpe"" OR System.FileExtension:="".mpv"" OR System.FileExtension:="".png"" OR System.FileExtension:="".jpg"" OR System.FileExtension:="".jpeg"" OR System.FileExtension:="".webp"" OR System.FileExtension:="".bmp"" OR System.FileExtension:="".tif"" OR System.FileExtension:="".tiff"" OR System.FileExtension:="".gif"" OR System.FileExtension:="".ico"" OR System.FileExtension:="".qoi"" OR System.FileExtension:="".tga"" OR System.FileExtension:="".ff"" OR System.FileExtension:="".hdr"" OR System.FileExtension:="".exr"" OR System.FileExtension:="".pnm"" OR System.FileExtension:="".pam"" OR System.FileExtension:="".pbm"" OR System.FileExtension:="".pgm"" OR System.FileExtension:="".ppm"" OR System.FileExtension:="".avif"" OR System.FileExtension:="".heic"" OR System.FileExtension:="".heif"" OR System.FileExtension:="".pdf"" OR System.FileExtension:="".xls"" OR System.FileExtension:="".xlsx"" OR System.FileExtension:="".xlsm"" OR System.FileExtension:="".ods"" OR System.FileExtension:="".csv"" OR System.FileExtension:="".html"" OR System.FileExtension:="".htm"" OR System.FileExtension:="".doc"" OR System.FileExtension:="".docx"" OR System.FileExtension:="".odt"" OR System.FileExtension:="".rtf"" OR System.FileExtension:="".txt"" OR System.FileExtension:="".ppt"" OR System.FileExtension:="".pptx"" OR System.FileExtension:="".odp"""; Tasks: contextmenu
 
 [Run]
 Filename: "{app}\the-converter.exe"; Description: "{cm:LaunchApp}"; Flags: nowait postinstall skipifsilent unchecked
@@ -199,7 +199,7 @@ begin
   ShortcutPath := CleanupShortcutPath;
   ForceDirectories(ExtractFileDir(ScriptPath));
   SetArrayLength(Script, 16);
-  Script[0] := '# The Converter one-shot uninstall cleanup; exact paths only.';
+  Script[0] := '# Convert Here one-shot uninstall cleanup; exact paths only.';
   Script[1] := '$ErrorActionPreference = ''SilentlyContinue''';
   Script[2] := '$app = ' + PowerShellLiteral(ExpandConstant('{app}\the-converter.exe'));
   Script[3] := '$dll = ' + PowerShellLiteral(ExpandConstant('{app}\the_converter_shell.dll'));
@@ -218,7 +218,7 @@ begin
   { SaveStringsToUTF8File writes a BOM so Windows PowerShell preserves Unicode paths. }
   if not SaveStringsToUTF8File(ScriptPath, Script, False) then
     RaiseException('Could not save the deferred shell cleanup helper.');
-  Ignored := CreateShellLink(ShortcutPath, 'The Converter temporary uninstall cleanup',
+  Ignored := CreateShellLink(ShortcutPath, 'Convert Here temporary uninstall cleanup',
     ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
     '-NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File ' + Quoted(ScriptPath),
     ExtractFileDir(ScriptPath), '', 0, SW_HIDE);

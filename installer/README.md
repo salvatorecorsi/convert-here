@@ -1,6 +1,6 @@
-# Installer Windows
+# Installer Windows di Convert Here
 
-`TheConverter.iss` genera un installer Inno Setup per Windows x64 (Windows 10 build 19041 o successivo), installato per l'utente corrente in `%LOCALAPPDATA%\Programs\The Converter`. La disinstallazione è disponibile nelle App installate di Windows e nel menu Start.
+`TheConverter.iss` genera l'installer di Convert Here con Inno Setup per Windows x64 (Windows 10 build 19041 o successivo), installato per l'utente corrente in `%LOCALAPPDATA%\Programs\The Converter`. La disinstallazione è disponibile nelle App installate di Windows come **Convert Here** e nel menu Start. Per compatibilita con gli aggiornamenti, il percorso di installazione, la cartella Start e i nomi dei collegamenti conservano il nome storico **The Converter**. Anche i nomi degli eseguibili, gli identificativi e i file del setup rimangono stabili.
 
 L'installer contiene l'applicazione Rust, la DLL di Esplora file, la CLI e la documentazione. Il task consigliato scarica FFmpeg e Poppler direttamente dai rispettivi distributori tramite `scripts/install-runtime-tools.ps1`, che verifica gli hash dei pacchetti. Nessun runtime Python, Node o Rust è richiesto per usare l'applicazione.
 

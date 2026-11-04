@@ -1,8 +1,8 @@
 fn main() {
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
         let mut resource = winresource::WindowsResource::new();
-        resource.set("ProductName", "The Converter");
-        resource.set("FileDescription", "The Converter — conversioni locali");
+        resource.set("ProductName", "Convert Here");
+        resource.set("FileDescription", "Convert Here — conversioni locali");
         resource.set("CompanyName", "Corsivo");
         let manifest = std::env::var("THE_CONVERTER_APP_MANIFEST")
             .unwrap_or_else(|_| "shell-extension/app.manifest".into());

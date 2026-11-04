@@ -1,5 +1,7 @@
 //! Local conversion engine. Inputs are never modified; outputs are committed without clobbering.
-use crate::model::{ConversionSettings, MediaKind, OutputFormat, VideoCodec, supported_formats};
+use crate::model::{
+    ConversionSettings, MediaKind, OutputFormat, PdfAction, VideoCodec, supported_formats,
+};
 use crate::tools::ToolPaths;
 use anyhow::{Context, Result, bail};
 use image::{DynamicImage, GenericImageView, ImageDecoder, ImageFormat};
@@ -20,6 +22,7 @@ use tempfile::NamedTempFile;
 
 #[path = "output_plan.rs"]
 mod output_plan;
+pub(crate) use output_plan::identity as file_identity;
 pub use output_plan::{
     PreparedConversion, ReservedOutput, convert_prepared, prepare, release_prepared,
     validate_prepared,
@@ -117,8 +120,14 @@ pub fn convert(
             settings.format
         );
     }
-    validate(settings)?;
-    if let Some(reason) = tools.missing_for(kind, settings.format) {
+    validate_for_input(&input, settings)?;
+    if kind == MediaKind::Pdf
+        && settings.format == OutputFormat::Pdf
+        && settings.pdf.action == PdfAction::Merge
+    {
+        bail!("Per unire i PDF seleziona almeno due file e avvia l'operazione di gruppo");
+    }
+    if let Some(reason) = tools.missing_for_input(&input, settings) {
         bail!("{reason}");
     }
     let out_dir = settings
@@ -150,21 +159,35 @@ pub fn convert(
             cancel,
             &mut on_progress,
         )?],
+        MediaKind::Image if settings.format == OutputFormat::Txt => {
+            vec![crate::ocr::convert_image_text(
+                &input,
+                &out_dir,
+                settings,
+                tools,
+                cancel,
+                &mut on_progress,
+            )?]
+        }
         MediaKind::Image => vec![convert_image(
             &input,
             &out_dir,
             settings,
-            cancel,
-            &mut on_progress,
-        )?],
-        MediaKind::Pdf => convert_pdf(&input, &out_dir, settings, tools, cancel, &mut on_progress)?,
-        MediaKind::Document => vec![convert_document(
-            &input,
-            &out_dir,
             tools,
             cancel,
             &mut on_progress,
         )?],
+        MediaKind::Pdf => convert_pdf(&input, &out_dir, settings, tools, cancel, &mut on_progress)?,
+        MediaKind::Document | MediaKind::Spreadsheet | MediaKind::Html => {
+            vec![crate::documents::convert_office(
+                &input,
+                &out_dir,
+                settings,
+                tools,
+                cancel,
+                &mut on_progress,
+            )?]
+        }
         _ => bail!("Formato non supportato"),
     };
     on_progress(Progress {
@@ -172,6 +195,26 @@ pub fn convert(
         message: format!("Completato: {} file", outputs.len()),
     });
     Ok(outputs)
+}
+
+/// A merge is a single operation over an ordered group, not a per-file conversion.
+pub fn merge_pdfs(
+    inputs: &[PathBuf],
+    settings: &ConversionSettings,
+    cancel: &AtomicBool,
+    mut on_progress: impl FnMut(Progress),
+) -> Result<Vec<PathBuf>> {
+    cancelled(cancel)?;
+    if settings.format != OutputFormat::Pdf || settings.pdf.action != PdfAction::Merge {
+        bail!("L'unione richiede destinazione PDF e operazione Merge");
+    }
+    validate(settings)?;
+    crate::pdf_ops::merge(
+        inputs,
+        settings.output_dir.as_deref(),
+        cancel,
+        &mut on_progress,
+    )
 }
 
 fn validate(s: &ConversionSettings) -> Result<()> {
@@ -187,12 +230,18 @@ fn validate(s: &ConversionSettings) -> Result<()> {
     if s.audio.channels > 2 {
         bail!("Canali audio: 0 = sorgente, 1 = mono, 2 = stereo");
     }
-    if matches!(s.format, OutputFormat::Opus | OutputFormat::Webm)
-        && s.audio.sample_rate != 0
-        && ![8000, 12000, 16000, 24000, 48000].contains(&s.audio.sample_rate)
+    if let Some(rates) = s.format.audio_sample_rates()
+        && !rates.contains(&s.audio.sample_rate)
     {
+        let choices = rates
+            .iter()
+            .filter(|rate| **rate != 0)
+            .map(u32::to_string)
+            .collect::<Vec<_>>()
+            .join(", ");
         bail!(
-            "Opus/WebM: frequenza audio supportata 8000, 12000, 16000, 24000 o 48000 Hz (0 = automatica)"
+            "{}: frequenze audio supportate {choices} Hz (0 = automatica)",
+            s.format.label()
         );
     }
     if s.video.crf > 51 {
@@ -221,6 +270,22 @@ fn validate(s: &ConversionSettings) -> Result<()> {
         && end <= s.video.trim_start.unwrap_or(0.)
     {
         bail!("La fine del taglio deve essere successiva all'inizio");
+    }
+    Ok(())
+}
+
+fn validate_for_input(input: &Path, settings: &ConversionSettings) -> Result<()> {
+    validate(settings)?;
+    let kind = MediaKind::from_path(input);
+    if kind == MediaKind::Image && settings.format == OutputFormat::Txt
+        || kind == MediaKind::Pdf
+            && settings.ocr.enabled
+            && matches!(
+                settings.format,
+                OutputFormat::Txt | OutputFormat::Docx | OutputFormat::Html
+            )
+    {
+        crate::ocr::validate_language(&settings.ocr.language)?;
     }
     Ok(())
 }
@@ -267,7 +332,7 @@ pub(crate) fn stem(input: &Path) -> String {
         .into_owned()
 }
 
-fn copy_commit(source: &Path, dir: &Path, name: &str, ext: &str) -> Result<PathBuf> {
+pub(crate) fn copy_commit(source: &Path, dir: &Path, name: &str, ext: &str) -> Result<PathBuf> {
     let mut temp = temporary(dir, ext)?;
     let mut source = fs::File::open(source)?;
     std::io::copy(&mut source, temp.as_file_mut())?;
@@ -295,10 +360,25 @@ fn convert_image(
     input: &Path,
     dir: &Path,
     s: &ConversionSettings,
+    tools: &ToolPaths,
     cancel: &AtomicBool,
     progress: &mut impl FnMut(Progress),
 ) -> Result<PathBuf> {
-    let mut decoder = image::ImageReader::open(input)?
+    let modern_workspace = if crate::modern_images::is_modern_input(input) {
+        Some(
+            tempfile::Builder::new()
+                .prefix(".the-converter-heif-")
+                .tempdir_in(dir)?,
+        )
+    } else {
+        None
+    };
+    let decoded = if let Some(workspace) = &modern_workspace {
+        crate::modern_images::decode(input, workspace.path(), tools, cancel, progress)?
+    } else {
+        input.to_owned()
+    };
+    let mut decoder = image::ImageReader::open(&decoded)?
         .with_guessed_format()?
         .into_decoder()
         .context("Immagine non leggibile o codec non supportato")?;
@@ -328,8 +408,11 @@ fn convert_image(
         }
         image = image.resize_exact(width, height, image::imageops::FilterType::Lanczos3);
     }
-    if s.format == OutputFormat::Ico {
+    if s.format == OutputFormat::Ico && (image.width() > 256 || image.height() > 256) {
         image = image.thumbnail(256, 256);
+    }
+    if matches!(s.format, OutputFormat::Avif | OutputFormat::Heic) {
+        return crate::modern_images::encode(&image, input, dir, s, tools, cancel, progress);
     }
     let mut temp = temporary(dir, s.format.extension())?;
     match s.format {
@@ -346,9 +429,57 @@ fn convert_image(
                 OutputFormat::Tiff => ImageFormat::Tiff,
                 OutputFormat::Gif => ImageFormat::Gif,
                 OutputFormat::Ico => ImageFormat::Ico,
+                OutputFormat::Qoi => ImageFormat::Qoi,
+                OutputFormat::Tga => ImageFormat::Tga,
+                OutputFormat::Farbfeld => ImageFormat::Farbfeld,
+                OutputFormat::OpenExr => ImageFormat::OpenExr,
+                OutputFormat::Hdr => ImageFormat::Hdr,
+                OutputFormat::Pnm => ImageFormat::Pnm,
                 _ => bail!("Format image non supportato"),
             };
-            image.write_to(temp.as_file_mut(), format)?;
+            if s.format == OutputFormat::Farbfeld {
+                DynamicImage::ImageRgba16(image.to_rgba16())
+                    .write_to(temp.as_file_mut(), format)?;
+            } else if s.format == OutputFormat::OpenExr {
+                DynamicImage::ImageRgba32F(image.to_rgba32f())
+                    .write_to(temp.as_file_mut(), format)?;
+            } else if matches!(
+                s.format,
+                OutputFormat::Qoi
+                    | OutputFormat::Tga
+                    | OutputFormat::Webp
+                    | OutputFormat::Bmp
+                    | OutputFormat::Gif
+                    | OutputFormat::Ico
+            ) {
+                DynamicImage::ImageRgba8(image.to_rgba8()).write_to(temp.as_file_mut(), format)?;
+            } else if s.format == OutputFormat::Png && image.color().bits_per_pixel() > 64 {
+                // EXR/HDR can decode to floating point, which PNG cannot encode.
+                DynamicImage::ImageRgba16(image.to_rgba16())
+                    .write_to(temp.as_file_mut(), format)?;
+            } else if s.format == OutputFormat::Pnm {
+                DynamicImage::ImageRgba16(image.to_rgba16())
+                    .write_to(temp.as_file_mut(), format)?;
+            } else if s.format == OutputFormat::Hdr && image.has_alpha() {
+                // Radiance RGBE has no alpha channel. Composite in floating point
+                // so HDR source values are not clipped to an 8-bit intermediate.
+                let rgba = image.to_rgba32f();
+                let rgb = image::Rgb32FImage::from_fn(image.width(), image.height(), |x, y| {
+                    let pixel = rgba.get_pixel(x, y);
+                    let alpha = pixel[3].clamp(0.0, 1.0);
+                    image::Rgb([
+                        pixel[0] * alpha + 1.0 - alpha,
+                        pixel[1] * alpha + 1.0 - alpha,
+                        pixel[2] * alpha + 1.0 - alpha,
+                    ])
+                });
+                DynamicImage::ImageRgb32F(rgb).write_to(temp.as_file_mut(), format)?;
+            } else if s.format == OutputFormat::Hdr {
+                DynamicImage::ImageRgb32F(image.to_rgb32f())
+                    .write_to(temp.as_file_mut(), format)?;
+            } else {
+                image.write_to(temp.as_file_mut(), format)?;
+            }
         }
     }
     cancelled(cancel)?;
@@ -502,15 +633,23 @@ fn convert_media(
             OutputFormat::Wav => "pcm_s16le",
             OutputFormat::Aiff => "pcm_s16be",
             OutputFormat::Flac => "flac",
-            OutputFormat::Aac => "aac",
+            OutputFormat::Aac | OutputFormat::M4a => "aac",
             OutputFormat::Ogg => "libvorbis",
             OutputFormat::Opus => "libopus",
+            OutputFormat::Wma => "wmav2",
+            OutputFormat::Ac3 => "ac3",
+            OutputFormat::Au => "pcm_s16be",
+            OutputFormat::Caf => "alac",
             _ => unreachable!(),
         };
         cmd.args(["-c:a", codec]);
         if !matches!(
             s.format,
-            OutputFormat::Wav | OutputFormat::Aiff | OutputFormat::Flac
+            OutputFormat::Wav
+                | OutputFormat::Aiff
+                | OutputFormat::Flac
+                | OutputFormat::Au
+                | OutputFormat::Caf
         ) {
             cmd.args(["-b:a", &format!("{}k", s.audio.bitrate_kbps)]);
         }
@@ -552,10 +691,35 @@ fn convert_media(
                     "libmp3lame",
                 ]);
             }
+            OutputFormat::Mpeg | OutputFormat::Wmv | OutputFormat::Flv | OutputFormat::ThreeGp => {
+                let (video_codec, audio_codec) = match s.format {
+                    OutputFormat::Mpeg => ("mpeg2video", "mp2"),
+                    OutputFormat::Wmv => ("wmv2", "wmav2"),
+                    OutputFormat::Flv => ("flv", "libmp3lame"),
+                    OutputFormat::ThreeGp => ("mpeg4", "aac"),
+                    _ => unreachable!(),
+                };
+                cmd.args([
+                    "-c:v",
+                    video_codec,
+                    "-q:v",
+                    &((s.video.crf as u32 / 2).clamp(2, 31)).to_string(),
+                    "-c:a",
+                    audio_codec,
+                ]);
+                if s.format == OutputFormat::Mpeg && s.video.fps.is_none() {
+                    // MPEG-2 accepts a fixed set of frame rates; arbitrary source
+                    // rates (e.g. screen recordings at 12 fps) need a valid default.
+                    cmd.args(["-r", "25"]);
+                }
+                if s.format == OutputFormat::Flv && s.audio.sample_rate == 0 {
+                    cmd.args(["-ar", "44100"]);
+                }
+            }
             _ => {
                 cmd.args([
                     "-c:v",
-                    if s.video.codec == VideoCodec::H265 {
+                    if s.video.codec == VideoCodec::H265 && s.format != OutputFormat::Ts {
                         "libx265"
                     } else {
                         "libx264"
@@ -568,7 +732,10 @@ fn convert_media(
                     "aac",
                 ]);
                 if s.video.codec == VideoCodec::H265
-                    && matches!(s.format, OutputFormat::Mp4 | OutputFormat::Mov)
+                    && matches!(
+                        s.format,
+                        OutputFormat::Mp4 | OutputFormat::Mov | OutputFormat::M4v
+                    )
                 {
                     cmd.args(["-tag:v", "hvc1"]);
                 }
@@ -600,8 +767,15 @@ fn convert_media(
         if s.audio.normalize {
             cmd.args(["-af", "loudnorm=I=-16:TP=-1.5:LRA=11"]);
         }
-        if matches!(s.format, OutputFormat::Mp4 | OutputFormat::Mov) {
+        if matches!(
+            s.format,
+            OutputFormat::Mp4 | OutputFormat::Mov | OutputFormat::M4v
+        ) {
             cmd.args(["-movflags", "+faststart"]);
+        }
+        if s.format == OutputFormat::M4v {
+            // FFmpeg otherwise infers raw MPEG-4 video from .m4v and drops audio.
+            cmd.args(["-f", "mp4"]);
         }
     }
     cmd.arg(temp.path());
@@ -733,21 +907,20 @@ fn convert_pdf(
     cancel: &AtomicBool,
     progress: &mut impl FnMut(Progress),
 ) -> Result<Vec<PathBuf>> {
-    if s.format == OutputFormat::Txt {
-        let temp = temporary(dir, "txt")?;
-        let mut cmd = Command::new(tools.pdftotext.as_ref().context("pdftotext non trovato")?);
-        cmd.args(["-layout", "-enc", "UTF-8"])
-            .arg(input)
-            .arg(temp.path());
-        run_process(cmd, cancel, None, progress)?;
-        cancelled(cancel)?;
-        // A scanned PDF has no embedded text; avoid presenting an empty export as success.
-        if fs::read_to_string(temp.path())?.trim().is_empty() {
-            bail!(
-                "Il PDF non contiene testo estraibile. I PDF scansionati richiedono OCR, non incluso."
-            );
-        }
-        return Ok(vec![commit(temp, dir, &stem(input), "txt")?]);
+    if s.format == OutputFormat::Pdf {
+        return match s.pdf.action {
+            PdfAction::Compress => crate::pdf_ops::compress(input, Some(dir), cancel, progress),
+            PdfAction::Split => crate::pdf_ops::split(input, Some(dir), cancel, progress),
+            PdfAction::Merge => bail!("L'unione richiede una selezione di PDF"),
+        };
+    }
+    if matches!(
+        s.format,
+        OutputFormat::Txt | OutputFormat::Docx | OutputFormat::Html
+    ) {
+        return Ok(vec![crate::documents::convert_pdf_text(
+            input, dir, s, tools, cancel, progress,
+        )?]);
     }
     let stage = tempfile::Builder::new()
         .prefix(".the-converter-pages-")
@@ -807,57 +980,6 @@ fn convert_pdf(
         return Err(e);
     }
     Ok(outputs)
-}
-
-fn convert_document(
-    input: &Path,
-    dir: &Path,
-    tools: &ToolPaths,
-    cancel: &AtomicBool,
-    progress: &mut impl FnMut(Progress),
-) -> Result<PathBuf> {
-    let stage = tempfile::Builder::new()
-        .prefix(".the-converter-office-")
-        .tempdir_in(dir)?;
-    let profile = stage.path().join("profile");
-    // A private profile prevents headless conversion from being handed to an existing GUI instance.
-    let profile_text = profile.to_string_lossy();
-    let profile_path = if let Some(unc) = profile_text.strip_prefix(r"\\?\UNC\") {
-        PathBuf::from(format!(r"\\{unc}"))
-    } else if let Some(local) = profile_text.strip_prefix(r"\\?\") {
-        PathBuf::from(local)
-    } else {
-        profile.clone()
-    };
-    let profile_uri = url::Url::from_directory_path(&profile_path)
-        .map_err(|_| anyhow::anyhow!("Percorso del profilo LibreOffice non valido"))?
-        .to_string();
-    let mut cmd = Command::new(tools.soffice.as_ref().context("LibreOffice non trovato")?);
-    cmd.arg(format!("-env:UserInstallation={profile_uri}"))
-        .args([
-            "--headless",
-            "--nologo",
-            "--nodefault",
-            "--nofirststartwizard",
-            "--convert-to",
-            "pdf",
-            "--outdir",
-        ])
-        .arg(stage.path())
-        .arg(input);
-    progress(Progress {
-        fraction: 0.1,
-        message: "Conversione documento con LibreOffice…".into(),
-    });
-    run_process(cmd, cancel, None, progress)?;
-    cancelled(cancel)?;
-    let pdf = stage.path().join(format!("{}.pdf", stem(input)));
-    if !pdf.is_file() {
-        bail!(
-            "LibreOffice non ha prodotto il PDF. Il documento potrebbe essere protetto o non supportato."
-        );
-    }
-    copy_commit(&pdf, dir, &stem(input), "pdf")
 }
 
 #[cfg(test)]

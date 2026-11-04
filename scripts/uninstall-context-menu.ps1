@@ -29,7 +29,7 @@ if ($Mode -in @('Classic', 'All')) {
     }
     foreach ($key in $classicKeys) {
         if (-not $ownsClassic) { continue }
-        if ((Test-Path -LiteralPath $key) -and $PSCmdlet.ShouldProcess($key, 'Rimuovi integrazione The Converter')) {
+        if ((Test-Path -LiteralPath $key) -and $PSCmdlet.ShouldProcess($key, 'Rimuovi integrazione Convert Here')) {
             Remove-Item -LiteralPath $key -Recurse -Force
         }
     }

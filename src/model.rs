@@ -8,6 +8,8 @@ pub enum MediaKind {
     Image,
     Pdf,
     Document,
+    Spreadsheet,
+    Html,
     Unknown,
 }
 
@@ -21,13 +23,20 @@ impl MediaKind {
             .as_str()
         {
             "mp3" | "mpga" | "wav" | "flac" | "aac" | "m4a" | "ogg" | "opus" | "aiff" | "aif"
-            | "wma" | "alac" | "ape" => Self::Audio,
+            | "wma" | "alac" | "ape" | "m4b" | "mka" | "mp2" | "oga" | "weba" | "ac3" | "au"
+            | "caf" | "amr" | "dts" | "tta" | "voc" | "wv" | "tak" | "w64" | "aifc" | "ra" => {
+                Self::Audio
+            }
             "mp4" | "m4v" | "mkv" | "mov" | "webm" | "avi" | "wmv" | "mpeg" | "mpg" | "mts"
-            | "m2ts" | "ts" | "3gp" | "flv" => Self::Video,
-            "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" | "tif" | "tiff" | "ico" => Self::Image,
+            | "m2ts" | "ts" | "3gp" | "flv" | "asf" | "vob" | "ogv" | "m2v" | "mxf" | "f4v"
+            | "divx" | "3g2" | "m2t" | "mpe" | "mpv" => Self::Video,
+            "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" | "tif" | "tiff" | "ico" | "qoi"
+            | "tga" | "ff" | "hdr" | "exr" | "pnm" | "pam" | "pbm" | "pgm" | "ppm" | "avif"
+            | "heic" | "heif" => Self::Image,
             "pdf" => Self::Pdf,
-            "doc" | "docx" | "odt" | "rtf" | "txt" | "ppt" | "pptx" | "odp" | "xls" | "xlsx"
-            | "ods" => Self::Document,
+            "doc" | "docx" | "odt" | "rtf" | "txt" | "ppt" | "pptx" | "odp" => Self::Document,
+            "xls" | "xlsx" | "xlsm" | "ods" | "csv" => Self::Spreadsheet,
+            "html" | "htm" => Self::Html,
             _ => Self::Unknown,
         }
     }
@@ -57,10 +66,33 @@ pub enum OutputFormat {
     Ico,
     Pdf,
     Txt,
+    M4a,
+    Wma,
+    Ac3,
+    Au,
+    Caf,
+    Mpeg,
+    Wmv,
+    Flv,
+    Ts,
+    M4v,
+    ThreeGp,
+    Qoi,
+    Tga,
+    Farbfeld,
+    OpenExr,
+    Hdr,
+    Pnm,
+    Csv,
+    Xlsx,
+    Docx,
+    Html,
+    Avif,
+    Heic,
 }
 
 impl OutputFormat {
-    pub const ALL: [Self; 21] = [
+    pub const ALL: [Self; 44] = [
         Self::Mp3,
         Self::Wav,
         Self::Flac,
@@ -82,6 +114,29 @@ impl OutputFormat {
         Self::Ico,
         Self::Pdf,
         Self::Txt,
+        Self::M4a,
+        Self::Wma,
+        Self::Ac3,
+        Self::Au,
+        Self::Caf,
+        Self::Mpeg,
+        Self::Wmv,
+        Self::Flv,
+        Self::Ts,
+        Self::M4v,
+        Self::ThreeGp,
+        Self::Qoi,
+        Self::Tga,
+        Self::Farbfeld,
+        Self::OpenExr,
+        Self::Hdr,
+        Self::Pnm,
+        Self::Csv,
+        Self::Xlsx,
+        Self::Docx,
+        Self::Html,
+        Self::Avif,
+        Self::Heic,
     ];
     pub fn extension(self) -> &'static str {
         match self {
@@ -106,6 +161,29 @@ impl OutputFormat {
             Self::Ico => "ico",
             Self::Pdf => "pdf",
             Self::Txt => "txt",
+            Self::M4a => "m4a",
+            Self::Wma => "wma",
+            Self::Ac3 => "ac3",
+            Self::Au => "au",
+            Self::Caf => "caf",
+            Self::Mpeg => "mpeg",
+            Self::Wmv => "wmv",
+            Self::Flv => "flv",
+            Self::Ts => "ts",
+            Self::M4v => "m4v",
+            Self::ThreeGp => "3gp",
+            Self::Qoi => "qoi",
+            Self::Tga => "tga",
+            Self::Farbfeld => "ff",
+            Self::OpenExr => "exr",
+            Self::Hdr => "hdr",
+            Self::Pnm => "pnm",
+            Self::Csv => "csv",
+            Self::Xlsx => "xlsx",
+            Self::Docx => "docx",
+            Self::Html => "html",
+            Self::Avif => "avif",
+            Self::Heic => "heic",
         }
     }
     pub fn label(self) -> &'static str {
@@ -131,6 +209,29 @@ impl OutputFormat {
             Self::Ico => "ICO",
             Self::Pdf => "PDF",
             Self::Txt => "TXT",
+            Self::M4a => "M4A (AAC)",
+            Self::Wma => "WMA",
+            Self::Ac3 => "AC3",
+            Self::Au => "AU",
+            Self::Caf => "CAF (ALAC)",
+            Self::Mpeg => "MPEG",
+            Self::Wmv => "WMV",
+            Self::Flv => "FLV",
+            Self::Ts => "MPEG-TS",
+            Self::M4v => "M4V",
+            Self::ThreeGp => "3GP",
+            Self::Qoi => "QOI",
+            Self::Tga => "TGA",
+            Self::Farbfeld => "Farbfeld",
+            Self::OpenExr => "OpenEXR",
+            Self::Hdr => "HDR",
+            Self::Pnm => "PNM",
+            Self::Csv => "CSV",
+            Self::Xlsx => "Excel (XLSX)",
+            Self::Docx => "Word (DOCX) · testo",
+            Self::Html => "HTML · testo",
+            Self::Avif => "AVIF",
+            Self::Heic => "HEIC",
         }
     }
     pub fn kind(self) -> MediaKind {
@@ -141,13 +242,55 @@ impl OutputFormat {
             | Self::Aac
             | Self::Ogg
             | Self::Opus
-            | Self::Aiff => MediaKind::Audio,
-            Self::Mp4 | Self::Mkv | Self::Mov | Self::Webm | Self::Avi => MediaKind::Video,
-            Self::Gif | Self::Png | Self::Jpg | Self::Webp | Self::Bmp | Self::Tiff | Self::Ico => {
-                MediaKind::Image
-            }
+            | Self::Aiff
+            | Self::M4a
+            | Self::Wma
+            | Self::Ac3
+            | Self::Au
+            | Self::Caf => MediaKind::Audio,
+            Self::Mp4
+            | Self::Mkv
+            | Self::Mov
+            | Self::Webm
+            | Self::Avi
+            | Self::Mpeg
+            | Self::Wmv
+            | Self::Flv
+            | Self::Ts
+            | Self::M4v
+            | Self::ThreeGp => MediaKind::Video,
+            Self::Gif
+            | Self::Png
+            | Self::Jpg
+            | Self::Webp
+            | Self::Bmp
+            | Self::Tiff
+            | Self::Ico
+            | Self::Qoi
+            | Self::Tga
+            | Self::Farbfeld
+            | Self::OpenExr
+            | Self::Hdr
+            | Self::Pnm => MediaKind::Image,
+            Self::Avif | Self::Heic => MediaKind::Image,
             Self::Pdf => MediaKind::Pdf,
-            Self::Txt => MediaKind::Document,
+            Self::Txt | Self::Docx => MediaKind::Document,
+            Self::Csv | Self::Xlsx => MediaKind::Spreadsheet,
+            Self::Html => MediaKind::Html,
+        }
+    }
+
+    /// Explicit encoder/container constraints; zero lets FFmpeg choose a rate.
+    /// Other formats use the general application sample-rate limits.
+    pub fn audio_sample_rates(self) -> Option<&'static [u32]> {
+        match self {
+            Self::Opus | Self::Webm => Some(&[0, 8000, 12000, 16000, 24000, 48000]),
+            Self::Ac3 => Some(&[0, 32000, 44100, 48000]),
+            Self::Wma | Self::Wmv => {
+                Some(&[0, 8000, 11025, 16000, 22050, 24000, 32000, 44100, 48000])
+            }
+            Self::Flv => Some(&[0, 11025, 22050, 44100]),
+            _ => None,
         }
     }
 }
@@ -161,13 +304,21 @@ impl std::fmt::Display for OutputFormat {
 pub fn supported_formats(kind: MediaKind) -> Vec<OutputFormat> {
     use OutputFormat::*;
     match kind {
-        MediaKind::Audio => vec![Mp3, Wav, Flac, Aac, Ogg, Opus, Aiff, Txt],
-        MediaKind::Video => vec![
-            Mp4, Mkv, Mov, Webm, Avi, Gif, Mp3, Wav, Flac, Aac, Ogg, Opus, Aiff,
+        MediaKind::Audio => vec![
+            Mp3, Wav, Flac, Aac, Ogg, Opus, Aiff, M4a, Wma, Ac3, Au, Caf, Txt,
         ],
-        MediaKind::Image => vec![Png, Jpg, Webp, Bmp, Tiff, Gif, Ico, Pdf],
-        MediaKind::Pdf => vec![Png, Jpg, Txt],
+        MediaKind::Video => vec![
+            Mp4, Mkv, Mov, Webm, Avi, Gif, Mpeg, Wmv, Flv, Ts, M4v, ThreeGp, Mp3, Wav, Flac, Aac,
+            Ogg, Opus, Aiff, M4a, Wma, Ac3, Au, Caf,
+        ],
+        MediaKind::Image => vec![
+            Png, Jpg, Webp, Bmp, Tiff, Gif, Ico, Pdf, Qoi, Tga, Farbfeld, OpenExr, Hdr, Pnm, Avif,
+            Heic, Txt,
+        ],
+        MediaKind::Pdf => vec![Png, Jpg, Txt, Docx, Html, Pdf],
         MediaKind::Document => vec![Pdf],
+        MediaKind::Spreadsheet => vec![Pdf, Csv, Xlsx],
+        MediaKind::Html => vec![Pdf],
         MediaKind::Unknown => vec![],
     }
 }
@@ -208,6 +359,8 @@ pub struct ConversionSettings {
     pub image: ImageSettings,
     pub pdf: PdfSettings,
     pub transcription: TranscriptionSettings,
+    pub csv: CsvSettings,
+    pub ocr: OcrSettings,
 }
 impl Default for ConversionSettings {
     fn default() -> Self {
@@ -219,6 +372,8 @@ impl Default for ConversionSettings {
             image: ImageSettings::default(),
             pdf: PdfSettings::default(),
             transcription: TranscriptionSettings::default(),
+            csv: CsvSettings::default(),
+            ocr: OcrSettings::default(),
         }
     }
 }
@@ -298,9 +453,52 @@ impl Default for ImageSettings {
 #[serde(default)]
 pub struct PdfSettings {
     pub dpi: u32,
+    pub action: PdfAction,
 }
 impl Default for PdfSettings {
     fn default() -> Self {
-        Self { dpi: 150 }
+        Self {
+            dpi: 150,
+            action: PdfAction::Compress,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum PdfAction {
+    #[default]
+    Compress,
+    Split,
+    Merge,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum CsvDelimiter {
+    #[default]
+    Comma,
+    Semicolon,
+    Tab,
+    Pipe,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct CsvSettings {
+    pub delimiter: CsvDelimiter,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct OcrSettings {
+    pub enabled: bool,
+    pub language: String,
+}
+
+impl Default for OcrSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            language: "ita+eng".into(),
+        }
     }
 }

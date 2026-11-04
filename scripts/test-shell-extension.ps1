@@ -178,11 +178,13 @@ public static class ConverterShellSmokeV2 {
             Check(((CreateInstance)Slot(factory, 3, typeof(CreateInstance)))(factory, IntPtr.Zero, ref commandId, out parent));
             Check(((EnumCommands)Slot(parent, 10, typeof(EnumCommands)))(parent, out enumerator));
             var next = (NextCommand)Slot(enumerator, 3, typeof(NextCommand));
-            for (int index = 0; index <= (custom ? 21 : 0); index++) {
+            for (int index = 0; ; index++) {
                 uint fetched;
                 if (child != IntPtr.Zero) { Marshal.Release(child); child = IntPtr.Zero; }
                 Check(next(enumerator, 1, out child, out fetched));
                 if (fetched != 1) throw new Exception("Sottocomando mancante");
+                if (!custom || Title(child) == "Impostazioni personalizzate…") break;
+                if (index >= 127) throw new Exception("Troppi sottocomandi");
             }
             for (int index = 0; index < files.Length; index++) {
                 uint attributes;
@@ -204,7 +206,7 @@ public static class ConverterShellSmokeV2 {
             if (initialized >= 0) CoUninitialize();
         }
     }
-    public static string Run(string library, string supported, string unsupported, string audio, string video, string pdf, string document, string text, string mpga, string directory) {
+    public static string Run(string library, string supported, string unsupported, string audio, string video, string pdf, string document, string text, string mpga, string directory, string spreadsheet, string csv, string html, string qoi, string avif, string heif) {
         int initialized = CoInitializeEx(IntPtr.Zero, 2);
         IntPtr module = LoadLibrary(library), factory = IntPtr.Zero, command = IntPtr.Zero;
         if (module == IntPtr.Zero) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
@@ -224,20 +226,27 @@ public static class ConverterShellSmokeV2 {
             if (State(command, supported) != 0) throw new Exception("PNG non abilitato");
             if (State(command, unsupported) != 2) throw new Exception("Estensione sconosciuta non nascosta");
             const string custom = "Impostazioni personalizzate…";
-            Expect("Audio + video", Visible(command, audio, video), new string[]{"MP3", "WAV", "FLAC", "AAC", "OGG", "Opus", "AIFF", custom});
-            Expect("PNG + PDF", Visible(command, supported, pdf), new string[]{"PNG", "JPEG", custom});
+            bool keyAvailable = ApiKeyPresent();
+            Expect("Audio + video", Visible(command, audio, video), new string[]{"MP3", "WAV", "FLAC", "AAC", "OGG", "Opus", "AIFF", "M4A", "WMA", "AC3", "AU", "CAF", custom});
+            Expect("PNG + PDF", Visible(command, supported, pdf), new string[]{"PNG", "JPEG", "PDF · comprimi", "TXT · OCR / testo PDF", custom});
             Expect("DOCX + PNG", Visible(command, document, supported), new string[]{"PDF", custom});
-            Expect("PNG + audio", Visible(command, supported, audio), new string[]{});
+            Expect("PNG + audio", Visible(command, supported, audio), keyAvailable ? new string[]{"TXT · audio OpenAI / immagini OCR", custom} : new string[]{});
             Expect("Testo", Visible(command, text), new string[]{"PDF", custom});
             Expect("Testo + audio", Visible(command, text, audio), new string[]{});
             Expect("Cartella WAV", Visible(command, directory), new string[]{});
             var audioFormats = new List<string>(new string[]{"MP3", "WAV", "FLAC", "AAC", "OGG", "Opus", "AIFF"});
-            bool keyAvailable = ApiKeyPresent();
             if (keyAvailable) audioFormats.Add("TXT con OpenAI");
+            audioFormats.AddRange(new string[]{"M4A", "WMA", "AC3", "AU", "CAF"});
             audioFormats.Add(custom);
             Expect("Audio e mpga", Visible(command, audio, mpga), audioFormats.ToArray());
-            Expect("PDF", Visible(command, pdf), new string[]{"PNG", "JPEG", "TXT", custom});
+            Expect("PDF", Visible(command, pdf), new string[]{"PNG", "JPEG", "PDF · comprimi", "TXT", "Word (DOCX) · testo", "HTML · testo", custom});
             Expect("Audio + PDF", Visible(command, audio, pdf), keyAvailable ? new string[]{"TXT con OpenAI", custom} : new string[]{});
+            Expect("Excel e CSV", Visible(command, spreadsheet, csv), new string[]{"PDF", "CSV", "XLSX", custom});
+            Expect("HTML", Visible(command, html), new string[]{"PDF", custom});
+            Expect("HTML e Excel", Visible(command, html, spreadsheet), new string[]{"PDF", custom});
+            Expect("QOI", Visible(command, qoi), Visible(command, supported));
+            Expect("AVIF", Visible(command, avif), Visible(command, supported));
+            Expect("HEIF", Visible(command, heif), Visible(command, supported));
             Expect("Sconosciuto", Visible(command, unsupported), new string[]{});
             Marshal.Release(command); command = IntPtr.Zero;
             Marshal.Release(factory); factory = IntPtr.Zero;
@@ -263,11 +272,17 @@ $document = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.doc
 $text = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.txt"
 $mpga = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.mpga"
 $directory = Join-Path ([IO.Path]::GetTempPath()) "the-converter-folder-$token.wav"
-$testFiles = @($supported, $unsupported, $audio, $video, $pdf, $document, $text, $mpga)
+$spreadsheet = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.xlsx"
+$csv = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.csv"
+$html = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.html"
+$qoi = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.qoi"
+$avif = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.avif"
+$heif = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.heif"
+$testFiles = @($supported, $unsupported, $audio, $video, $pdf, $document, $text, $mpga, $spreadsheet, $csv, $html, $qoi, $avif, $heif)
 try {
     foreach ($file in $testFiles) { [IO.File]::WriteAllBytes($file, [byte[]]@()) }
     New-Item -ItemType Directory -Path $directory | Out-Null
-    [ConverterShellSmokeV2]::Run($library, $supported, $unsupported, $audio, $video, $pdf, $document, $text, $mpga, $directory)
+    [ConverterShellSmokeV2]::Run($library, $supported, $unsupported, $audio, $video, $pdf, $document, $text, $mpga, $directory, $spreadsheet, $csv, $html, $qoi, $avif, $heif)
     if ($InvokeCaptureFile) {
         foreach ($custom in @($false, $true)) {
             if (Test-Path -LiteralPath $InvokeCaptureFile) { throw 'Il file di cattura deve essere assente prima del test.' }

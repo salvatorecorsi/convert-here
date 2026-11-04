@@ -199,7 +199,7 @@ $report = [ordered]@{
 $reportPath = Join-Path $runDirectory 'submission-report.json'
 [IO.File]::WriteAllText($reportPath, ($report | ConvertTo-Json -Depth 12), (New-Object Text.UTF8Encoding($false)))
 $submissionText = @(
-    '# The Converter - Microsoft Store package', '',
+    '# Convert Here - Microsoft Store package', '',
     ('Mode: ' + $identity.Mode), ('Package: ' + $fileName), ('SHA256: ' + $packageHash), '',
     ('Identity Name: ' + $identity.Name), ('Publisher: ' + $identity.Publisher), ('Display name: ' + $identity.DisplayName),
     ('Publisher display name: ' + $identity.PublisherDisplayName), ('Store version: ' + $identity.Version), ('Cargo version: ' + $cargoVersion),

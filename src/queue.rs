@@ -288,7 +288,7 @@ fn submit_at(
     }
     if launch_worker && !submission.jobs.is_empty() {
         let _dispatch = dispatch_lock(root)?;
-        start_worker_locked(root, executable).context("I lavori sono salvati in coda, ma non è stato possibile avviare il convertitore. Apri The Converter per riprendere la coda")?;
+        start_worker_locked(root, executable).context("I lavori sono salvati in coda, ma non è stato possibile avviare il convertitore. Apri Convert Here per riprendere la coda")?;
     }
     Ok(submission)
 }

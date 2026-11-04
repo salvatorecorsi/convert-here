@@ -2,7 +2,7 @@
 
 This packaging path targets **Windows 11 x64, build 22000 or later**, and contains one graphical application, the Explorer COM DLL, execution-alias metadata, app logos and third-party notices. It uses `packagedClassicApp`, a visible app-list entry and `runFullTrust`. It does not use sparse identity or external application content. The console CLI, FFmpeg, Poppler, LibreOffice and the PowerShell runtime downloader are excluded; terminal commands remain available in the separate portable/GitHub distribution.
 
-The publisher brand is **Corsivo**; the developer is **Salvatore Corsi**. A Corsivo Partner Center account and reserved product do not yet exist. Production identity values must be copied from that account after registration; the development publisher subject must not be substituted for those values.
+The requested publisher brand is **Corsivo**; the developer is **Salvatore Corsi**. The owner confirmed developer registration and reservation of **Convert Here** on 4 November 2026. Direct portal inspection after the publisher edit shows **Corsivo** in Legal info, account type **Individual**, status **Active**, and a banner requesting completion of account verification. Product identity still assigns `SalvatoreCorsi.ConvertHere` and **Salvatore Corsi** as PublisherDisplayName, including after reload. Resolve this discrepancy before producing the public Corsivo candidate; no propagation deadline has been established. The Git-ignored local `identity.partner-center.json` preserves the exact currently observed product identity. Recopy the actual identity values after the portal is aligned; the development publisher subject must not be substituted for those values. No public Corsivo candidate has been built or uploaded.
 
 ## Preview build
 
@@ -11,7 +11,7 @@ The publisher brand is **Corsivo**; the developer is **Salvatore Corsi**. A Cors
 .\scripts\build-store-package.ps1
 ```
 
-The preview is deliberately named `Corsivo.TheConverter.StorePreview`, displays **The Converter Store Preview**, uses publisher display name **Corsivo** and development publisher `CN=Salvatore Corsi`. Its default package version is `1.0.0.0`. The preview must not be uploaded as the production app.
+The preview is deliberately named `Corsivo.TheConverter.StorePreview`, displays **Convert Here Store Preview**, uses publisher display name **Corsivo** and development publisher `CN=Salvatore Corsi`. Its default package version is `1.0.0.0`. The preview must not be uploaded as the production app.
 
 The script does not sign, install, register or trust the preview. Local installation is a separate action requiring an appropriately signed package and explicit authorization. Because preview and standalone Explorer extensions currently use the same COM CLSID, coexistence can cause duplicate menu entries or ambiguous activation during testing; verify the executable path of the invoked app or use a clean test profile.
 

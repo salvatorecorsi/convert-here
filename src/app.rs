@@ -9,7 +9,10 @@ use std::sync::{
 };
 use the_converter::{
     engine,
-    model::{ConversionSettings, MediaKind, OutputFormat, VideoCodec, supported_formats},
+    model::{
+        ConversionSettings, CsvDelimiter, MediaKind, OutputFormat, PdfAction, VideoCodec,
+        supported_formats,
+    },
     platform,
     queue::{self, JobState as QuickJobState, QueueJob},
     tools::{ToolPaths, executable_available},
@@ -23,7 +26,7 @@ const GREEN: Color32 = Color32::from_rgb(28, 135, 86);
 pub fn launch(files: Vec<PathBuf>, target: Option<OutputFormat>) -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("The Converter")
+            .with_title("Convert Here")
             .with_icon(app_icon())
             .with_inner_size([1060.0, 760.0])
             .with_min_inner_size([860.0, 620.0])
@@ -32,7 +35,7 @@ pub fn launch(files: Vec<PathBuf>, target: Option<OutputFormat>) -> eframe::Resu
         ..Default::default()
     };
     eframe::run_native(
-        "The Converter",
+        "Convert Here",
         options,
         Box::new(move |cc| {
             configure_style(&cc.egui_ctx);
@@ -44,7 +47,7 @@ pub fn launch(files: Vec<PathBuf>, target: Option<OutputFormat>) -> eframe::Resu
 pub fn launch_queue_status(job_id: String) -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("The Converter · Stato conversione")
+            .with_title("Convert Here · Stato conversione")
             .with_icon(app_icon())
             .with_inner_size([650.0, 470.0])
             .with_min_inner_size([500.0, 360.0]),
@@ -52,7 +55,7 @@ pub fn launch_queue_status(job_id: String) -> eframe::Result {
         ..Default::default()
     };
     eframe::run_native(
-        "The Converter · Stato conversione",
+        "Convert Here · Stato conversione",
         options,
         Box::new(move |cc| {
             configure_style(&cc.egui_ctx);
@@ -277,6 +280,15 @@ impl ConverterApp {
             self.saved.settings.format = common[0];
             self.settings_dirty = true;
         }
+        if self
+            .items
+            .iter()
+            .any(|item| MediaKind::from_path(&item.path) != MediaKind::Pdf)
+            && self.saved.settings.pdf.action != PdfAction::Compress
+        {
+            self.saved.settings.pdf.action = PdfAction::Compress;
+            self.settings_dirty = true;
+        }
     }
 
     fn common_formats(&self) -> Vec<OutputFormat> {
@@ -316,6 +328,16 @@ impl ConverterApp {
                 self.saved.settings.format.label()
             ));
         }
+        if self.saved.settings.format == OutputFormat::Pdf
+            && self.saved.settings.pdf.action == PdfAction::Merge
+            && (self.items.len() < 2
+                || self
+                    .items
+                    .iter()
+                    .any(|item| MediaKind::from_path(&item.path) != MediaKind::Pdf))
+        {
+            return Some("Per unire i PDF aggiungi almeno due file PDF. L'ordine della lista determina quello delle pagine.".into());
+        }
         for item in &self.items {
             let kind = MediaKind::from_path(&item.path);
             if kind == MediaKind::Audio && self.saved.settings.format == OutputFormat::Txt {
@@ -329,17 +351,21 @@ impl ConverterApp {
                 }
                 continue;
             }
-            if let Some(missing) = self.tools.missing_for(kind, self.saved.settings.format) {
+            if let Some(missing) = self
+                .tools
+                .missing_for_input(&item.path, &self.saved.settings)
+            {
                 return Some(missing);
             }
         }
-        if matches!(
-            self.saved.settings.format,
-            OutputFormat::Opus | OutputFormat::Webm
-        ) && ![0, 8000, 12000, 16000, 24000, 48000]
-            .contains(&self.saved.settings.audio.sample_rate)
+        if self
+            .saved
+            .settings
+            .format
+            .audio_sample_rates()
+            .is_some_and(|rates| !rates.contains(&self.saved.settings.audio.sample_rate))
         {
-            return Some("L’audio Opus richiede 8000, 12000, 16000, 24000 o 48000 Hz. Scegli una frequenza compatibile nelle impostazioni.".into());
+            return Some("Il formato scelto richiede una frequenza audio diversa. Scegli una frequenza compatibile nelle impostazioni.".into());
         }
         None
     }
@@ -367,6 +393,32 @@ impl ConverterApp {
         self.notice = None;
         let ctx = ctx.clone();
         std::thread::spawn(move || {
+            if settings.format == OutputFormat::Pdf && settings.pdf.action == PdfAction::Merge {
+                for index in 0..paths.len() {
+                    let _ = sender.send(Event::Started(index));
+                }
+                let result = engine::merge_pdfs(&paths, &settings, &cancel, |progress| {
+                    for index in 0..paths.len() {
+                        let _ = sender.send(Event::Progress(
+                            index,
+                            progress.fraction,
+                            progress.message.clone(),
+                        ));
+                    }
+                    ctx.request_repaint();
+                });
+                for index in 0..paths.len() {
+                    let event = match &result {
+                        Ok(outputs) => Event::Complete(index, outputs.clone()),
+                        Err(_) if cancel.load(Ordering::Relaxed) => Event::Cancelled(index),
+                        Err(error) => Event::Failed(index, format!("{error:#}")),
+                    };
+                    let _ = sender.send(event);
+                }
+                let _ = sender.send(Event::End);
+                ctx.request_repaint();
+                return;
+            }
             for (index, path) in paths.into_iter().enumerate() {
                 if cancel.load(Ordering::Relaxed) {
                     break;
@@ -449,7 +501,7 @@ impl ConverterApp {
             painter.arrow(c + egui::vec2(12.0, 6.0), egui::vec2(-24.0, 0.0), stroke);
             ui.vertical(|ui| {
                 ui.add_space(1.0);
-                ui.label(RichText::new("The Converter").size(24.0).strong());
+                ui.label(RichText::new("Convert Here").size(24.0).strong());
                 ui.label(
                     RichText::new("I tuoi file, nel formato giusto.")
                         .size(13.0)
@@ -484,28 +536,42 @@ impl ConverterApp {
                 .selected_text(selected)
                 .show_ui(ui, |ui| {
                     for format in formats {
-                        let label = if format == OutputFormat::Txt
-                            && self
-                                .items
-                                .iter()
-                                .any(|item| MediaKind::from_path(&item.path) == MediaKind::Audio)
-                        {
-                            "TXT con OpenAI"
-                        } else {
-                            format.label()
-                        };
+                        let label =
+                            if format == OutputFormat::Txt
+                                && self.items.iter().any(|item| {
+                                    MediaKind::from_path(&item.path) == MediaKind::Audio
+                                })
+                            {
+                                "TXT con OpenAI"
+                            } else {
+                                if format == OutputFormat::Txt
+                                    && self.items.iter().any(|item| {
+                                        MediaKind::from_path(&item.path) == MediaKind::Image
+                                    })
+                                {
+                                    "TXT · OCR locale"
+                                } else if format == OutputFormat::Pdf
+                                    && self.items.iter().all(|item| {
+                                        MediaKind::from_path(&item.path) == MediaKind::Pdf
+                                    })
+                                {
+                                    "PDF · comprimi / dividi / unisci"
+                                } else {
+                                    format.label()
+                                }
+                            };
                         ui.selectable_value(&mut self.saved.settings.format, format, label);
                     }
                 });
         });
         self.settings_dirty |= before != self.saved.settings.format;
         if before != self.saved.settings.format
-            && matches!(
-                self.saved.settings.format,
-                OutputFormat::Opus | OutputFormat::Webm
-            )
-            && ![0, 8000, 12000, 16000, 24000, 48000]
-                .contains(&self.saved.settings.audio.sample_rate)
+            && self
+                .saved
+                .settings
+                .format
+                .audio_sample_rates()
+                .is_some_and(|rates| !rates.contains(&self.saved.settings.audio.sample_rate))
         {
             self.saved.settings.audio.sample_rate = 0;
         }
@@ -522,7 +588,14 @@ impl ConverterApp {
         }
         ui.add_space(7.0);
         ui.label(RichText::new("Qualità").strong());
-        if quality_applicable(self.saved.settings.format) {
+        if quality_applicable(self.saved.settings.format)
+            && !(self.saved.settings.format == OutputFormat::Pdf
+                && !self.items.is_empty()
+                && self
+                    .items
+                    .iter()
+                    .all(|item| MediaKind::from_path(&item.path) == MediaKind::Pdf))
+        {
             ui.horizontal_wrapped(|ui| {
                 for (index, name) in ["Leggero", "Bilanciato", "Alta qualità"]
                     .into_iter()
@@ -624,6 +697,89 @@ impl ConverterApp {
     }
 
     fn advanced_settings(&mut self, ui: &mut egui::Ui) {
+        if self.items.iter().any(|item| {
+            item.path
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("csv"))
+        }) || self.saved.settings.format == OutputFormat::Csv
+        {
+            ui.label("Separatore CSV in ingresso e uscita");
+            let delimiter = &mut self.saved.settings.csv.delimiter;
+            egui::ComboBox::from_id_salt("csv_delimiter")
+                .selected_text(match delimiter {
+                    CsvDelimiter::Comma => "Virgola (,)",
+                    CsvDelimiter::Semicolon => "Punto e virgola (;)",
+                    CsvDelimiter::Tab => "Tabulazione",
+                    CsvDelimiter::Pipe => "Barra verticale (|)",
+                })
+                .show_ui(ui, |ui| {
+                    for (value, label) in [
+                        (CsvDelimiter::Comma, "Virgola (,)"),
+                        (CsvDelimiter::Semicolon, "Punto e virgola (;)"),
+                        (CsvDelimiter::Tab, "Tabulazione"),
+                        (CsvDelimiter::Pipe, "Barra verticale (|)"),
+                    ] {
+                        ui.selectable_value(delimiter, value, label);
+                    }
+                });
+            ui.label(RichText::new("UTF-8 con virgolette. Il separatore scelto viene usato anche per leggere i CSV.").small().weak());
+            ui.add_space(7.0);
+        }
+        let image_ocr = self.saved.settings.format == OutputFormat::Txt
+            && self
+                .items
+                .iter()
+                .any(|item| MediaKind::from_path(&item.path) == MediaKind::Image);
+        let pdf_text = matches!(
+            self.saved.settings.format,
+            OutputFormat::Txt | OutputFormat::Docx | OutputFormat::Html
+        ) && self
+            .items
+            .iter()
+            .any(|item| MediaKind::from_path(&item.path) == MediaKind::Pdf);
+        if pdf_text
+            && ui
+                .checkbox(
+                    &mut self.saved.settings.ocr.enabled,
+                    "Riconosci le scansioni con OCR locale",
+                )
+                .changed()
+            && self.saved.settings.ocr.enabled
+        {
+            self.saved.settings.pdf.dpi = self.saved.settings.pdf.dpi.max(300);
+        }
+        if image_ocr || pdf_text && self.saved.settings.ocr.enabled {
+            ui.label("Lingue OCR installate");
+            egui::ComboBox::from_id_salt("ocr_languages")
+                .selected_text(&self.saved.settings.ocr.language)
+                .show_ui(ui, |ui| {
+                    for (code, name) in [
+                        ("ita+eng", "Italiano e inglese"),
+                        ("ita", "Italiano"),
+                        ("eng", "Inglese"),
+                        ("fra", "Francese"),
+                        ("deu", "Tedesco"),
+                        ("spa", "Spagnolo"),
+                    ] {
+                        ui.selectable_value(
+                            &mut self.saved.settings.ocr.language,
+                            code.into(),
+                            name,
+                        );
+                    }
+                });
+            ui.text_edit_singleline(&mut self.saved.settings.ocr.language);
+            ui.label(RichText::new("Tesseract riconosce il testo sul PC. Occorrono i dati delle lingue indicate; rileggi il risultato.").small().weak());
+            if pdf_text {
+                ui.add(
+                    egui::Slider::new(&mut self.saved.settings.pdf.dpi, 150..=600)
+                        .suffix(" DPI OCR"),
+                );
+            }
+            if image_ocr && !self.transcribes_audio() {
+                return;
+            }
+        }
         if self.transcribes_audio() {
             ui.label("Lingua dell’audio");
             let language = &mut self.saved.settings.transcription.language;
@@ -657,11 +813,12 @@ impl ConverterApp {
                             .suffix(" kbps"),
                     );
                 }
-                let rates: &[u32] = if self.saved.settings.format == OutputFormat::Opus {
-                    &[0, 8000, 12000, 16000, 24000, 48000]
-                } else {
-                    &[0, 22050, 44100, 48000, 96000]
-                };
+                let rates: &[u32] = self
+                    .saved
+                    .settings
+                    .format
+                    .audio_sample_rates()
+                    .unwrap_or(&[0, 22050, 44100, 48000, 96000]);
                 let rate = &mut self.saved.settings.audio.sample_rate;
                 egui::ComboBox::from_id_salt("sample_rate")
                     .selected_text(if *rate == 0 {
@@ -700,7 +857,11 @@ impl ConverterApp {
                 );
                 if matches!(
                     self.saved.settings.format,
-                    OutputFormat::Wav | OutputFormat::Flac | OutputFormat::Aiff
+                    OutputFormat::Wav
+                        | OutputFormat::Flac
+                        | OutputFormat::Aiff
+                        | OutputFormat::Au
+                        | OutputFormat::Caf
                 ) {
                     ui.label(
                         RichText::new("Formato senza perdita: il bitrate non viene applicato.")
@@ -715,7 +876,7 @@ impl ConverterApp {
             MediaKind::Video => {
                 if matches!(
                     self.saved.settings.format,
-                    OutputFormat::Mp4 | OutputFormat::Mkv | OutputFormat::Mov
+                    OutputFormat::Mp4 | OutputFormat::Mkv | OutputFormat::Mov | OutputFormat::M4v
                 ) {
                     egui::ComboBox::from_id_salt("codec")
                         .selected_text(match self.saved.settings.video.codec {
@@ -737,9 +898,21 @@ impl ConverterApp {
                 }
                 if self.saved.settings.format != OutputFormat::Gif {
                     ui.label("Qualità video · valori minori = più dettaglio");
+                    let quality_label = if matches!(
+                        self.saved.settings.format,
+                        OutputFormat::Avi
+                            | OutputFormat::Mpeg
+                            | OutputFormat::Wmv
+                            | OutputFormat::Flv
+                            | OutputFormat::ThreeGp
+                    ) {
+                        "Qualità "
+                    } else {
+                        "CRF "
+                    };
                     ui.add(
                         egui::Slider::new(&mut self.saved.settings.video.crf, 16..=35)
-                            .prefix("CRF "),
+                            .prefix(quality_label),
                     );
                 }
                 width_setting(ui, "video_width", &mut self.saved.settings.video.width);
@@ -773,11 +946,12 @@ impl ConverterApp {
                             )
                             .suffix(" kbps"),
                         );
-                        let rates: &[u32] = if self.saved.settings.format == OutputFormat::Webm {
-                            &[0, 48000]
-                        } else {
-                            &[0, 44100, 48000]
-                        };
+                        let rates: &[u32] = self
+                            .saved
+                            .settings
+                            .format
+                            .audio_sample_rates()
+                            .unwrap_or(&[0, 44100, 48000]);
                         let rate = &mut self.saved.settings.audio.sample_rate;
                         egui::ComboBox::from_id_salt("video_sample_rate")
                             .selected_text(if *rate == 0 {
@@ -840,8 +1014,11 @@ impl ConverterApp {
                             .weak(),
                     );
                 } else {
-                    if self.saved.settings.format == OutputFormat::Jpg {
-                        ui.label("Qualità JPEG");
+                    if matches!(
+                        self.saved.settings.format,
+                        OutputFormat::Jpg | OutputFormat::Avif | OutputFormat::Heic
+                    ) {
+                        ui.label("Qualità dell'immagine");
                         ui.add(
                             egui::Slider::new(&mut self.saved.settings.image.quality, 20..=100)
                                 .suffix("%"),
@@ -858,7 +1035,42 @@ impl ConverterApp {
                 }
             }
             MediaKind::Pdf => {
-                if self
+                if !self.items.is_empty()
+                    && self
+                        .items
+                        .iter()
+                        .all(|item| MediaKind::from_path(&item.path) == MediaKind::Pdf)
+                {
+                    let action = &mut self.saved.settings.pdf.action;
+                    egui::ComboBox::from_id_salt("pdf_action")
+                        .selected_text(match action {
+                            PdfAction::Compress => "Comprimi senza perdita",
+                            PdfAction::Split => "Dividi: una pagina per file",
+                            PdfAction::Merge => "Unisci i PDF della lista",
+                        })
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(
+                                action,
+                                PdfAction::Compress,
+                                "Comprimi senza perdita",
+                            );
+                            ui.selectable_value(
+                                action,
+                                PdfAction::Split,
+                                "Dividi: una pagina per file",
+                            );
+                            ui.selectable_value(
+                                action,
+                                PdfAction::Merge,
+                                "Unisci i PDF della lista",
+                            );
+                        });
+                    ui.label(RichText::new(match action {
+                        PdfAction::Compress => "Ottimizza i flussi senza ridurre la qualità. Un PDF già ottimizzato può mantenere le stesse dimensioni.",
+                        PdfAction::Split => "Crea un PDF per pagina. Segnalibri, struttura accessibile e metadati del documento non vengono trasferiti; documenti firmati o con moduli compilabili richiedono una copia statica.",
+                        PdfAction::Merge => "Unisce nell'ordine della lista: usa le frecce per cambiarlo. Segnalibri, struttura accessibile e metadati non vengono trasferiti; documenti firmati o con moduli compilabili richiedono una copia statica.",
+                    }).small().weak());
+                } else if self
                     .items
                     .iter()
                     .any(|item| MediaKind::from_path(&item.path) == MediaKind::Image)
@@ -873,12 +1085,28 @@ impl ConverterApp {
                 } else {
                     ui.label(
                         RichText::new(
-                            "I documenti Office vengono esportati in PDF con LibreOffice.",
+                            "Documenti Office, fogli di calcolo e HTML vengono esportati in PDF con LibreOffice. HTML/CSS complessi possono cambiare impaginazione; JavaScript non viene eseguito. Le risorse collegate nell'HTML possono essere lette dal motore.",
                         )
                         .small()
                         .weak(),
                     );
                 }
+            }
+            MediaKind::Spreadsheet => {
+                let text = if self.saved.settings.format == OutputFormat::Csv {
+                    "Esporta il primo foglio in CSV UTF-8 con il separatore scelto e virgolette. Conserva i valori delle celle; formattazione, formule e altri fogli non sono inclusi."
+                } else {
+                    "Crea un file Excel XLSX con LibreOffice. I CSV in ingresso devono essere UTF-8 e usare il separatore scelto; il contenuto che inizia con = resta testo."
+                };
+                ui.label(RichText::new(text).small().weak());
+            }
+            MediaKind::Document | MediaKind::Html => {
+                let text = if self.saved.settings.format == OutputFormat::Txt {
+                    "Estrae il testo incorporato nel PDF; per le scansioni abilita OCR locale qui sopra."
+                } else {
+                    "Ricostruisce il testo del PDF in un file modificabile. Per le scansioni abilita OCR locale qui sopra; immagini, tabelle e impaginazione originali non vengono ricostruite."
+                };
+                ui.label(RichText::new(text).small().weak());
             }
             _ => {
                 ui.label(RichText::new("Il testo viene estratto dal PDF. I PDF scansionati richiedono OCR, qui non incluso.").small().weak());
@@ -936,7 +1164,10 @@ impl ConverterApp {
                                 .strong(),
                         );
                         ui.add_space(3.0);
-                        ui.label(RichText::new("Audio, video, immagini e PDF.").weak());
+                        ui.label(
+                            RichText::new("Audio, video, immagini, documenti, Excel e HTML.")
+                                .weak(),
+                        );
                         ui.add_space(12.0);
                         if ui
                             .add(
@@ -961,6 +1192,9 @@ impl ConverterApp {
             return;
         }
         let mut remove = None;
+        let mut reorder = None;
+        let merging = self.saved.settings.format == OutputFormat::Pdf
+            && self.saved.settings.pdf.action == PdfAction::Merge;
         egui::ScrollArea::vertical()
             .id_salt("queue")
             .auto_shrink([false, false])
@@ -1035,6 +1269,28 @@ impl ConverterApp {
                                                 .clicked()
                                         {
                                             remove = Some(index);
+                                        }
+                                        if merging && !self.running {
+                                            if ui
+                                                .add_enabled(
+                                                    index > 0,
+                                                    egui::Button::new("↑").small(),
+                                                )
+                                                .on_hover_text("Sposta prima nell'unione")
+                                                .clicked()
+                                            {
+                                                reorder = Some((index, index - 1));
+                                            }
+                                            if ui
+                                                .add_enabled(
+                                                    index + 1 < self.items.len(),
+                                                    egui::Button::new("↓").small(),
+                                                )
+                                                .on_hover_text("Sposta dopo nell'unione")
+                                                .clicked()
+                                            {
+                                                reorder = Some((index, index + 1));
+                                            }
                                         }
                                         match &item.state {
                                             JobState::Waiting => {
@@ -1125,6 +1381,8 @@ impl ConverterApp {
             } else {
                 self.items.remove(index);
             }
+        } else if let Some((from, to)) = reorder {
+            self.items.swap(from, to);
         }
     }
 
@@ -1261,7 +1519,18 @@ impl ConverterApp {
                     }
                 } else {
                     let enabled = !self.items.is_empty() && self.prerequisite().is_none();
-                    let label = if self.items.iter().any(|item| {
+                    let label = if self.saved.settings.format == OutputFormat::Pdf
+                        && self
+                            .items
+                            .iter()
+                            .all(|item| MediaKind::from_path(&item.path) == MediaKind::Pdf)
+                    {
+                        match self.saved.settings.pdf.action {
+                            PdfAction::Compress => "Comprimi PDF",
+                            PdfAction::Split => "Dividi PDF",
+                            PdfAction::Merge => "Unisci PDF",
+                        }
+                    } else if self.items.iter().any(|item| {
                         matches!(item.state, JobState::Complete(_) | JobState::Failed(_))
                     }) {
                         "Converti di nuovo"
@@ -1293,7 +1562,7 @@ impl ConverterApp {
             .collapsible(false)
             .show(ctx, |ui| {
                 ui.label(RichText::new("Immagini e PDF da immagini, subito disponibili.").strong());
-                ui.label("Audio, video, pagine PDF e documenti Office usano strumenti opzionali. Se sono già installati, The Converter li rileva o ti permette di selezionarli.");
+                ui.label("Audio, video, pagine PDF e documenti Office usano strumenti opzionali. Se sono già installati, Convert Here li rileva o ti permette di selezionarli.");
                 ui.label(RichText::new("Le conversioni standard avvengono sul PC. La trascrizione OpenAI facoltativa invia l’audio al servizio. I siti ufficiali si aprono nel browser.").small().weak());
                 ui.add_space(5.0);
                 egui::ScrollArea::vertical().id_salt("tools_scroll").max_height(470.0).show(ui, |ui| {
@@ -1302,8 +1571,11 @@ impl ConverterApp {
                         ("ffmpeg", "FFmpeg", "Necessario per audio, video e GIF da video.", "https://ffmpeg.org/download.html"),
                         ("ffprobe", "FFprobe", "Opzionale: durata dei media e avanzamento più preciso. Di solito è accanto a ffmpeg.exe.", "https://ffmpeg.org/ffprobe.html"),
                         ("pdftoppm", "Poppler · immagini", "Necessario per esportare ogni pagina PDF in PNG o JPEG. Seleziona pdftoppm.exe.", "https://poppler.freedesktop.org/"),
-                        ("pdftotext", "Poppler · testo", "Necessario per estrarre testo dai PDF. Seleziona pdftotext.exe. Il riconoscimento OCR non è incluso.", "https://poppler.freedesktop.org/"),
-                        ("soffice", "LibreOffice", "Necessario per i documenti Office in PDF. Seleziona soffice.exe nella cartella program di LibreOffice.", "https://www.libreoffice.org/download/download-libreoffice/"),
+                        ("pdftotext", "Poppler · testo", "Necessario per PDF in TXT, Word e HTML (solo testo). Seleziona pdftotext.exe. Il riconoscimento OCR non è incluso.", "https://poppler.freedesktop.org/"),
+                        ("soffice", "LibreOffice", "Necessario per Office e HTML in PDF ed Excel ↔ CSV. Seleziona soffice.exe nella cartella program di LibreOffice.", "https://www.libreoffice.org/download/download-libreoffice/"),
+                        ("tesseract", "Tesseract · OCR locale", "Necessario per immagini in TXT e scansioni PDF in TXT, Word e HTML. Mantieni la cartella tessdata con le lingue accanto al programma.", "https://tesseract-ocr.github.io/tessdoc/Installation.html"),
+                        ("heif-enc", "libheif · HEIC/AVIF in uscita", "Crea HEIC e AVIF. Mantieni DLL e plugin accanto agli strumenti; la build deve includere gli encoder HEVC e AV1.", "https://github.com/strukturag/libheif"),
+                        ("heif-dec", "libheif · HEIC/AVIF in ingresso", "Legge HEIC, HEIF e AVIF; viene convertita la prima immagine. Mantieni DLL e plugin accanto agli strumenti.", "https://github.com/strukturag/libheif"),
                     ] {
                         egui::Frame::new().fill(subtle_fill(ui)).corner_radius(7).inner_margin(11).show(ui, |ui| {
                             let path = self.saved.overrides.get(key).cloned().or_else(|| get_tool(&self.tools, key));
@@ -1926,6 +2198,8 @@ fn kind_label(kind: MediaKind) -> &'static str {
         MediaKind::Image => "Immagine",
         MediaKind::Pdf => "Documento PDF",
         MediaKind::Document => "Documento",
+        MediaKind::Spreadsheet => "Foglio di calcolo",
+        MediaKind::Html => "Pagina HTML",
         MediaKind::Unknown => "File",
     }
 }
@@ -1975,12 +2249,23 @@ fn quality_applicable(format: OutputFormat) -> bool {
             | OutputFormat::Aac
             | OutputFormat::Ogg
             | OutputFormat::Opus
+            | OutputFormat::M4a
+            | OutputFormat::Wma
+            | OutputFormat::Ac3
             | OutputFormat::Mp4
             | OutputFormat::Mkv
             | OutputFormat::Mov
             | OutputFormat::Webm
             | OutputFormat::Avi
+            | OutputFormat::Mpeg
+            | OutputFormat::Wmv
+            | OutputFormat::Flv
+            | OutputFormat::Ts
+            | OutputFormat::M4v
+            | OutputFormat::ThreeGp
             | OutputFormat::Jpg
+            | OutputFormat::Avif
+            | OutputFormat::Heic
             | OutputFormat::Pdf
     )
 }
@@ -2013,6 +2298,9 @@ fn get_tool(tools: &ToolPaths, key: &str) -> Option<PathBuf> {
         "pdftoppm" => tools.pdftoppm.clone(),
         "pdftotext" => tools.pdftotext.clone(),
         "soffice" => tools.soffice.clone(),
+        "tesseract" => tools.tesseract.clone(),
+        "heif-enc" => tools.heif_enc.clone(),
+        "heif-dec" => tools.heif_dec.clone(),
         _ => None,
     }
 }

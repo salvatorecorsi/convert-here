@@ -1,6 +1,6 @@
 # Microsoft Store listing — English (en-US)
 
-Draft for the complete MSIX, to be checked against the final package. Publisher: **CORSIVO**. Developer: **Salvatore Corsi**. The proposed name **The Converter** requires a successful reservation in Partner Center. This listing is translated; the application UI is currently Italian. Do not copy this preamble into public listing fields.
+Draft for the complete MSIX, to be checked against the final package. Publisher: **CORSIVO**. Developer: **Salvatore Corsi**. The owner confirmed reservation of **Convert Here** in Partner Center on 4 November 2026. This listing is translated; the application UI is currently Italian. Do not copy this preamble into public listing fields.
 
 ## Short description
 
@@ -8,23 +8,33 @@ Convert files from the Windows 11 context menu with a queue and custom settings.
 
 ## Description
 
-Image and image-to-PDF conversion work immediately. Audio/video format conversion requires FFmpeg; PDF export requires Poppler; Office-to-PDF requires LibreOffice. These optional engines are not included. Optional OpenAI audio-to-text transcription requires internet, your API key and separate API billing, not a ChatGPT subscription; it uploads audio to OpenAI. FFmpeg prepares audio that cannot be sent directly. The application UI is Italian.
+Native image formats and image-to-PDF conversion work immediately, as do PDF compression, splitting and merging. Audio/video requires FFmpeg; PDF export requires Poppler; Office, Excel/CSV and HTML-to-PDF requires LibreOffice. HEIC/HEIF and AVIF require libheif; OCR requires Tesseract and language models, plus Poppler for scanned PDFs. These optional engines are not included. Optional OpenAI audio-to-text transcription requires internet, your API key and separate API billing, not a ChatGPT subscription; it uploads audio to OpenAI. FFmpeg prepares audio that cannot be sent directly. The application UI is Italian.
 
-The Converter brings conversion to the folder where you work. In the Windows 11 context menu, choose Converti in and a compatible format. The job joins a queue with your saved settings, without opening the options window every time.
+Convert Here brings conversion to the folder where you work. In the Windows 11 context menu, choose Converti in and a compatible format. The job joins a queue with your saved settings, without opening the options window every time.
 
 A placeholder with a pending icon immediately shows where the result will appear. Open it to check progress or cancel the job. When conversion finishes, the completed file replaces the placeholder. Outputs are saved beside their originals by default; numbered names preserve files that already exist.
 
-Built-in conversions cover PNG, JPEG, WebP, BMP, TIFF, GIF and ICO, plus a separate A4 PDF for each source image. Adjust JPEG quality and image width.
+There are 44 destination formats and 93 recognized input extensions across compatible categories. Native image conversions cover PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR and PNM, plus a separate A4 PDF for each source image. Adjust JPEG quality and image width.
 
-With optional FFmpeg, convert audio to MP3, WAV, FLAC, AAC, OGG, Opus and AIFF; convert video to MP4, MKV, MOV, WebM, AVI and animated GIF; or extract its audio. Settings include quality presets, bitrate, sample rate, channels, normalization, video quality, width, frame rate and time trimming.
+With libheif, read HEIC/HEIF and AVIF files or create HEIC and AVIF from supported images. Configure heif-dec.exe and heif-enc.exe in Strumenti, keeping the build's DLLs and plugins together. Availability depends on installed HEVC/AV1 decoders and encoders. Choose output quality and width. Only the first image in a container is converted; image sequences and animations are not preserved.
 
-With Poppler, export PDF pages to PNG/JPEG or extract embedded text. With LibreOffice, convert compatible documents, spreadsheets and presentations to PDF.
+With optional FFmpeg, convert audio to MP3, WAV, FLAC, AAC, OGG, Opus, AIFF, M4A with AAC, WMA, AC3, AU and CAF with ALAC; convert video to MP4, MKV, MOV, WebM, AVI, MPEG, WMV, FLV, MPEG-TS, M4V, 3GP and animated GIF; or extract its audio. Codec availability depends on the selected FFmpeg engine. Settings include quality presets, bitrate, sample rate, channels, normalization, video quality, width, frame rate and time trimming.
+
+With Poppler, export PDF pages to PNG/JPEG, extract embedded text as TXT, or reconstruct it as editable Word DOCX and HTML files. DOCX and HTML exports contain text only: original images, tables and page layout are not reconstructed.
+
+With Tesseract, recognize text in images as TXT, or enable local OCR for PDFs to create TXT, DOCX or HTML from scanned pages. PDF OCR is off by default and also uses Poppler. Select installed language models, such as ita+eng, and the PDF page DPI. Keep models in the engine's tessdata directory. Processing stays on your PC without OpenAI or API charges. Recognized text may contain errors and should be reviewed; OCR does not create a searchable PDF.
+
+Compress PDFs losslessly, split them into one file per page, or merge several PDFs in your chosen order without external engines. Use the list arrows in the options window to reorder files. Compression does not resample images or produce a file larger than its source; file size may remain unchanged. Splitting and merging omit bookmarks, tags and document metadata, and reject interactive forms. These operations reject encrypted or signed PDFs. Compression preserves the catalog and forms and does not remove metadata.
+
+With LibreOffice, convert compatible Word documents, other documents, spreadsheets and presentations to PDF; export XLS/XLSX/XLSM/ODS to CSV; or create Excel XLSX files from CSV. CSV export contains only the first sheet, using UTF-8 and double quotes. It preserves displayed values without formatting or formulas. Choose commas, semicolons, tabs or pipes for both import and export; commas are the default. Input CSV files must use UTF-8. Expressions beginning with = are imported as text, and quoted fields preserve identifiers with leading zeros.
+
+Convert simple HTML files to PDF with LibreOffice. Complex CSS may change the layout, and JavaScript is not executed. Resources linked from the HTML may access local files or the network during conversion.
 
 Format conversion runs on your PC. Audio is uploaded only when you select OpenAI audio-to-text transcription after enabling it with your API key. Windows Credential Manager protects the key, and you can remove it in settings. Local conversions do not require an in-app account. Preferences, file paths, queue status and error details are stored locally without the key.
 
 Speech transcription creates a TXT file with automatic language detection or an optional language selection. It is not directly available for video files. Review the result because recognition errors are possible. Requests already sent may incur costs even if you cancel the job.
 
-Limitations: OCR, PDF merging and PDF editing are not included. Animated image inputs and multipage TIFF inputs use their first frame or page. Each image produces its own PDF. Office document layout depends on LibreOffice and available fonts. The modern context menu requires Windows 11 x64. The application UI is Italian.
+Limitations: free editing of PDF page content is not available. OCR recognizes text without reconstructing graphics or layout. Animated GIFs, multipage TIFFs and HEIC/AVIF containers use their first frame or image. Each image produces its own PDF, which can then be merged with other PDFs. Office document layout depends on LibreOffice and available fonts. The modern context menu requires Windows 11 x64. The application UI is Italian.
 
 ## Product features
 
@@ -34,11 +44,16 @@ Enter each line in a separate feature field, without adding bullet characters:
 Converti in command directly in the Windows 11 File Explorer context menu
 Quick conversions join a queue without opening the options window each time
 Output-folder placeholders with job status available on demand
-Convert PNG, JPEG, WebP, BMP, TIFF, GIF and ICO images
+Images in PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR and PNM
 Create a separate A4 PDF for each source image
 Adjust JPEG quality, image width and output folder
 Audio and video conversion with optional user-selected FFmpeg
-PDF export with Poppler and Office-to-PDF conversion with optional LibreOffice
+PDF to images, TXT, text-only Word DOCX and HTML with optional Poppler
+Excel to first-sheet CSV and UTF-8 CSV to XLSX, with four delimiters and optional LibreOffice
+Word and simple HTML to PDF with optional LibreOffice; JavaScript is not executed
+HEIC/HEIF and AVIF input and HEIC/AVIF output with optional libheif
+Local OCR for images and scanned PDFs with optional Tesseract and language models
+Lossless PDF compression, one-page splitting and merging in list order
 Preserve original files and use numbered output names for existing files
 Local format conversion; audio is sent to OpenAI only for requested transcription
 Optional audio-to-text transcription with your OpenAI API key and separate API charges
@@ -62,7 +77,8 @@ conversion queue
 
 ```text
 Windows 11 x64 for the modern context menu
-FFmpeg for audio/video; Poppler for PDF export; LibreOffice for Office-to-PDF. Optional engines are not included. The application UI is Italian.
+FFmpeg for audio/video; Poppler for PDF export; LibreOffice for Office/HTML to PDF and Excel/CSV conversion. Optional engines are not included. The application UI is Italian.
+libheif with heif-dec.exe, heif-enc.exe, DLLs and plugins for HEIC/AVIF; Tesseract and language models for OCR, plus Poppler for PDFs. Not included.
 Optional audio-to-text: internet, an OpenAI API key and separately billed API account; FFmpeg when audio preparation is needed. No ChatGPT subscription usage.
 ```
 

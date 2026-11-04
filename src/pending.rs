@@ -371,7 +371,7 @@ mod native {
         let mut description_text = String::new();
         let mut units = 0;
         for character in format!(
-            "The Converter — {status}\nDestinazione: {}",
+            "Convert Here — {status}\nDestinazione: {}",
             display_path(output)
         )
         .chars()

@@ -1,4 +1,4 @@
-use crate::model::{MediaKind, OutputFormat};
+use crate::model::{ConversionSettings, MediaKind, OutputFormat};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -11,6 +11,9 @@ pub struct ToolPaths {
     pub pdftoppm: Option<PathBuf>,
     pub pdftotext: Option<PathBuf>,
     pub soffice: Option<PathBuf>,
+    pub tesseract: Option<PathBuf>,
+    pub heif_enc: Option<PathBuf>,
+    pub heif_dec: Option<PathBuf>,
 }
 
 impl ToolPaths {
@@ -21,6 +24,9 @@ impl ToolPaths {
             pdftoppm: find_tool("pdftoppm"),
             pdftotext: find_tool("pdftotext"),
             soffice: find_tool("soffice"),
+            tesseract: find_tool("tesseract"),
+            heif_enc: find_tool("heif-enc"),
+            heif_dec: find_tool("heif-dec"),
         }
     }
     /// Apply explicit user selections after automatic discovery. Companion tools
@@ -41,6 +47,8 @@ impl ToolPaths {
                 "ffprobe" => "ffmpeg",
                 "pdftoppm" => "pdftotext",
                 "pdftotext" => "pdftoppm",
+                "heif-enc" => "heif-dec",
+                "heif-dec" => "heif-enc",
                 _ => continue,
             };
             if overrides.contains_key(companion) {
@@ -63,8 +71,41 @@ impl ToolPaths {
             "pdftoppm" => self.pdftoppm = path,
             "pdftotext" => self.pdftotext = path,
             "soffice" => self.soffice = path,
+            "tesseract" => self.tesseract = path,
+            "heif-enc" => self.heif_enc = path,
+            "heif-dec" => self.heif_dec = path,
             _ => {}
         }
+    }
+    /// Prerequisites depend on the source codec and explicit OCR choice.
+    pub fn missing_for_input(&self, input: &Path, settings: &ConversionSettings) -> Option<String> {
+        let kind = MediaKind::from_path(input);
+        let modern_input = kind == MediaKind::Image && crate::modern_images::is_modern_input(input);
+        if modern_input && !tool_exists(&self.heif_dec) {
+            return Some("Per leggere HEIC/HEIF e AVIF serve libheif. Apri Strumenti e seleziona heif-dec.exe con le sue DLL e i plugin.".into());
+        }
+        if kind == MediaKind::Image
+            && matches!(settings.format, OutputFormat::Avif | OutputFormat::Heic)
+            && !tool_exists(&self.heif_enc)
+        {
+            return Some("Per creare HEIC e AVIF serve libheif con i relativi encoder. Apri Strumenti e seleziona heif-enc.exe con le sue DLL e i plugin.".into());
+        }
+        let pdf_ocr = kind == MediaKind::Pdf
+            && settings.ocr.enabled
+            && matches!(
+                settings.format,
+                OutputFormat::Txt | OutputFormat::Docx | OutputFormat::Html
+            );
+        if kind == MediaKind::Image && settings.format == OutputFormat::Txt || pdf_ocr {
+            if !tool_exists(&self.tesseract) {
+                return Some("Per riconoscere il testo serve Tesseract OCR con i dati delle lingue selezionate. Apri Strumenti e seleziona tesseract.exe.".into());
+            }
+            if pdf_ocr && !tool_exists(&self.pdftoppm) {
+                return Some("Per riconoscere le pagine PDF con OCR serve anche Poppler. Apri Strumenti e seleziona pdftoppm.exe.".into());
+            }
+            return None;
+        }
+        self.missing_for(kind, settings.format)
     }
     pub fn missing_for(&self, kind: MediaKind, format: OutputFormat) -> Option<String> {
         let missing = match kind {
@@ -74,9 +115,16 @@ impl ToolPaths {
             MediaKind::Audio | MediaKind::Video if !tool_exists(&self.ffmpeg) => Some(
                 "Per convertire audio e video serve FFmpeg. Apri Strumenti e seleziona ffmpeg.exe già installato sul PC.",
             ),
-            MediaKind::Pdf if format == OutputFormat::Txt && !tool_exists(&self.pdftotext) => Some(
-                "Per estrarre il testo dai PDF serve Poppler. Apri Strumenti e seleziona pdftotext.exe. Il riconoscimento OCR non è incluso.",
-            ),
+            MediaKind::Pdf
+                if matches!(
+                    format,
+                    OutputFormat::Txt | OutputFormat::Docx | OutputFormat::Html
+                ) && !tool_exists(&self.pdftotext) =>
+            {
+                Some(
+                    "Per esportare il testo incorporato dei PDF serve Poppler. Apri Strumenti e seleziona pdftotext.exe, oppure abilita OCR locale per le scansioni.",
+                )
+            }
             MediaKind::Pdf
                 if matches!(format, OutputFormat::Png | OutputFormat::Jpg)
                     && !tool_exists(&self.pdftoppm) =>
@@ -85,9 +133,13 @@ impl ToolPaths {
                     "Per esportare le pagine PDF serve Poppler. Apri Strumenti e seleziona pdftoppm.exe già installato sul PC.",
                 )
             }
-            MediaKind::Document if !tool_exists(&self.soffice) => Some(
-                "Per convertire i documenti Office in PDF serve LibreOffice. Apri Strumenti e seleziona soffice.exe nella sua cartella program.",
-            ),
+            MediaKind::Document | MediaKind::Spreadsheet | MediaKind::Html
+                if !tool_exists(&self.soffice) =>
+            {
+                Some(
+                    "Per convertire documenti Office, fogli di calcolo, CSV e HTML serve LibreOffice. Apri Strumenti e seleziona soffice.exe nella sua cartella program.",
+                )
+            }
             _ => None,
         };
         missing.map(str::to_owned)
@@ -149,6 +201,18 @@ fn find_tool(name: &str) -> Option<PathBuf> {
                 .join(&exe);
             if executable_available(&path) {
                 return Some(path);
+            }
+        }
+    }
+    if name == "tesseract" {
+        for variable in ["ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"] {
+            if let Some(root) = std::env::var_os(variable) {
+                for suffix in ["Tesseract-OCR", "Programs/Tesseract-OCR"] {
+                    let path = PathBuf::from(&root).join(suffix).join(&exe);
+                    if executable_available(&path) {
+                        return Some(path);
+                    }
+                }
             }
         }
     }
@@ -217,6 +281,9 @@ fn find_in_roots(executable: &str, roots: &[PathBuf]) -> Option<PathBuf> {
             "poppler/Library/bin",
             "poppler/bin",
             "LibreOffice/program",
+            "libheif/bin",
+            "tesseract",
+            "Tesseract-OCR",
         ] {
             let path = root.join(suffix).join(executable);
             if executable_available(&path) {

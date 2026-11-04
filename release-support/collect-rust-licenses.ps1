@@ -32,9 +32,11 @@ $upstream = @{
     'gl_generator' = @{ Repository = 'brendanzab/gl-rs'; Files = @('LICENSE') }
     'khronos_api' = @{ Repository = 'brendanzab/gl-rs'; Files = @('LICENSE') }
     'profiling' = @{ Repository = 'aclysma/profiling'; Files = @('LICENSE-MIT', 'LICENSE-APACHE') }
+    'pulp-wasm-simd-flag' = @{ Repository = 'sarah-quinones/pulp'; Files = @('LICENSE') }
+    'zune-inflate' = @{ Repository = 'etemesi254/zune-image'; Files = @('LICENSE.md', 'LICENSE-ZLIB') }
 }
 $text = [Text.StringBuilder]::new()
-[void]$text.AppendLine('The Converter - third-party Rust dependency notices')
+[void]$text.AppendLine('Convert Here - third-party Rust dependency notices')
 [void]$text.AppendLine('Generated from Cargo.lock and shell-extension/Cargo.lock for x86_64-pc-windows-msvc.')
 [void]$text.AppendLine('Includes build-time dependencies as a conservative superset. The application has its own rights; these texts concern the identified third-party components only.')
 $index = @()

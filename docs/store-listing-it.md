@@ -1,6 +1,6 @@
 # Scheda Microsoft Store — italiano (it-IT)
 
-Bozza per il MSIX completo, da verificare sul pacchetto finale. Editore: **CORSIVO**. Sviluppatore: **Salvatore Corsi**. Il nome **The Converter** resta subordinato alla disponibilita e alla prenotazione in Partner Center. Non copiare questo preambolo nei campi pubblici.
+Bozza per il MSIX completo, da verificare sul pacchetto finale. Editore: **CORSIVO**. Sviluppatore: **Salvatore Corsi**. Il proprietario ha confermato la prenotazione del nome **Convert Here** in Partner Center il 4 novembre 2026. Non copiare questo preambolo nei campi pubblici.
 
 ## Descrizione breve
 
@@ -8,23 +8,33 @@ Conversioni di file dal tasto destro di Windows 11, con coda e opzioni. Trascriz
 
 ## Descrizione
 
-Immagini e immagini in PDF funzionano subito. Le conversioni di formato audio/video richiedono FFmpeg; l'esportazione PDF richiede Poppler; i documenti Office in PDF richiedono LibreOffice. Questi motori opzionali non sono inclusi. La trascrizione audio TXT con OpenAI e facoltativa: richiede internet, una propria chiave API e fatturazione API separata da ChatGPT; invia l'audio a OpenAI. FFmpeg prepara gli audio che non possono essere inviati direttamente.
+Le immagini nei formati nativi e le immagini in PDF funzionano subito, come compressione, divisione e unione dei PDF. Audio/video richiedono FFmpeg; esportazione PDF richiede Poppler; Office, Excel/CSV e HTML in PDF richiedono LibreOffice. HEIC/HEIF e AVIF richiedono libheif; OCR richiede Tesseract e i modelli delle lingue, oltre a Poppler per le scansioni PDF. Questi motori opzionali non sono inclusi. La trascrizione audio TXT con OpenAI e facoltativa: richiede internet, una propria chiave API e fatturazione API separata da ChatGPT; invia l'audio a OpenAI. FFmpeg prepara gli audio che non possono essere inviati direttamente.
 
-The Converter porta le conversioni nella cartella in cui lavori. Dal menu contestuale di Windows 11 scegli Converti in e il formato desiderato: il lavoro entra in coda con le impostazioni salvate, senza aprire ogni volta la finestra delle opzioni.
+Convert Here porta le conversioni nella cartella in cui lavori. Dal menu contestuale di Windows 11 scegli Converti in e il formato desiderato: il lavoro entra in coda con le impostazioni salvate, senza aprire ogni volta la finestra delle opzioni.
 
 Un segnaposto con icona di attesa mostra subito dove comparira il risultato. Puoi aprirlo per vedere lo stato o annullare il lavoro. Quando la conversione termina, il file pronto prende il suo posto. Per impostazione predefinita i risultati sono accanto agli originali; se un nome esiste gia viene aggiunto un numero.
 
-Le conversioni incluse comprendono PNG, JPEG, WebP, BMP, TIFF, GIF e ICO, oltre alla creazione di un PDF A4 per ciascuna immagine. Puoi regolare qualita JPEG e larghezza delle immagini.
+Sono disponibili 44 formati di destinazione e 93 estensioni di ingresso riconosciute, nelle categorie compatibili. Le conversioni di immagini native comprendono PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR e PNM, oltre alla creazione di un PDF A4 per ciascuna immagine. Puoi regolare qualita JPEG e larghezza delle immagini.
 
-Con FFmpeg puoi convertire audio in MP3, WAV, FLAC, AAC, OGG, Opus e AIFF, convertire video in MP4, MKV, MOV, WebM, AVI e GIF animato, oppure estrarne l'audio. Le opzioni comprendono preset di qualita, bitrate, frequenza, canali, normalizzazione, qualita video, larghezza, FPS e taglio temporale.
+Con libheif puoi leggere HEIC/HEIF e AVIF e crearli dalle immagini supportate. Configura heif-dec.exe e heif-enc.exe in Strumenti, mantenendo insieme DLL e plugin della build. La disponibilita dipende dai decoder e dagli encoder HEVC/AV1 installati. Puoi scegliere qualita e larghezza; viene usata la prima immagine del contenitore, senza conservare sequenze o animazioni.
 
-Con Poppler puoi esportare i PDF in immagini PNG/JPEG o estrarne il testo incorporato. Con LibreOffice puoi convertire documenti, fogli e presentazioni compatibili in PDF.
+Con FFmpeg puoi convertire audio in MP3, WAV, FLAC, AAC, OGG, Opus, AIFF, M4A con AAC, WMA, AC3, AU e CAF con ALAC; convertire video in MP4, MKV, MOV, WebM, AVI, MPEG, WMV, FLV, MPEG-TS, M4V, 3GP e GIF animato, oppure estrarne l'audio. La disponibilita dei codec dipende dal motore FFmpeg selezionato. Le opzioni comprendono preset di qualita, bitrate, frequenza, canali, normalizzazione, qualita video, larghezza, FPS e taglio temporale.
+
+Con Poppler puoi esportare i PDF in immagini PNG/JPEG, estrarne il testo incorporato in TXT oppure ricostruirlo in Word DOCX e HTML modificabili. Le esportazioni DOCX e HTML contengono solo testo: immagini, tabelle e impaginazione originali non vengono ricostruite.
+
+Con Tesseract puoi riconoscere il testo delle immagini in TXT e, attivando OCR locale per i PDF, creare TXT, DOCX o HTML dalle scansioni. OCR dei PDF e disattivato per default e usa anche Poppler. Seleziona lingue installate, per esempio ita+eng, e i DPI delle pagine PDF; conserva i modelli nella cartella tessdata del motore. L'elaborazione resta sul PC, senza OpenAI o costi API. Il testo riconosciuto puo contenere errori e va riletto; OCR non crea un PDF ricercabile.
+
+Puoi comprimere i PDF senza perdita, dividerli in un file per pagina e unire piu PDF nell'ordine scelto, senza motori esterni. Nella finestra delle opzioni usa le frecce per cambiare l'ordine della lista. La compressione non ricampiona le immagini e non produce un file piu grande dell'originale; puo lasciare le dimensioni invariate. Divisione e unione non trasferiscono segnalibri, tag o metadati del documento e rifiutano moduli interattivi. Le operazioni rifiutano PDF cifrati o firmati; la compressione conserva catalogo e moduli e non rimuove i metadati.
+
+Con LibreOffice puoi convertire documenti Word e altri documenti, fogli e presentazioni compatibili in PDF, esportare XLS/XLSX/XLSM/ODS in CSV e creare Excel XLSX da CSV. Il CSV contiene soltanto il primo foglio, in UTF-8 con virgolette: conserva i valori visualizzati, senza formattazione o formule. Puoi scegliere virgola, punto e virgola, tab o pipe sia in ingresso sia in uscita; il default e la virgola. I CSV in ingresso devono essere UTF-8; le espressioni che iniziano con = vengono importate come testo e i campi quotati mantengono gli identificativi con zeri iniziali.
+
+Puoi anche convertire file HTML in PDF con LibreOffice. Sono supportati documenti HTML semplici; CSS complessi possono cambiare impaginazione e JavaScript non viene eseguito. Le risorse collegate nell'HTML possono accedere a file locali o alla rete durante la conversione.
 
 Le conversioni di formato vengono elaborate sul PC. Solo scegliendo la trascrizione audio TXT con OpenAI, dopo averla abilitata, invii l'audio al servizio online usando la tua chiave API. La chiave e protetta dal Gestore credenziali Windows e puo essere rimossa dalle impostazioni. Non serve un account nell'app per le conversioni locali. Preferenze, percorsi dei file, stato della coda e dettagli degli errori vengono salvati localmente, senza includere la chiave.
 
 La trascrizione del parlato crea un file TXT e permette il riconoscimento automatico della lingua o la scelta di una lingua. Non e disponibile direttamente per i video. Rileggi sempre il testo ottenuto: possono esserci errori. I costi delle richieste gia inviate possono maturare anche se il lavoro viene annullato.
 
-Limiti: non sono inclusi OCR, unione o modifica dei PDF. Da GIF animate e TIFF multipagina viene convertito il primo fotogramma o la prima pagina. Ogni immagine genera un PDF separato. L'impaginazione dei documenti Office dipende da LibreOffice e dai font disponibili. L'interfaccia e attualmente in italiano. Il menu moderno richiede Windows 11 x64.
+Limiti: non e disponibile la modifica libera del contenuto delle pagine PDF. OCR riconosce il testo senza ricostruire la grafica o l'impaginazione. Da GIF animate, TIFF multipagina e contenitori HEIC/AVIF viene convertito il primo fotogramma o la prima immagine. Ogni immagine genera un PDF separato, che puoi poi unire ad altri PDF. L'impaginazione dei documenti Office dipende da LibreOffice e dai font disponibili. L'interfaccia e attualmente in italiano. Il menu moderno richiede Windows 11 x64.
 
 ## Funzionalita
 
@@ -34,11 +44,16 @@ Inserire ciascuna riga in un campo separato, senza il trattino iniziale:
 Menu Converti in direttamente in Esplora file su Windows 11
 Conversioni rapide in coda senza aprire ogni volta le opzioni
 Segnaposto nella cartella di destinazione e stato del lavoro su richiesta
-Conversioni tra PNG, JPEG, WebP, BMP, TIFF, GIF e ICO
+Immagini in PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR e PNM
 Creazione di un PDF A4 separato per ciascuna immagine
 Qualita JPEG, ridimensionamento e cartella di destinazione personalizzabili
 Audio e video con FFmpeg opzionale selezionato dall'utente
-Esportazione PDF con Poppler e documenti in PDF con LibreOffice opzionali
+PDF in immagini, TXT, Word DOCX e HTML di solo testo con Poppler opzionale
+Excel in CSV del primo foglio e CSV UTF-8 in XLSX, con quattro separatori e LibreOffice opzionale
+Word e HTML semplici in PDF con LibreOffice opzionale; JavaScript non eseguito
+HEIC/HEIF e AVIF in ingresso e HEIC/AVIF in uscita con libheif opzionale
+OCR locale di immagini e scansioni PDF con Tesseract e modelli delle lingue opzionali
+Comprimi PDF senza perdita, dividi per pagina e unisci nell'ordine della lista
 File originali conservati e nomi numerati in caso di conflitto
 Conversioni di formato locali; audio inviato a OpenAI solo per la trascrizione richiesta
 Trascrizione audio TXT opzionale con propria API key OpenAI e costi API separati
@@ -62,7 +77,8 @@ coda conversioni
 
 ```text
 Windows 11 x64 per il menu contestuale moderno
-FFmpeg per audio e video; Poppler per esportare PDF; LibreOffice per documenti in PDF. Motori opzionali non inclusi.
+FFmpeg per audio/video; Poppler per esportare PDF; LibreOffice per Office/HTML in PDF ed Excel/CSV. Motori opzionali non inclusi.
+libheif con heif-dec.exe, heif-enc.exe, DLL e plugin per HEIC/AVIF; Tesseract con i modelli delle lingue per OCR, oltre a Poppler per i PDF. Non inclusi.
 Trascrizione audio TXT facoltativa: internet, chiave e account OpenAI API con costi separati da ChatGPT; FFmpeg se occorre preparare l'audio.
 ```
 

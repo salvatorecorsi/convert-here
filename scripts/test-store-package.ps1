@@ -34,7 +34,7 @@ function New-PeFixture([string]$Path, [string]$Import = 'kernel32.dll', [uint16]
 try {
     New-Item -ItemType Directory -Path $fixture | Out-Null
     $preview = Get-StorePackageIdentity
-    Assert ($preview.Name -ceq 'Corsivo.TheConverter.StorePreview' -and $preview.DisplayName -ceq 'The Converter Store Preview' -and $preview.PublisherDisplayName -ceq 'Corsivo') 'Preview identity is not clearly separate.'
+    Assert ($preview.Name -ceq 'Corsivo.TheConverter.StorePreview' -and $preview.DisplayName -ceq 'Convert Here Store Preview' -and $preview.PublisherDisplayName -ceq 'Corsivo') 'Preview identity is not clearly separate.'
     Assert ($preview.Version -eq '1.0.0.0' -and $preview.ExecutionAlias -eq 'corsivo-the-converter-preview.exe') 'Incorrect preview version or alias.'
     Assert (-not $preview.PSObject.Properties['CliExecutionAlias']) 'Preview identity advertises an unsupported Store CLI alias.'
     Assert-Fails { Get-StorePackageIdentity -ForSubmission -IdentityConfig (Join-Path $definitions 'identity.partner-center.example.json') } 'Submission accepted placeholder identity.'

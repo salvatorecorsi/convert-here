@@ -1,6 +1,10 @@
+pub mod documents;
 pub mod engine;
 pub mod model;
+pub mod modern_images;
+pub mod ocr;
 pub mod package;
+pub mod pdf_ops;
 pub mod pending;
 pub mod platform;
 pub mod queue;

@@ -12,7 +12,7 @@ $env:PSModulePath = (Join-Path $PSHOME 'Modules') + [IO.Path]::PathSeparator + $
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 $installRoot = (Resolve-Path -LiteralPath $InstallDirectory).Path
 if (-not (Test-Path -LiteralPath (Join-Path $installRoot 'the-converter.exe') -PathType Leaf)) {
-    throw 'La cartella selezionata non contiene The Converter.'
+    throw 'La cartella selezionata non contiene Convert Here.'
 }
 $toolsRoot = Join-Path $installRoot 'tools'
 New-Item -ItemType Directory -Force -Path $toolsRoot | Out-Null

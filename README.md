@@ -1,12 +1,14 @@
-# The Converter
+# Convert Here
 
 Progetto **Corsivo**, sviluppato da **Salvatore Corsi**: versione Rust per Windows di [Final Converter](https://github.com/salvatorecorsi/final-converter). Conversioni di formato locali, selezioni multiple e integrazione con Esplora file. La trascrizione audio in TXT e facoltativa: usa OpenAI online con la chiave API dell'utente e invia l'audio solo quando viene richiesta.
+
+Il nome **Convert Here** e stato riservato in Microsoft Partner Center. Repository, nomi degli eseguibili e identificativi tecnici restano quelli esistenti per compatibilita. Le release precedenti possono ancora mostrare il nome The Converter.
 
 ## Preparazione Microsoft Store
 
 La distribuzione Store usa un **MSIX completo** con il menu di Windows 11 dichiarato nel pacchetto. Editore pubblico: **Corsivo**; autore del codice: Salvatore Corsi. L'account GitHub che ospita il sorgente resta indipendente dall'identita dell'editore Microsoft.
 
-La build di anteprima e separata dalla release GitHub e non contiene certificati privati o motori esterni. Immagini e immagini in PDF funzionano subito; conversioni di formato audio/video richiedono FFmpeg, esportazione PDF richiede Poppler e documenti Office richiedono LibreOffice, selezionabili in **Strumenti**. La trascrizione audio TXT richiede internet, una propria chiave API OpenAI e, quando occorre preparare l'audio, FFmpeg. Questi requisiti sono dichiarati anche all'inizio delle schede Store.
+La build di anteprima e separata dalla release GitHub e non contiene certificati privati o motori esterni. Le immagini nei formati nativi e le immagini in PDF funzionano subito, come compressione, divisione e unione dei PDF. Audio/video richiedono FFmpeg; esportazione PDF in immagini o testo incorporato richiede Poppler; Office, Excel/CSV e HTML in PDF richiedono LibreOffice. HEIC/HEIF e AVIF richiedono libheif, mentre OCR richiede Tesseract con i modelli delle lingue e, per i PDF, anche Poppler. I motori si selezionano in **Strumenti**. La trascrizione audio TXT richiede internet, una propria chiave API OpenAI e, quando occorre preparare l'audio, FFmpeg. Questi requisiti sono dichiarati anche all'inizio delle schede Store.
 
 ```powershell
 .\scripts\build-store-package.ps1
@@ -28,7 +30,7 @@ Il setup è leggero. L'opzione consigliata scarica FFmpeg e Poppler direttamente
 
 Su Windows 11 il menu incluso in questa release compare in **Mostra altre opzioni**. Il menu moderno richiede un'identità MSIX firmata attendibile ed è descritto in [windows-integration.md](docs/windows-integration.md); la release iniziale non include un pacchetto firmato.
 
-Per rimuovere il programma usa **Impostazioni Windows → App → App installate → The Converter → Disinstalla**, oppure il collegamento nel menu Start. Le preferenze e i file convertiti restano conservati. Se Windows mantiene caricata la DLL del menu, la pulizia viene completata al successivo accesso senza riavviare Esplora file durante il lavoro.
+Per rimuovere il programma usa **Impostazioni Windows → App → App installate → Convert Here → Disinstalla**, oppure il collegamento nel menu Start. Le preferenze e i file convertiti restano conservati. Se Windows mantiene caricata la DLL del menu, la pulizia viene completata al successivo accesso senza riavviare Esplora file durante il lavoro.
 
 È disponibile anche l'archivio portable: estrailo in una cartella stabile, esegui `scripts/install-runtime-tools.ps1 -InstallDirectory <cartella>` per i motori e, se desideri il menu, `scripts/install-context-menu.ps1 -Mode Classic -InstallDirectory <cartella>`.
 
@@ -44,18 +46,50 @@ Per default i risultati sono accanto agli originali. Se il nome esiste già, vie
 
 ## Conversioni
 
+Sono disponibili **44 formati di destinazione** e **93 estensioni di ingresso riconosciute**. Le destinazioni proposte dipendono dalla categoria del file e i codec disponibili dai motori selezionati.
+
 | Sorgente | Destinazioni | Motore |
 | --- | --- | --- |
-| Audio: MP3, MPGA, WAV, FLAC, AAC, M4A, OGG, Opus, AIFF, WMA, ALAC, APE | MP3, WAV, FLAC, AAC, OGG, Opus, AIFF | FFmpeg |
+| Audio: MP3, MPGA, WAV, FLAC, AAC, M4A/M4B, OGG/OGA, Opus, AIFF/AIFC, WMA, ALAC, APE, MKA, MP2, WebA, AC3, AU, CAF, AMR, DTS, TTA, VOC, WV, TAK, W64, RA | MP3, WAV, FLAC, AAC, OGG, Opus, AIFF, M4A (AAC), WMA, AC3, AU, CAF (ALAC) | FFmpeg |
 | Audio supportati | TXT, trascrizione del parlato | OpenAI GPT-Transcribe facoltativo; FFmpeg per preparare formati non accettati direttamente o file grandi |
-| Video: MP4, MKV, MOV, WebM, AVI, WMV, MPEG, M4V, TS, MTS, M2TS, 3GP, FLV | MP4, MKV, MOV, WebM, AVI, GIF animato; estrazione audio nei sette formati sopra | FFmpeg |
-| Immagini: PNG, JPEG, WebP, BMP, TIFF, GIF, ICO | PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, PDF | Rust, senza programmi esterni |
-| PDF | PNG/JPEG, una immagine per pagina; TXT con testo incorporato | Poppler |
-| DOC/DOCX, ODT, RTF, TXT, XLS/XLSX, ODS, PPT/PPTX, ODP | PDF | LibreOffice opzionale |
+| Video: MP4, MKV, MOV, WebM, AVI, WMV, MPEG, M4V, TS/MTS/M2TS/M2T, 3GP/3G2, FLV, ASF, VOB, OGV, M2V, MXF, F4V, DivX, MPE, MPV | MP4, MKV, MOV, WebM, AVI, GIF animato, MPEG, WMV, FLV, TS, M4V, 3GP; estrazione audio nei dodici formati sopra | FFmpeg |
+| Immagini native: PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld (.ff), OpenEXR, HDR, PNM/PAM/PBM/PGM/PPM | PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, PDF, QOI, TGA, Farbfeld, OpenEXR, HDR, PNM; HEIC, AVIF; TXT con OCR | Rust per i formati nativi e PDF; libheif per creare HEIC/AVIF; Tesseract per TXT |
+| HEIC/HEIF, AVIF | Destinazioni immagine sopra, PDF e TXT con OCR | libheif per la lettura; Tesseract per TXT |
+| PDF | PNG/JPEG, una immagine per pagina; TXT, Word DOCX e HTML dal testo incorporato o con OCR | Poppler per immagini e testo incorporato; Tesseract + Poppler per OCR; DOCX e HTML ricostruiti dall'app |
+| PDF | PDF compresso senza perdita, un PDF per pagina, unione di piu PDF | Rust, senza motori esterni |
+| DOC/DOCX, ODT, RTF, TXT, PPT/PPTX, ODP | PDF | LibreOffice opzionale |
+| XLS/XLSX/XLSM, ODS, CSV | CSV, Excel XLSX, PDF | LibreOffice opzionale |
+| HTML/HTM | PDF | LibreOffice opzionale |
 
 L'estensione determina la categoria proposta; il motore verifica il contenuto durante la conversione. File protetti, corrotti o con codec non disponibili producono un errore leggibile.
 
-Impostazioni disponibili: preset leggero/bilanciato/alta qualità, bitrate, frequenza e canali audio, normalizzazione, H.264/H.265, qualità video, larghezza, FPS, taglio temporale, qualità JPEG, ridimensionamento immagini e DPI dei PDF. L'interfaccia mostra solo i controlli pertinenti. Per WebM si usa VP9/Opus, per AVI MPEG-4/MP3; WAV e AIFF sono PCM 16 bit. I PDF creati da immagini sono A4 con proporzioni mantenute e sfondo bianco.
+Impostazioni disponibili: preset leggero/bilanciato/alta qualità, bitrate, frequenza e canali audio, normalizzazione, H.264/H.265, qualità video, larghezza, FPS, taglio temporale, qualità JPEG, ridimensionamento immagini e DPI dei PDF. L'interfaccia mostra solo i controlli pertinenti. Per WebM si usa VP9/Opus, per AVI MPEG-4/MP3, per MPEG MPEG-2/MP2, per WMV WMV2/WMA2, per FLV FLV1/MP3, per 3GP MPEG-4/AAC, per TS H.264/AAC. M4V e un contenitore MP4 con audio; WAV, AIFF e AU sono PCM 16 bit, CAF usa ALAC senza perdita. I PDF creati da immagini sono A4 con proporzioni mantenute e sfondo bianco.
+
+### Excel, CSV, Word e HTML
+
+Excel e CSV vengono convertiti con un profilo LibreOffice temporaneo separato, che disabilita macro e aggiornamento dei collegamenti Office. L'esportazione CSV produce **il primo foglio**, in UTF-8 con delimitatore virgolette; conserva i valori visualizzati, senza formule, formattazione o altri fogli. Puoi scegliere **virgola, punto e virgola, tab o pipe**, con la stessa impostazione per importazione ed esportazione. La virgola e il default. L'importazione conserva come testo i campi quotati, incluse le cifre iniziali degli identificativi, e non valuta le formule. Le altre codifiche vanno prima convertite in UTF-8; il separatore non viene indovinato automaticamente.
+
+PDF → Word/HTML ricostruisce **solo il testo**, conservando la separazione delle pagine in un singolo file modificabile. Di default usa il testo incorporato; puoi attivare OCR locale per riconoscerlo dalle scansioni. Immagini, tabelle, font e impaginazione originali non vengono ricostruiti. L'HTML esportato contiene il testo escapato e gli stili nel file, senza risorse esterne.
+
+HTML → PDF usa il motore di LibreOffice per documenti HTML: supporta HTML/CSS di base e non esegue JavaScript. Non sostituisce la stampa di una pagina dinamica da browser; l'impaginazione puo cambiare. Durante l'apertura di HTML, il motore puo leggere risorse collegate locali o remote, ad esempio immagini e CSS.
+
+### Immagini HEIC e AVIF
+
+Puoi leggere HEIC/HEIF e AVIF, convertirli nei formati immagine nativi o in PDF, e creare HEIC o AVIF dalle immagini supportate. In **Strumenti** seleziona `heif-dec.exe` per leggere e `heif-enc.exe` per creare questi formati. Sono strumenti di [libheif](https://github.com/strukturag/libheif), facoltativi e non inclusi: mantieni insieme eseguibili, DLL e plugin. La build deve includere i decoder e gli encoder HEVC/AV1 richiesti; se mancano, l'app mostra l'errore del motore. Per HEIC/AVIF puoi regolare larghezza e qualita. Dei contenitori con piu immagini viene usata la prima; sequenze e animazioni non vengono conservate.
+
+Gli altri formati immagine sono nativi e non richiedono FFmpeg. HDR non conserva la trasparenza, che viene composta su bianco. OpenEXR e HDR possono conservare valori a virgola mobile; convertirli in formati ordinari puo ridurne precisione e gamma dinamica. JPEG XL, RAW fotografici e DDS non sono attualmente inclusi. I codec audio/video disponibili dipendono dalla build FFmpeg selezionata.
+
+### OCR locale di immagini e scansioni PDF
+
+Per un'immagine scegli **TXT · OCR locale**. Per un PDF scegli TXT, Word DOCX o HTML e abilita **OCR locale**: il riconoscimento e disattivato per default e, quando attivo, elabora tutte le pagine invece di estrarre il testo incorporato. Sono necessari [Tesseract](https://tesseract-ocr.github.io/tessdoc/Installation.html) e i [modelli delle lingue](https://github.com/tesseract-ocr/tessdata_fast); i PDF richiedono anche `pdftoppm.exe` di Poppler. In **Strumenti** indica `tesseract.exe` e conserva accanto la cartella `tessdata` con i modelli richiesti, per esempio `ita.traineddata` e `eng.traineddata`.
+
+La lingua predefinita e `ita+eng`; puoi scegliere altri codici Tesseract installati. I DPI PDF determinano la risoluzione delle pagine da riconoscere: 300 DPI e un punto di partenza utile. Le immagini vengono orientate secondo EXIF e la trasparenza viene composta su bianco. Il testo resta sul PC, senza OpenAI o costi API. Il riconoscimento puo sbagliare e va riletto; non ricostruisce l'impaginazione e non aggiunge uno strato ricercabile al PDF originale. Se non viene riconosciuto testo, l'app segnala l'errore senza creare un risultato vuoto.
+
+### Comprimi, dividi e unisci PDF
+
+Nella finestra delle opzioni, seleziona soltanto PDF e scegli **PDF · comprimi / dividi / unisci**. **Comprimi senza perdita** ottimizza i flussi senza ricampionare le immagini e crea `nome-compresso.pdf`; se la riscrittura sarebbe piu grande, salva una copia dei byte originali. Il risultato non supera le dimensioni del file letto e puo restare della stessa dimensione. **Dividi: una pagina per file** produce `nome-pagina-001.pdf`, `nome-pagina-002.pdf` e cosi via. **Unisci i PDF della lista** crea un solo `primo-unito.pdf` nell'ordine mostrato: usa le frecce della lista per cambiarlo. I nomi esistenti vengono preservati con la consueta numerazione.
+
+Queste operazioni sono locali e non richiedono motori esterni. Rifiutano PDF cifrati o con firme digitali. Unione e divisione rifiutano anche moduli interattivi: conservano i contenuti delle pagine, ma non trasferiscono segnalibri, struttura accessibile/tag o metadati del documento. La compressione mantiene il catalogo e i moduli; non e una rimozione dei metadati. Non e disponibile la modifica libera del contenuto delle pagine.
 
 ### Trascrizione audio TXT con OpenAI, facoltativa
 
@@ -65,7 +99,7 @@ La credenziale Windows e separata dai file dell'app e non viene eliminata automa
 
 Dopo l'abilitazione, **TXT con OpenAI** e disponibile per gli audio compatibili con l'app. Sceglierlo avvia una trascrizione online: l'audio viene inviato via HTTPS a `api.openai.com/v1/audio/transcriptions`, usando il modello `gpt-transcribe`. Puoi lasciare il riconoscimento automatico della lingua o indicarne una. I video non hanno questa destinazione: prima estrai l'audio in un formato supportato. Il TXT da un PDF rimane invece estrazione locale con Poppler, senza OpenAI.
 
-Occorre un account OpenAI API con accesso e fatturazione disponibili. Gli eventuali costi sono a carico di quell'account, separati dall'abbonamento ChatGPT; The Converter non acquista credito e non include chiamate API. Verifica le [tariffe OpenAI](https://developers.openai.com/api/docs/pricing) prima dell'uso.
+Occorre un account OpenAI API con accesso e fatturazione disponibili. Gli eventuali costi sono a carico di quell'account, separati dall'abbonamento ChatGPT; Convert Here non acquista credito e non include chiamate API. Verifica le [tariffe OpenAI](https://developers.openai.com/api/docs/pricing) prima dell'uso.
 
 Gli audio in un formato accettato direttamente e fino alla soglia prudenziale di 24 MB (24.000.000 byte) vengono inviati senza FFmpeg. Negli altri casi FFmpeg prepara localmente MP3 mono a 16 kHz/64 kbit/s, suddivisi in segmenti di circa 20 minuti; l'app li invia in sequenza e unisce i testi. OpenAI documenta un limite di 25 MB per file. Il TXT viene pubblicato soltanto a lavoro completo; non ci sono tentativi automatici dopo un errore. Annullare non ritira l'audio gia inviato e non annulla eventuali costi maturati. [Requisiti dell'API](https://developers.openai.com/api/docs/guides/speech-to-text).
 
@@ -75,11 +109,12 @@ Il testo mantiene la lingua parlata, senza traduzione, timestamp o riconosciment
 
 ### Limiti espliciti
 
-- Nessun OCR: un PDF scansionato può essere esportato in immagini; per TXT occorre testo incorporato.
+- OCR richiede Tesseract e i modelli delle lingue; per i PDF serve anche Poppler. E riconoscimento del testo, senza ricostruzione della grafica o del layout.
 - Le immagini GIF animate e i TIFF multipagina sono letti dal primo fotogramma/pagina. La conversione da video a GIF conserva l'animazione.
 - WebP è codificato senza perdita. La qualità JPEG non influisce sui formati senza perdita.
-- Ogni immagine genera il proprio PDF. Unione, modifica e compressione di PDF non sono incluse.
-- I documenti Office richiedono LibreOffice installato o configurato; l'impaginazione dipende anche dai font disponibili.
+- Ogni immagine genera il proprio PDF. Puoi poi unire i PDF nell'ordine scelto; unione e divisione non trasferiscono segnalibri, tag o metadati e rifiutano moduli interattivi. Le operazioni PDF rifiutano documenti cifrati o firmati.
+- I documenti Office, i fogli di calcolo, i CSV e HTML in PDF richiedono LibreOffice installato o configurato; l'impaginazione dipende anche dai font disponibili.
+- PDF in DOCX/HTML e una ricostruzione del testo, senza immagini o impaginazione originale. Excel in CSV esporta soltanto il primo foglio e perde formule e formattazione.
 - La coda interattiva usa un formato comune ai file selezionati. Se le categorie non hanno una destinazione comune, vanno convertite in gruppi separati.
 - Le conversioni rapide lavorano in coda in background. La finestra di stato si apre su richiesta dal segnaposto, mentre la finestra principale mostra la coda completa. Il resoconto conserva l'ultima esecuzione rapida; chiudere la finestra di stato non interrompe il lavoro.
 
@@ -107,7 +142,7 @@ Per le prove con un certificato di sviluppo, su Windows 11 build 26200 il trust 
 
 L'app cerca gli strumenti nella cartella `tools` accanto all'eseguibile, nel `PATH`, nelle impostazioni salvate e nella cartella indicata dalla variabile `THE_CONVERTER_TOOLS`. I percorsi possono essere scelti nella finestra **Strumenti**. LibreOffice viene cercato anche nella sua posizione standard di installazione.
 
-La distribuzione locale di sviluppo può includere FFmpeg e Poppler. L'installer e l'archivio portable pubblici li scaricano separatamente dagli upstream su richiesta. L'app non richiede Python, Node, WebView o un'installazione Rust per essere eseguita. LibreOffice non è incluso.
+La distribuzione locale di sviluppo può includere FFmpeg e Poppler. L'installer e l'archivio portable pubblici li scaricano separatamente dagli upstream su richiesta. LibreOffice, libheif, Tesseract e i modelli OCR non sono inclusi ne scaricati automaticamente: configura installazioni locali nella finestra Strumenti. Le copie estratte sotto `.tools/` per i test non fanno parte dei pacchetti pubblici. L'app non richiede Python, Node, WebView o un'installazione Rust per essere eseguita.
 
 Le preferenze si trovano nella cartella di configurazione utente `SalvatoreCorsi\TheConverter\config` sotto `%APPDATA%`: `preferences.json` e `report-last.json`. Il resoconto include percorsi locali ed errori e non viene trasmesso. La conversione interattiva mantiene i propri risultati nella coda corrente.
 
@@ -145,10 +180,22 @@ Usa l'eseguibile console dedicato, che restituisce output, diagnostica e codici 
 .\the-converter-cli.exe --diagnose
 .\the-converter-cli.exe --convert --target mp3 --preset quality --files "C:\Video\clip.mp4"
 .\the-converter-cli.exe --convert --target png --output-dir "C:\Risultati" --files "C:\Documenti\file.pdf"
+.\the-converter-cli.exe --convert --target csv --files "C:\Documenti\tabella.xlsx"
+.\the-converter-cli.exe --convert --target xlsx --csv-separator semicolon --files "C:\Documenti\tabella.csv"
+.\the-converter-cli.exe --convert --target docx --files "C:\Documenti\file.pdf"
+.\the-converter-cli.exe --convert --target docx --ocr --ocr-language ita+eng --files "C:\Documenti\scansione.pdf"
+.\the-converter-cli.exe --convert --target txt --ocr-language ita+eng --files "C:\Documenti\scansione.png"
+.\the-converter-cli.exe --convert --target avif --files "C:\Immagini\foto.heic"
+.\the-converter-cli.exe --convert --target pdf --files "C:\Documenti\pagina.html"
+.\the-converter-cli.exe --convert --target pdf --pdf-action compress --files "C:\Documenti\file.pdf"
+.\the-converter-cli.exe --convert --target pdf --pdf-action split --files "C:\Documenti\file.pdf"
+.\the-converter-cli.exe --convert --target pdf --pdf-action merge --files "C:\Documenti\prima.pdf" "C:\Documenti\seconda.pdf"
 .\the-converter-cli.exe --convert --settings .\settings.json --files "C:\Audio\registrazione.wav"
 ```
 
 `--convert` lavora senza UI, continua sugli altri file dopo un errore e termina con codice non zero se almeno una conversione fallisce. Ctrl+C annulla il processo e pulisce i temporanei. I percorsi sono passati direttamente ai processi senza interpolazione in una shell.
+
+`--pdf-action compress|split|merge` richiede destinazione PDF e soli PDF in ingresso; il default e `compress`. L'unione richiede almeno due file e rispetta l'ordine degli argomenti. `--ocr` attiva il riconoscimento delle scansioni PDF nelle destinazioni testuali; immagini in TXT usano sempre OCR. `--ocr-language ita+eng` sceglie i modelli, senza attivare da solo OCR dei PDF. `--csv-separator comma|semicolon|tab|pipe` sceglie il separatore sia in ingresso sia in uscita; il default e `comma`.
 
 Esempio di impostazioni JSON (i campi omessi usano i default):
 
@@ -169,7 +216,7 @@ cargo test --locked --manifest-path .\shell-extension\Cargo.toml
 .\scripts\test-shell-extension.ps1
 ```
 
-I test esterni usano i motori trovati localmente; se FFmpeg/Poppler mancano, i relativi fixture vengono saltati esplicitamente. Le verifiche del menu caricano la DLL e usano le API COM di Windows senza registrarla. La comparsa effettiva nel menu moderno richiede un'installazione firmata e una verifica su Windows 11.
+I test esterni usano i motori trovati localmente; se FFmpeg, Poppler, LibreOffice, Tesseract o libheif mancano, i relativi fixture vengono saltati esplicitamente. I fixture verificano codec e decodifica dei nuovi contenitori, roundtrip HEIC/AVIF e degli altri formati immagine, precisione HDR, i quattro separatori CSV con Unicode/virgolette/righe multiple e formule trattate come testo, primo foglio Excel, ricostruzione PDF in DOCX/HTML con e senza OCR, ordine delle pagine, compressione/unione/divisione PDF, collisioni dei nomi, annullamento e coda. Le verifiche del menu caricano la DLL e usano le API COM di Windows senza registrarla; una verifica di parita confronta tutte le estensioni e destinazioni della DLL con il modello applicativo. La comparsa effettiva nel menu moderno richiede un'installazione firmata e una verifica su Windows 11.
 
 I test automatici della trascrizione usano un servizio simulato locale, senza inviare audio a OpenAI o sostenere costi API. Non costituiscono una prova di accesso, fatturazione o disponibilita del servizio reale. I report di verifica si riferiscono al pacchetto e al codice effettivamente testati: quelli precedenti all'integrazione OpenAI non coprono questa funzione.
 

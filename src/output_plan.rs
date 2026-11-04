@@ -1,7 +1,7 @@
 //! Names are reserved before a job enters the queue; only complete media are published.
-use super::{Progress, cancelled, convert, stem, validate};
+use super::{Progress, cancelled, convert, stem, validate_for_input};
 use crate::{
-    model::{ConversionSettings, MediaKind, OutputFormat, supported_formats},
+    model::{ConversionSettings, MediaKind, OutputFormat, PdfAction, supported_formats},
     tools::ToolPaths,
 };
 use anyhow::{Context, Result, bail};
@@ -247,8 +247,14 @@ pub fn prepare(
             settings.format
         );
     }
-    validate(settings)?;
-    if let Some(message) = tools.missing_for(kind, settings.format) {
+    validate_for_input(&input, settings)?;
+    if kind == MediaKind::Pdf
+        && settings.format == OutputFormat::Pdf
+        && settings.pdf.action == PdfAction::Merge
+    {
+        bail!("L'unione PDF si avvia dalla selezione di gruppo nell'app o nella CLI");
+    }
+    if let Some(message) = tools.missing_for_input(&input, settings) {
         bail!("{message}");
     }
     let destination = settings
@@ -270,7 +276,9 @@ pub fn prepare(
     };
     let result = (|| -> Result<()> {
         let names = if kind == MediaKind::Pdf
-            && matches!(plan.settings.format, OutputFormat::Png | OutputFormat::Jpg)
+            && (matches!(plan.settings.format, OutputFormat::Png | OutputFormat::Jpg)
+                || plan.settings.format == OutputFormat::Pdf
+                    && plan.settings.pdf.action == PdfAction::Split)
         {
             let document = lopdf::Document::load(&plan.input)
                 .context("Impossibile leggere le pagine del PDF")?;
@@ -284,6 +292,8 @@ pub fn prepare(
             (1..=count)
                 .map(|page| format!("{}-pagina-{page:03}", stem(&plan.input)))
                 .collect::<Vec<_>>()
+        } else if kind == MediaKind::Pdf && plan.settings.format == OutputFormat::Pdf {
+            vec![format!("{}-compresso", stem(&plan.input))]
         } else {
             vec![stem(&plan.input)]
         };
@@ -393,7 +403,7 @@ pub fn validate_prepared(plan: &PreparedConversion) -> Result<()> {
     {
         bail!("Piano di conversione non valido");
     }
-    validate(&plan.settings)?;
+    validate_for_input(&plan.input, &plan.settings)?;
     let mut paths = std::collections::HashSet::new();
     for output in &plan.outputs {
         if output.path.extension().and_then(|value| value.to_str())
@@ -472,7 +482,7 @@ struct Published {
 }
 
 #[cfg(windows)]
-fn identity(file: &File) -> std::io::Result<(u32, u64)> {
+pub(crate) fn identity(file: &File) -> std::io::Result<(u32, u64)> {
     use std::os::windows::io::AsRawHandle;
     #[repr(C)]
     #[derive(Default)]
@@ -503,7 +513,7 @@ fn identity(file: &File) -> std::io::Result<(u32, u64)> {
 }
 
 #[cfg(not(windows))]
-fn identity(file: &File) -> std::io::Result<(u64, u64)> {
+pub(crate) fn identity(file: &File) -> std::io::Result<(u64, u64)> {
     use std::os::unix::fs::MetadataExt;
     let metadata = file.metadata()?;
     Ok((metadata.dev(), metadata.ino()))

@@ -48,7 +48,7 @@ function Get-ModernMenuPackageInfo {
     $publisher = $identity.GetAttribute('Publisher')
     $versionText = $identity.GetAttribute('Version')
     if ($name -cne 'SalvatoreCorsi.TheConverter' -or [string]::IsNullOrWhiteSpace($publisher) -or
-        $identity.GetAttribute('ProcessorArchitecture') -cne 'x64') { throw 'Il pacchetto non e l identita x64 di The Converter.' }
+        $identity.GetAttribute('ProcessorArchitecture') -cne 'x64') { throw 'Il pacchetto non e l identita x64 di Convert Here.' }
     if ($versionText -notmatch '^\d+\.\d+\.\d+\.\d+$') { throw 'Versione identita MSIX non valida.' }
     $version = [version]$versionText
     foreach ($part in @($version.Major, $version.Minor, $version.Build, $version.Revision)) {

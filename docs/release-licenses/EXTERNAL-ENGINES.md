@@ -1,8 +1,8 @@
 # Motori esterni: provenienza e scelta di distribuzione
 
-L'installer pubblico e il pacchetto portable di questa release contengono l'app Rust, la CLI e l'estensione Explorer. **Non contengono i binari FFmpeg, Poppler o LibreOffice.** Le conversioni di immagini e immagini in PDF sono implementate nell'app; le altre funzioni usano programmi separati installati dall'utente o scaricati direttamente dai rispettivi distributori.
+L'installer pubblico e il pacchetto portable di questa release contengono l'app Rust, la CLI e l'estensione Explorer. **Non contengono binari FFmpeg, Poppler, LibreOffice, Tesseract o libheif, ne modelli OCR.** Le conversioni dei formati immagine nativi, immagini in PDF e le operazioni di compressione/divisione/unione PDF sono implementate nell'app. Le altre funzioni usano programmi separati installati dall'utente o scaricati direttamente dai rispettivi distributori.
 
-Il download facoltativo dei motori usa versioni fissate e verifica gli SHA-256 prima dell'estrazione. Conserva la documentazione presente negli archivi di origine.
+Il download facoltativo di FFmpeg e Poppler usa versioni fissate e verifica gli SHA-256 prima dell'estrazione. Conserva la documentazione presente negli archivi di origine. LibreOffice, Tesseract, i modelli OCR e libheif vengono configurati separatamente e non sono scaricati automaticamente.
 
 | Motore | Archivio di origine | SHA-256 |
 | --- | --- | --- |
@@ -18,3 +18,22 @@ Per pubblicare in futuro un bundle che ospiti questi binari insieme all'app, la 
 Fonti: [condizioni FFmpeg](https://ffmpeg.org/legal.html), [GPL v3, sezione 6](https://www.gnu.org/licenses/gpl-3.0.html#section6), [FAQ GNU sulla redistribuzione di binari invariati](https://www.gnu.org/licenses/gpl-faq.html#UnchangedJustBinary), [MPL 2.0, sezione 3.2](https://www.mozilla.org/en-US/MPL/2.0/).
 
 LibreOffice è facoltativo e non è incluso né scaricato automaticamente da questa release. [Licenze LibreOffice](https://www.libreoffice.org/about-us/licenses/).
+
+## Runtime di verifica locali
+
+Le cartelle `.tools/` sono escluse da Git e dal pacchetto pubblico. I runtime seguenti sono stati estratti nel workspace per provare le funzioni effettive; non sono motori distribuiti insieme all'app e non cambiano le versioni scaricate dagli script pubblici.
+
+### Tesseract e tessdata_fast
+
+- Motore: `tesseract-ocr-w64-setup-5.5.3.20260724.exe` dalla [release ufficiale Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract/releases/tag/5.5.3), collegata dalla [pagina Windows di UB Mannheim](https://github.com/UB-Mannheim/tesseract/wiki), a sua volta indicata nella [documentazione Tesseract](https://tesseract-ocr.github.io/tessdoc/Installation.html).
+- Estrazione locale: `.tools/tesseract-validation/runtime/`, senza installazione globale o modifica del PATH persistente.
+- Modelli: `eng.traineddata` e `ita.traineddata` dal repository ufficiale [tessdata_fast](https://github.com/tesseract-ocr/tessdata_fast), nella cartella `tessdata` del runtime.
+- Licenze: [Tesseract Apache-2.0](https://github.com/tesseract-ocr/tesseract/blob/main/LICENSE) e [tessdata_fast Apache-2.0](https://github.com/tesseract-ocr/tessdata_fast/blob/main/LICENSE). Le dipendenze della build, comprese le librerie per immagini, mantengono le licenze della distribuzione di origine.
+
+### libheif
+
+L'app usa la coppia CLI `heif-dec.exe`/`heif-enc.exe` con DLL e plugin della stessa installazione. Le copie MSYS2 estratte sotto `.tools/libheif-validation/` sono soltanto runtime di test; non vengono ri-ospitate in un artefatto pubblico.
+
+La verifica usa **MSYS2 UCRT64 libheif 1.23.7-1** dall'[archivio del distributore](https://mirror.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-libheif-1.23.7-1-any.pkg.tar.zst), SHA-256 `394f86529164f878b78e505f0585ddfb12b20c55e965467551c3264a54416cc5`. Il runtime comprende 35 dipendenze risolte da MSYS2; database e archivi sono conservati nelle sottocartelle locali `db/` e `packages/`, con la verifica degli archivi eseguita dallo script di preparazione `fetch.py` del workspace. Questa e provenienza dei test, non una nuova distribuzione pubblica.
+
+Riferimenti: [sorgenti libheif](https://github.com/strukturag/libheif), [licenze upstream](https://github.com/strukturag/libheif/blob/master/COPYING), [codec e plugin](https://github.com/strukturag/libheif#supported-features). La libreria e sotto GNU LGPL v3; le applicazioni di esempio e i wrapper sono sotto MIT. Ogni codec e dipendenza conserva la propria licenza; il contenuto effettivo dipende dalla build selezionata.

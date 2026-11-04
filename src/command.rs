@@ -9,7 +9,7 @@ use std::{
 };
 use the_converter::{
     engine,
-    model::{ConversionSettings, OutputFormat},
+    model::{ConversionSettings, CsvDelimiter, MediaKind, OutputFormat, PdfAction},
     queue,
     tools::ToolPaths,
 };
@@ -17,7 +17,7 @@ use the_converter::{
 #[derive(Parser, Debug)]
 #[command(
     version,
-    about = "The Converter — audio, video, immagini e PDF sul tuo PC"
+    about = "Convert Here — audio, video, immagini e PDF sul tuo PC"
 )]
 struct Args {
     /// File da aprire nella finestra. Usa -- prima di nomi che iniziano con un trattino.
@@ -48,6 +48,18 @@ struct Args {
     settings: Option<PathBuf>,
     #[arg(long, value_enum, requires = "convert")]
     preset: Option<Preset>,
+    /// Operazione sui PDF: compress, split (una pagina per file), merge (ordine dei file).
+    #[arg(long, value_enum, requires = "convert")]
+    pdf_action: Option<PdfCommand>,
+    /// Riconosci testo da scansioni PDF con Tesseract locale.
+    #[arg(long, requires = "convert")]
+    ocr: bool,
+    /// Lingue Tesseract installate, per esempio ita+eng.
+    #[arg(long, requires = "convert")]
+    ocr_language: Option<String>,
+    /// Separatore CSV in ingresso e uscita: comma, semicolon, tab, pipe.
+    #[arg(long, value_enum, requires = "convert")]
+    csv_separator: Option<CsvSeparator>,
     /// Mostra i percorsi dei motori disponibili in JSON.
     #[arg(long)]
     diagnose: bool,
@@ -61,6 +73,21 @@ enum Preset {
     Compact,
     Balanced,
     Quality,
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum PdfCommand {
+    Compress,
+    Split,
+    Merge,
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum CsvSeparator {
+    Comma,
+    Semicolon,
+    Tab,
+    Pipe,
 }
 
 fn parse_format(value: &str) -> std::result::Result<OutputFormat, String> {
@@ -146,6 +173,47 @@ fn run(args: Args) -> Result<()> {
     if let Some(dir) = args.output_dir {
         settings.output_dir = Some(dir);
     }
+    if let Some(action) = args.pdf_action {
+        settings.pdf.action = match action {
+            PdfCommand::Compress => PdfAction::Compress,
+            PdfCommand::Split => PdfAction::Split,
+            PdfCommand::Merge => PdfAction::Merge,
+        };
+        if settings.format != OutputFormat::Pdf
+            || files
+                .iter()
+                .any(|path| MediaKind::from_path(path) != MediaKind::Pdf)
+        {
+            bail!("--pdf-action richiede --target pdf e soltanto PDF in ingresso");
+        }
+    }
+    if args.ocr {
+        if !matches!(
+            settings.format,
+            OutputFormat::Txt | OutputFormat::Docx | OutputFormat::Html
+        ) || files.iter().any(|path| {
+            !matches!(
+                MediaKind::from_path(path),
+                MediaKind::Image | MediaKind::Pdf
+            )
+        }) {
+            bail!(
+                "--ocr richiede immagini o PDF e una destinazione testuale TXT, DOCX o HTML compatibile"
+            );
+        }
+        settings.ocr.enabled = true;
+    }
+    if let Some(language) = args.ocr_language {
+        settings.ocr.language = language;
+    }
+    if let Some(separator) = args.csv_separator {
+        settings.csv.delimiter = match separator {
+            CsvSeparator::Comma => CsvDelimiter::Comma,
+            CsvSeparator::Semicolon => CsvDelimiter::Semicolon,
+            CsvSeparator::Tab => CsvDelimiter::Tab,
+            CsvSeparator::Pipe => CsvDelimiter::Pipe,
+        };
+    }
     if let Some(preset) = args.preset {
         let (bitrate, crf, quality) = match preset {
             Preset::Compact => (128, 28, 75),
@@ -162,6 +230,15 @@ fn run(args: Args) -> Result<()> {
     ctrlc::set_handler(move || {
         signal.store(true, Ordering::Relaxed);
     })?;
+    if settings.format == OutputFormat::Pdf && settings.pdf.action == PdfAction::Merge {
+        let outputs = engine::merge_pdfs(&files, &settings, &cancel, |progress| {
+            eprintln!("{:3.0}% {}", progress.fraction * 100.0, progress.message);
+        })?;
+        for output in outputs {
+            println!("{}", output.display());
+        }
+        return Ok(());
+    }
     let mut failures = 0;
     for file in files {
         if cancel.load(Ordering::Relaxed) {
@@ -194,6 +271,9 @@ fn quick_convert(files: Vec<PathBuf>, format: OutputFormat) -> Result<()> {
     }
     let (mut settings, tools) = crate::app::quick_configuration();
     settings.format = format;
+    if format == OutputFormat::Pdf {
+        settings.pdf.action = PdfAction::Compress;
+    }
     let submission = queue::enqueue(&files, &settings, &tools, &std::env::current_exe()?)?;
     if !submission.errors.is_empty() {
         let details = submission
@@ -218,7 +298,7 @@ pub fn main() {
         eprintln!("{error:#}");
         if !headless {
             rfd::MessageDialog::new()
-                .set_title("The Converter")
+                .set_title("Convert Here")
                 .set_description(format!("{error:#}"))
                 .set_level(rfd::MessageLevel::Error)
                 .show();
@@ -249,5 +329,61 @@ mod tests {
         assert!(parse_format("exe").is_err());
         assert_eq!(parse_format(".MP3").unwrap(), OutputFormat::Mp3);
         assert!(Args::try_parse_from(["the-converter", "--convert", "--target", "exe"]).is_err());
+    }
+
+    #[test]
+    fn explicit_pdf_ocr_and_csv_options_parse_without_affecting_saved_defaults() {
+        let args = Args::try_parse_from([
+            "converter",
+            "--convert",
+            "--target",
+            "pdf",
+            "--pdf-action",
+            "merge",
+            "--files",
+            "one.pdf",
+            "two.pdf",
+        ])
+        .unwrap();
+        assert!(matches!(args.pdf_action, Some(PdfCommand::Merge)));
+        assert_eq!(args.files.len(), 2);
+        let args = Args::try_parse_from([
+            "converter",
+            "--convert",
+            "--target",
+            "docx",
+            "--ocr",
+            "--ocr-language",
+            "ita+eng",
+            "--files",
+            "scan.pdf",
+        ])
+        .unwrap();
+        assert!(args.ocr);
+        assert_eq!(args.ocr_language.as_deref(), Some("ita+eng"));
+        let args = Args::try_parse_from([
+            "converter",
+            "--convert",
+            "--target",
+            "xlsx",
+            "--csv-separator",
+            "semicolon",
+            "--files",
+            "data.csv",
+        ])
+        .unwrap();
+        assert!(matches!(args.csv_separator, Some(CsvSeparator::Semicolon)));
+        assert!(Args::try_parse_from(["converter", "--pdf-action", "merge"]).is_err());
+        assert!(
+            Args::try_parse_from([
+                "converter",
+                "--convert",
+                "--target",
+                "csv",
+                "--csv-separator",
+                "invalid"
+            ])
+            .is_err()
+        );
     }
 }

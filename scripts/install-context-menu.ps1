@@ -51,7 +51,7 @@ if ($Mode -eq 'Modern') {
         }
     }
     $registered = @($allRegistered | Where-Object { $_.Publisher -ieq $info.Publisher })
-    if ($registered.Count -gt 1) { throw 'Sono presenti piu identita The Converter per questo utente; registrazione interrotta.' }
+    if ($registered.Count -gt 1) { throw 'Sono presenti piu identita Convert Here per questo utente; registrazione interrotta.' }
     $existing = $registered | Select-Object -First 1
     $existingPath = $null
     if ($existing) {
@@ -97,11 +97,11 @@ $classKey = "HKCU:\Software\Classes\CLSID\$classId"
 $menuKey = 'HKCU:\Software\Classes\*\shell\TheConverter'
 # Canonical AQS uses only the fast file-extension property, independent of locale.
 # Keep this input whitelist aligned with target_mask in the Explorer DLL.
-$classicExtensions = @('mp3', 'mpga', 'wav', 'flac', 'aac', 'm4a', 'ogg', 'opus', 'wma', 'aiff', 'aif', 'alac', 'ape', 'mp4', 'mkv', 'mov', 'avi', 'webm', 'wmv', 'm4v', 'mpeg', 'mpg', 'ts', 'mts', 'm2ts', '3gp', 'flv', 'png', 'jpg', 'jpeg', 'webp', 'bmp', 'tif', 'tiff', 'gif', 'ico', 'pdf', 'doc', 'docx', 'odt', 'rtf', 'txt', 'xlsx', 'xls', 'ods', 'ppt', 'pptx', 'odp')
+$classicExtensions = @('mp3', 'mpga', 'wav', 'flac', 'aac', 'm4a', 'ogg', 'opus', 'wma', 'aiff', 'aif', 'alac', 'ape', 'm4b', 'mka', 'mp2', 'oga', 'weba', 'ac3', 'au', 'caf', 'amr', 'dts', 'tta', 'voc', 'wv', 'tak', 'w64', 'aifc', 'ra', 'mp4', 'mkv', 'mov', 'avi', 'webm', 'wmv', 'm4v', 'mpeg', 'mpg', 'ts', 'mts', 'm2ts', '3gp', 'flv', 'asf', 'vob', 'ogv', 'm2v', 'mxf', 'f4v', 'divx', '3g2', 'm2t', 'mpe', 'mpv', 'png', 'jpg', 'jpeg', 'webp', 'bmp', 'tif', 'tiff', 'gif', 'ico', 'qoi', 'tga', 'ff', 'hdr', 'exr', 'pnm', 'pam', 'pbm', 'pgm', 'ppm', 'avif', 'heic', 'heif', 'pdf', 'xls', 'xlsx', 'xlsm', 'ods', 'csv', 'html', 'htm', 'doc', 'docx', 'odt', 'rtf', 'txt', 'ppt', 'pptx', 'odp')
 $appliesTo = ($classicExtensions | ForEach-Object { 'System.FileExtension:=".' + $_ + '"' }) -join ' OR '
-if ($PSCmdlet.ShouldProcess('HKCU\Software\Classes', 'Installa il comando classico The Converter')) {
+if ($PSCmdlet.ShouldProcess('HKCU\Software\Classes', 'Installa il comando classico Convert Here')) {
     New-Item -Path $classKey -Force | Out-Null
-    Set-Item -LiteralPath $classKey -Value 'The Converter Explorer Command'
+    Set-Item -LiteralPath $classKey -Value 'Convert Here Explorer Command'
     $server = New-Item -Path "$classKey\InprocServer32" -Force
     Set-Item -LiteralPath $server.PSPath -Value $library
     New-ItemProperty -LiteralPath $server.PSPath -Name 'ThreadingModel' -Value 'Apartment' -PropertyType String -Force | Out-Null

@@ -2,6 +2,13 @@
 
 The Converter usa una DLL COM Rust con `IExplorerCommand`, lo stesso contratto di Windows per i comandi di Esplora file. Il sottomenu **Converti in** offre i formati compatibili con tutti i file selezionati: scegliere MP3, WAV, PDF o un altro formato avvia direttamente la conversione con le impostazioni salvate. L'ultima voce **Impostazioni personalizzate…** apre la finestra per modificare qualita e destinazione. La conversione viene eseguita in un processo separato da Esplora file.
 
+Per i PDF la voce rapida **PDF · comprimi** applica sempre la compressione senza perdita, anche se nelle preferenze e rimasta selezionata un'altra operazione PDF. Le immagini convertite in PDF continuano a generare un PDF per immagine. **Dividi** e **Unisci** si scelgono esplicitamente nella finestra principale o nella CLI; non vengono avviati dal comando rapido PDF. L'unione segue l'ordine della lista nella finestra o dei percorsi nella CLI.
+
+```powershell
+.\the-converter-cli.exe --convert --target pdf --pdf-action split --files "C:\Documenti\documento.pdf"
+.\the-converter-cli.exe --convert --target pdf --pdf-action merge --files "C:\Documenti\primo.pdf" "C:\Documenti\secondo.pdf"
+```
+
 ## Compilazione x64
 
 Serve Rust per `x86_64-pc-windows-msvc` con i Build Tools C++. Il pacchetto identita si genera con MakeAppx del Windows SDK. Dalla cartella del progetto:
@@ -66,7 +73,11 @@ Questo rimuove il pacchetto identita dell'utente corrente soltanto se appartiene
 
 Il comando accetta fino a 10.000 elementi e passa i percorsi assoluti con un file JSON UTF-8 temporaneo. I formati rapidi lanciano direttamente `the-converter.exe --quick --target <formato> --selection-file <percorso>`; la voce personalizzate omette `--quick` e apre la finestra. In questo modo spazi, Unicode e selezioni lunghe non diventano una riga di comando enorme. Nessun percorso selezionato viene interpolato in PowerShell o `cmd`. Il processo applicazione convalida i percorsi e rimuove il file richiesta dopo averlo letto.
 
-Il padre espone `ECF_HASSUBCOMMANDS` e un vero enumeratore `IEnumExplorerCommand` con `Next`, `Skip`, `Reset` e `Clone`. Il `GetState` di ogni formato controlla la selezione completa e nasconde le conversioni incompatibili. Ad esempio, selezionando audio e video compaiono i sette formati audio comuni; selezionando un'immagine e un PDF compaiono PNG e JPEG. Per piu di 16 elementi la chiamata rapida torna `E_PENDING`, richiedendo a Windows di rieseguire il controllo in background con `fOkToBeSlow`. La DLL non sonda codec o strumenti esterni e non apre i documenti. Elementi virtuali, selezioni vuote ed estensioni sconosciute nascondono il comando.
+Il padre espone `ECF_HASSUBCOMMANDS` e un vero enumeratore `IEnumExplorerCommand` con `Next`, `Skip`, `Reset` e `Clone`. Il `GetState` di ogni formato controlla la selezione completa e nasconde le conversioni incompatibili. Le 93 estensioni riconosciute includono AVIF, HEIC e HEIF; le destinazioni sono 44. Selezionando audio e video compaiono i dodici formati audio comuni; selezionando un'immagine e un PDF compaiono PNG, JPEG, PDF e TXT. Excel/CSV propongono PDF, CSV e XLSX; i PDF propongono anche Word e HTML, esplicitamente indicati come esportazioni del testo.
+
+Il titolo TXT distingue **TXT · OCR** per le immagini, **TXT** per il testo incorporato nei PDF e **TXT con OpenAI** per l'audio quando la trascrizione e abilitata. Le selezioni miste usano **TXT · OCR / testo PDF** oppure **TXT · audio OpenAI / immagini OCR**. Il riferimento a OpenAI ha precedenza quando il gruppo comprende audio: quella parte della conversione invia l'audio online. OCR delle immagini resta locale e richiede Tesseract con i dati delle lingue richieste. Gli strumenti mancanti vengono segnalati dall'app prima di eseguire il lavoro; la presenza della voce nel menu non attesta la disponibilita del motore.
+
+Le maschere interne sono a 64 bit, con i bit superiori riservati alle categorie della selezione. I GUID dei formati precedenti e della voce personalizzate restano stabili quando vengono aggiunti nuovi formati. La whitelist del menu classico e dell'installer corrisponde a quella della DLL; i test confrontano tutte le destinazioni e le 93 estensioni con il modello dell'app. Per piu di 16 elementi la chiamata rapida torna `E_PENDING`, richiedendo a Windows di rieseguire il controllo in background con `fOkToBeSlow`. La DLL non sonda codec o strumenti esterni e non apre i documenti. Elementi virtuali, selezioni vuote ed estensioni sconosciute nascondono il comando.
 
 ## Stato di verifica
 
@@ -78,7 +89,7 @@ cargo test --manifest-path .\shell-extension\Cargo.toml
 .\scripts\test-modern-menu-package.ps1
 ```
 
-Lo smoke test carica la DLL reale senza registrarla, attiva gli oggetti COM e passa veri `IShellItemArray` creati da Windows: verifica il sottomenu e i formati comuni a batch audio/video, immagini/PDF e documenti/immagini, allocazione stringhe e rilascio degli oggetti. La modalita opzionale `-InvokeCaptureFile` e riservata a un helper di test isolato che registra gli argomenti del processo lanciato; verifica separatamente la conversione rapida e l'apertura delle impostazioni.
+Lo smoke test carica la DLL reale senza registrarla, attiva gli oggetti COM e passa veri `IShellItemArray` creati da Windows: verifica il sottomenu e i formati comuni a batch audio/video, immagini/PDF e documenti/immagini, i titoli contestuali OCR/OpenAI e compressione PDF, XLSX/CSV/HTML e immagini QOI/AVIF/HEIF, allocazione stringhe e rilascio degli oggetti. La modalita opzionale `-InvokeCaptureFile` e riservata a un helper di test isolato che registra gli argomenti del processo lanciato; verifica separatamente la conversione rapida e l'apertura delle impostazioni.
 
 I test del pacchetto moderno usano fixture e comandi Appx simulati in un processo Windows PowerShell separato: coprono manifest e asset non validi, firma incoerente, `WhatIf`, registrazione ripetuta, cambio cartella e Publisher, rimozione della sola installazione indicata e propagazione degli errori. Non modificano certificati, registro o pacchetti reali.
 

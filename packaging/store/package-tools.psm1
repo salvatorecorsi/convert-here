@@ -15,7 +15,7 @@ function Get-StorePackageIdentity {
         $identity = [pscustomobject]@{ Name = $config.Name; Publisher = $config.Publisher; DisplayName = $config.DisplayName; PublisherDisplayName = $config.PublisherDisplayName; Version = $config.Version; Mode = 'submission'; ExecutionAlias = 'corsivo-the-converter.exe' }
     } else {
         if ($IdentityConfig) { throw 'IdentityConfig is only accepted with -ForSubmission. Preview uses an explicitly separate identity.' }
-        $identity = [pscustomobject]@{ Name = 'Corsivo.TheConverter.StorePreview'; Publisher = 'CN=Salvatore Corsi'; DisplayName = 'The Converter Store Preview'; PublisherDisplayName = 'Corsivo'; Version = $PreviewVersion; Mode = 'preview'; ExecutionAlias = 'corsivo-the-converter-preview.exe' }
+        $identity = [pscustomobject]@{ Name = 'Corsivo.TheConverter.StorePreview'; Publisher = 'CN=Salvatore Corsi'; DisplayName = 'Convert Here Store Preview'; PublisherDisplayName = 'Corsivo'; Version = $PreviewVersion; Mode = 'preview'; ExecutionAlias = 'corsivo-the-converter-preview.exe' }
     }
     if ($identity.Name -notmatch '^[A-Za-z0-9][A-Za-z0-9.-]{1,48}[A-Za-z0-9]$') { throw 'Store package Name must contain 3-50 letters, digits, periods or hyphens.' }
     if ($identity.Publisher -notmatch '^CN=\S' -or $identity.Publisher.Length -gt 8192) { throw 'Store Publisher must be the exact Partner Center X.500 distinguished name.' }

@@ -3,6 +3,7 @@
 /dist/
 /tools/
 /test-output/
+/packaging/store/identity.partner-center.json
 /shell-extension/target/
 *.pfx
 *.cer

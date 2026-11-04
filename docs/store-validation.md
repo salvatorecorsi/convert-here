@@ -1,6 +1,16 @@
-# Verifiche tecniche — 27 ottobre 2026
+# Verifiche tecniche — 4 novembre 2026
 
 Queste verifiche accompagnano la preparazione Store di Corsivo. Non equivalgono alla certificazione Microsoft e non sostituiscono l'identita reale di Partner Center.
+
+## Nuove conversioni documenti e media
+
+La revisione aggiunge Excel/CSV, HTML in PDF, ricostruzione del testo PDF in Word/HTML e ulteriori formati audio, video e immagini: 42 destinazioni e 90 estensioni riconosciute. Sul codice aggiornato sono passati `cargo test --locked --all-targets` (**89 test**) e i 5 test della DLL shell. Nessun fixture dei nuovi motori e stato saltato: sono stati usati FFmpeg/FFprobe e Poppler del progetto e LibreOffice 26.8.2 estratto in una cartella di validazione, senza installazione nel sistema.
+
+Le prove verificano CSV UTF-8 con virgole, virgolette, Unicode, righe multiple e identificatori con zeri iniziali, formule mantenute come testo durante l'importazione, primo foglio Excel, HTML/RTF in PDF e PDF → DOCX → PDF → TXT con testo conservato. I PDF senza testo incorporato vengono rifiutati per DOCX/HTML con richiesta di OCR. DOCX e HTML sono ricostruzioni del testo, senza immagini o impaginazione originale. Un profilo temporaneo LibreOffice separa ogni conversione e disabilita macro/OLE e aggiornamento dei collegamenti Office; HTML puo comunque leggere le proprie risorse collegate, come dichiarato in interfaccia e privacy.
+
+I fixture media verificano 78 abbinamenti dei sei nuovi formati immagine con i 13 formati immagine nativi, profondita colore, trasparenza e valori HDR superiori a 1. Verificano inoltre codec, decodifica completa e tracce audio dei nuovi contenitori, equivalenza PCM per CAF/AU e tutte le frequenze proposte per Opus/WebM, AC3, WMA/WMV e FLV. Frequenze incompatibili vengono rifiutate prima di creare risultati o prenotazioni.
+
+Clippy con `--all-targets -- -D warnings` passa per app e DLL; formattazione Rust e sintassi dei 16 script PowerShell controllate. Lo smoke test COM reale passa con selezioni miste e file XLSX, CSV, HTML e QOI; la whitelist e coerente fra core, DLL, script di registrazione e installer. I test preservano i GUID dei vecchi comandi dopo l'estensione delle maschere a 64 bit. Non e stata modificata la registrazione del menu installato e questa verifica non e una nuova certificazione Store.
 
 ## Migrazione GPT-Transcribe
 
