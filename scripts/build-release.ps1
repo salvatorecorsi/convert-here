@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$CargoPath = 'cargo',
+    [string]$RustcPath = 'rustc',
     [switch]$SkipBuild,
     [string]$CertificateThumbprint,
     [string]$Publisher,
@@ -45,6 +46,26 @@ if ($CargoPath -eq 'cargo' -and -not (Get-Command cargo -ErrorAction SilentlyCon
     }
 }
 if (-not $SkipBuild) {
+    $gitCheckout = Test-Path -LiteralPath (Join-Path $root '.git')
+    if ($gitCheckout) {
+        $sourceCommit = [string](& git -C $root rev-parse HEAD)
+        if ($LASTEXITCODE -ne 0) { throw 'Impossibile registrare il commit della build.' }
+        $sourceDirty = @(& git -C $root status --porcelain --untracked-files=normal).Count -ne 0
+    } else {
+        $commitFile = Join-Path $root 'SOURCE-COMMIT.txt'
+        $sourceCommit = if (Test-Path -LiteralPath $commitFile) { (Get-Content -LiteralPath $commitFile -Raw).Trim() } else { 'unversioned' }
+        # Extracted GPL sources can build offline without Git. Public source
+        # attribution still requires a verified clean Git checkout.
+        $sourceDirty = $true
+    }
+    if ($RustcPath -eq 'rustc' -and (Test-Path -LiteralPath $CargoPath -PathType Leaf)) {
+        $candidate = Join-Path (Split-Path -Parent $CargoPath) 'rustc.exe'
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) { $RustcPath = $candidate }
+    }
+    $rustcVersion = @(& $RustcPath --version --verbose)
+    if ($LASTEXITCODE -ne 0) { throw 'Impossibile registrare la versione Rust.' }
+    $cargoVersion = [string](& $CargoPath --version)
+    if ($LASTEXITCODE -ne 0) { throw 'Impossibile registrare la versione Cargo.' }
     Push-Location -LiteralPath $root
     $previousManifest = $env:THE_CONVERTER_APP_MANIFEST
     $env:THE_CONVERTER_APP_MANIFEST = $generatedManifest
@@ -53,6 +74,23 @@ if (-not $SkipBuild) {
         if ($LASTEXITCODE -ne 0) { throw 'Compilazione applicazione fallita.' }
         & $CargoPath build --release --locked --manifest-path (Join-Path $root 'shell-extension\Cargo.toml')
         if ($LASTEXITCODE -ne 0) { throw 'Compilazione estensione Explorer fallita.' }
+        $hashes = [ordered]@{}
+        foreach ($entry in @(@('the-converter.exe', 'target\release'), @('the-converter-cli.exe', 'target\release'), @('the_converter_shell.dll', 'shell-extension\target\release'))) {
+            $hashes[$entry[0]] = (Get-FileHash -LiteralPath (Join-Path (Join-Path $root $entry[1]) $entry[0]) -Algorithm SHA256).Hash.ToLowerInvariant()
+        }
+        $afterCommit = $sourceCommit
+        $afterDirty = $sourceDirty
+        if ($gitCheckout) {
+            $afterCommit = [string](& git -C $root rev-parse HEAD)
+            $afterDirty = @(& git -C $root status --porcelain --untracked-files=normal).Count -ne 0
+        }
+        $buildInfo = [ordered]@{
+            SchemaVersion = 1; ApplicationVersion = $versionMatch.Groups[1].Value; SourceCommit = $sourceCommit
+            SourceDirty = $sourceDirty -or $afterCommit -cne $sourceCommit -or $afterDirty
+            CargoVersion = $cargoVersion; RustcVersion = $rustcVersion; RustFlags = [string]$env:RUSTFLAGS
+            Publisher = $Publisher; BinarySHA256 = $hashes; ApplicationManifest = $applicationManifest.OuterXml
+        }
+        [IO.File]::WriteAllText((Join-Path $root 'target\release\convert-here-build-info.json'), ($buildInfo | ConvertTo-Json -Depth 5), [Text.UTF8Encoding]::new($false))
     } finally { $env:THE_CONVERTER_APP_MANIFEST = $previousManifest; Pop-Location }
 }
 Import-Module (Join-Path $PSScriptRoot 'application-manifest.psm1') -Force
@@ -63,6 +101,7 @@ New-Item -ItemType Directory -Path $output -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $root 'target\release\the-converter.exe') -Destination $output -Force
 Copy-Item -LiteralPath (Join-Path $root 'target\release\the-converter-cli.exe') -Destination $output -Force
 Copy-Item -LiteralPath (Join-Path $root 'shell-extension\target\release\the_converter_shell.dll') -Destination $output -Force
+Copy-Item -LiteralPath (Join-Path $root 'target\release\convert-here-build-info.json') -Destination (Join-Path $output 'build-info.json') -Force
 $scriptOutput = Join-Path $output 'scripts'
 New-Item -ItemType Directory -Path $scriptOutput -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'install-context-menu.ps1'), (Join-Path $PSScriptRoot 'uninstall-context-menu.ps1'), (Join-Path $PSScriptRoot 'test-shell-extension.ps1'), (Join-Path $PSScriptRoot 'modern-menu-package.psm1') -Destination $scriptOutput -Force
@@ -74,6 +113,7 @@ if (Test-Path -LiteralPath $mediaTools -PathType Container) {
     Copy-Item -Path (Join-Path $mediaTools '*') -Destination $mediaOutput -Recurse -Force
 }
 if (Test-Path -LiteralPath (Join-Path $root 'README.md')) { Copy-Item -LiteralPath (Join-Path $root 'README.md') -Destination $output -Force }
+Copy-Item -LiteralPath (Join-Path $root 'LICENSE') -Destination $output -Force
 if (Test-Path -LiteralPath (Join-Path $root 'THIRD-PARTY-NOTICES.md')) { Copy-Item -LiteralPath (Join-Path $root 'THIRD-PARTY-NOTICES.md') -Destination $output -Force }
 $docsOutput = Join-Path $output 'docs'
 New-Item -ItemType Directory -Path $docsOutput -Force | Out-Null

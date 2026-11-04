@@ -63,7 +63,7 @@ try {
     $layout = Join-Path $fixture 'layout'
     New-Item -ItemType Directory -Path (Join-Path $layout 'Docs\licenses') -Force | Out-Null
     foreach ($binary in @('the-converter.exe', 'the_converter_shell.dll')) { New-PeFixture (Join-Path $layout $binary) }
-    foreach ($name in @('README.txt', 'THIRD-PARTY-NOTICES.md', 'Docs\licenses\RUST-THIRD-PARTY-LICENSES.txt')) { [IO.File]::WriteAllText((Join-Path $layout $name), 'Fixture text') }
+    foreach ($name in @('README.txt', 'LICENSE', 'THIRD-PARTY-NOTICES.md', 'Docs\licenses\RUST-THIRD-PARTY-LICENSES.txt')) { [IO.File]::WriteAllText((Join-Path $layout $name), 'Fixture text') }
     Write-Json (Join-Path $layout 'Docs\licenses\rust-components.json') @(@{ name = 'fixture'; version = '1'; notice_count = 1 })
     Write-Json (Join-Path $layout 'store-runtime.json') @{ execution_alias = $preview.ExecutionAlias }
     New-StorePackageAssets -SourceImage (Join-Path $root 'assets\app.png') -OutputDirectory (Join-Path $layout 'Assets')
@@ -76,6 +76,9 @@ try {
     Reset-Manifest
     Assert-StorePackageLayout -StageDirectory $layout -Identity $preview
     Assert $true 'Valid full package layout rejected.'
+    Remove-Item -LiteralPath (Join-Path $layout 'LICENSE')
+    Assert-Fails { Assert-StorePackageLayout -StageDirectory $layout -Identity $preview } 'Application license missing from Store package was accepted.'
+    [IO.File]::WriteAllText((Join-Path $layout 'LICENSE'), 'Fixture text')
     $variant = Join-Path $layout 'Assets\Square44x44Logo.scale-200.png'
     [IO.File]::WriteAllText($variant, 'Invalid PNG fixture')
     Assert-Fails { Assert-StorePackageLayout -StageDirectory $layout -Identity $preview } 'Invalid scale variant accepted.'
@@ -149,6 +152,7 @@ try {
         try {
             Assert ($null -ne $archive.GetEntry('the-converter.exe') -and $null -ne $archive.GetEntry('the_converter_shell.dll')) 'Full MSIX did not contain its binaries.'
             Assert ($null -eq $archive.GetEntry('AppxSignature.p7x')) 'Fixture package unexpectedly signed.'
+            Assert ($null -ne $archive.GetEntry('LICENSE')) 'Full MSIX omitted the application license.'
         } finally { $archive.Dispose() }
         Write-Host 'PASS: MakeAppx semantic validation, no /nv, using data-only fixtures.'
     } else { Write-Warning 'Windows SDK MakeAppx unavailable: semantic SDK fixture test skipped.' }

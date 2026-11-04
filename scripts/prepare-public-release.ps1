@@ -4,6 +4,9 @@ param(
     [string]$CompilerPath,
     [string]$Version,
     [string]$IdentityPackagePath,
+    [string]$CargoPath = 'cargo',
+    [string]$RustcPath = 'rustc',
+    [string]$StoreIdentityConfig,
     [switch]$RequireModernMenu
 )
 $ErrorActionPreference = 'Stop'
@@ -37,11 +40,12 @@ $variant = if ($modernInfo) { 'modern' } else { 'classic' }
 $stage = Join-Path $root "dist\public-stage\$Version\$variant\ConvertHere"
 $output = Join-Path $root "dist\releases\v$Version"
 New-Item -ItemType Directory -Force -Path $stage, $output | Out-Null
+$sourceInfo = & (Join-Path $root 'release-support\build-corresponding-source.ps1') -Version $Version -OutputDirectory $output -CargoPath $CargoPath -RustcPath $RustcPath -DistributionDirectory $source -StoreIdentityConfig $StoreIdentityConfig
 # An explicit allowlist keeps local GPL runtime bundles and test artifacts out of public assets.
 foreach ($name in @('the-converter.exe', 'the-converter-cli.exe', 'the_converter_shell.dll')) {
     Copy-Item -LiteralPath (Join-Path $source $name) -Destination $stage -Force
 }
-foreach ($name in @('README.md', 'THIRD-PARTY-NOTICES.md')) {
+foreach ($name in @('README.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md')) {
     Copy-Item -LiteralPath (Join-Path $root $name) -Destination $stage -Force
 }
 $scripts = Join-Path $stage 'scripts'
@@ -64,9 +68,11 @@ if ($modernInfo) {
 $portable = Join-Path $output "ConvertHere-$Version-windows-x64-portable.zip"
 Compress-Archive -LiteralPath $stage -DestinationPath $portable -CompressionLevel Optimal -Force
 $setup = Join-Path $output "ConvertHere-$Version-windows-x64-setup.exe"
-$checksums = foreach ($path in @($setup, $portable)) {
+$sourceArchive = $sourceInfo.SourceArchive
+if (-not (Test-Path -LiteralPath $sourceArchive -PathType Leaf)) { throw 'Archivio dei sorgenti corrispondenti non generato.' }
+$checksums = foreach ($path in @($setup, $portable, $sourceArchive)) {
     $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
     "$hash  $([IO.Path]::GetFileName($path))"
 }
 $checksums | Set-Content -LiteralPath (Join-Path $output 'SHA256SUMS.txt') -Encoding ASCII
-Get-Item -LiteralPath $setup, $portable, (Join-Path $output 'SHA256SUMS.txt') | Select-Object FullName, Length
+Get-Item -LiteralPath $setup, $portable, $sourceArchive, (Join-Path $output 'SHA256SUMS.txt') | Select-Object FullName, Length

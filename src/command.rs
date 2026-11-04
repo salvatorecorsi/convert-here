@@ -13,6 +13,7 @@ use the_converter::{
         ConversionSettings, CsvDelimiter, MediaKind, OutputFormat, PdfAction, supported_formats,
     },
     queue,
+    runtime_install::{self, RuntimeEngine},
     tools::ToolPaths,
 };
 
@@ -68,9 +69,27 @@ struct Args {
     /// Mostra i percorsi dei motori disponibili in JSON.
     #[arg(long)]
     diagnose: bool,
+    /// Scarica e verifica un motore portabile nella cartella personale ConvertHere/tools.
+    #[arg(long, value_enum, conflicts_with_all = ["files", "selection_file", "target", "convert", "quick", "pdf_batch", "queue_job", "queue_worker", "output_dir", "settings", "preset", "pdf_action", "ocr", "ocr_language", "csv_separator", "diagnose", "input"])]
+    install_runtime: Option<RuntimeCommand>,
     /// Percorsi diretti, usabili anche da Apri con.
     #[arg(value_name = "FILE")]
     input: Vec<PathBuf>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+enum RuntimeCommand {
+    Ffmpeg,
+    Poppler,
+}
+
+impl From<RuntimeCommand> for RuntimeEngine {
+    fn from(value: RuntimeCommand) -> Self {
+        match value {
+            RuntimeCommand::Ffmpeg => Self::Ffmpeg,
+            RuntimeCommand::Poppler => Self::Poppler,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -175,6 +194,34 @@ fn read_selection(path: &Path) -> Result<Vec<PathBuf>> {
 }
 
 fn run(args: Args) -> Result<()> {
+    if let Some(engine) = args.install_runtime {
+        let engine = RuntimeEngine::from(engine);
+        let manifest = engine.manifest();
+        eprintln!(
+            "Installazione esplicita di {} {} ({} byte): {}",
+            manifest.name, manifest.version, manifest.download_bytes, manifest.source_url
+        );
+        eprintln!(
+            "Destinazione: {}",
+            the_converter::tools::user_tools_dir()
+                .context("Cartella personale dei motori non disponibile")?
+                .display()
+        );
+        let cancel = Arc::new(AtomicBool::new(false));
+        let signal = cancel.clone();
+        ctrlc::set_handler(move || signal.store(true, Ordering::Relaxed))?;
+        let mut previous = None;
+        let directory = runtime_install::install(engine, &cancel, |progress| {
+            let percent = (progress.fraction.clamp(0.0, 1.0) * 100.0) as u8;
+            let current = (progress.phase, percent);
+            if previous != Some(current) {
+                eprintln!("{percent:3}% {}", progress.message);
+                previous = Some(current);
+            }
+        })?;
+        println!("{}", directory.display());
+        return Ok(());
+    }
     if args.queue_worker {
         return queue::run_worker();
     }
@@ -380,7 +427,8 @@ fn quick_convert(files: Vec<PathBuf>, format: OutputFormat) -> Result<()> {
 
 pub fn main() {
     let args = Args::parse();
-    let headless = args.convert || args.diagnose || args.queue_worker;
+    let headless =
+        args.convert || args.diagnose || args.queue_worker || args.install_runtime.is_some();
     if let Err(error) = run(args) {
         eprintln!("{error:#}");
         if !headless {
@@ -397,6 +445,47 @@ pub fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn runtime_install_requires_an_explicit_engine_and_excludes_other_operations() {
+        for (name, expected) in [
+            ("ffmpeg", RuntimeCommand::Ffmpeg),
+            ("poppler", RuntimeCommand::Poppler),
+        ] {
+            let args = Args::try_parse_from(["converter", "--install-runtime", name]).unwrap();
+            assert_eq!(args.install_runtime, Some(expected));
+            for conflict in [
+                vec!["--files", "untouched.wav"],
+                vec!["--selection-file", "untouched.json"],
+                vec!["--target", "mp3"],
+                vec!["--convert"],
+                vec!["--quick", "--target", "mp3"],
+                vec!["--pdf-batch", "merge", "--target", "pdf"],
+                vec!["--queue-job", "untouched"],
+                vec!["--queue-worker"],
+                vec!["--output-dir", "untouched"],
+                vec!["--settings", "untouched.json"],
+                vec!["--preset", "quality"],
+                vec!["--pdf-action", "merge"],
+                vec!["--ocr"],
+                vec!["--ocr-language", "ita"],
+                vec!["--csv-separator", "comma"],
+                vec!["--diagnose"],
+                vec!["untouched.wav"],
+                vec!["--", "--untouched.wav"],
+            ] {
+                let mut arguments = vec!["converter", "--install-runtime", name];
+                arguments.extend(conflict);
+                assert!(Args::try_parse_from(&arguments).is_err(), "{arguments:?}");
+            }
+        }
+        for invalid in [
+            vec!["--install-runtime"],
+            vec!["--install-runtime", "other"],
+        ] {
+            assert!(Args::try_parse_from(std::iter::once("converter").chain(invalid)).is_err());
+        }
+    }
 
     #[test]
     fn explorer_pdf_batch_routes_distinguish_bulk_queue_and_interactive_merge() {

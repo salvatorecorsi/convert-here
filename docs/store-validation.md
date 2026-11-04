@@ -2,7 +2,19 @@
 
 Queste verifiche accompagnano la preparazione Store di Convert Here, sviluppato da Salvatore Corsi. Non equivalgono alla certificazione Microsoft e non sostituiscono l'identita reale di Partner Center.
 
-## Verifiche correnti 0.3.2 / Store 1.0.2.0
+## Preparazione corrente 0.4.0 / Store 1.0.3.0
+
+La nuova versione prepara uscite visibili configurabili e download esplicito di FFmpeg/Poppler in Impostazioni → Motori. Le 93 estensioni in ingresso e le 44 destinazioni del motore restano supportate, con otto uscite mostrate per default. Il download HTTPS verifica lo SHA-256 e conserva licenze e documentazione nella cartella dei motori dell'utente.
+
+Il codice originale adotta GPL-3.0-only, Copyright (C) 2026 Salvatore Corsi, con testo canonico completo in `LICENSE`; licenze di dipendenze, font e motori restano separate. La nuova release prevede anche il pacchetto sorgente vendorizzato `ConvertHere-0.4.0-source.zip`, da verificare e includere nei checksum insieme a setup e portable. Il campo Store Additional license terms deve puntare alla licenza pubblica della nuova versione, dopo la verifica del relativo URL.
+
+Build degli artefatti pubblici, audit, checksum e invio Store 1.0.3.0 non sono ancora documentati come completati. La **Submission 2**, ID **1152921505702316905**, e **In draft**. Le prove 0.4.0 gia eseguite restano distinte dallo storico delle precedenti revisioni.
+
+Le fixture isolate hanno superato **21 controlli del pacchetto sorgente** e **11 controlli del wrapper motori**, sia con PowerShell 7 sia con Windows PowerShell 5.1. Verificano commit e lockfile esatti, vendor offline per entrambi i workspace, provenienza dei binari, conservazione delle licenze dei terzi, argomenti CLI, percorsi con spazi e propagazione degli errori. Usano repository e CLI fittizi: non scaricano o eseguono motori e non compilano Rust. Windows checks include ora entrambi gli script.
+
+La verifica nativa dell'interfaccia 0.4.0 ha completato due conversioni PNG in JPEG senza errori, controllato le cinque uscite compatibili mostrate per default alle immagini, l'abilitazione FLAC salvata in JSON e il ripristino delle otto uscite iniziali. Il dialogo di download mostra fonti, versioni, dimensioni e nuova cartella personale; Annulla chiude la conferma senza avviare il download. Un fixture FLAC inerte di 53 byte e stato accettato e il selettore mostra esattamente MP3 e WAV. Sono stati verificati percorso dei motori e testo GPL integrale nel dialogo licenza; nessun motore e stato installato dalla GUI. I sei controlli Rust sono superati: 225 test dell'app, il fixture separato degli archivi upstream in cache e 10 test DLL. Queste prove non attestano un'installazione del nuovo MSIX o un nuovo invio Store. L'inventario Windows resta di **236 componenti**, con le rispettive licenze e avvisi.
+
+## Ultimo stato verificato 0.3.2 / Store 1.0.2.0
 
 La [release GitHub 0.3.2](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.2) e pubblicata come latest dal **4 novembre 2026, 16:25:31 UTC**, commit `8f7532bf9d16f80ef65b5229dba93929e11c1d82`. Sono superati formattazione Rust, Clippy rigoroso e test `--all-targets` per app e DLL, oltre alle fixture PowerShell 7 e 5.1. Il job `verify` del [run Windows checks 41866571328](https://github.com/salvatorecorsi/convert-here/actions/runs/41866571328) e **SUCCESS**; questo riferimento attesta il job, non uno stato complessivo del workflow non ancora registrato.
 
@@ -18,7 +30,7 @@ Il MSIX `ConvertHere-1.0.2.0-x64-store.msix` e di **6165973 byte**, SHA-256 `c6d
 
 Il nome **Salvatore Corsi** e approvato: Verification Summary **Authorized**, account **Active**, Public Info Publisher Name **Salvatore Corsi**. Nel portale resta soltanto il nuovo 1.0.2.0 **Validated** dopo il salvataggio e il ricaricamento; il precedente 1.0.1.0 e stato sostituito automaticamente. La privacy fissata alla 0.3.2 e pubblica verificata e salvata; le istruzioni di test di **1977 caratteri** riportano 0.3.2 / 1.0.2.0 e persistono al ricaricamento. Telefono e indirizzo restano vuoti. Le tre schermate native 0.3.1 sono riutilizzate perche l'interfaccia e identica.
 
-La **Submission 1**, ID **1152921505702314630** del prodotto **9NPKPPCBNBM8**, e stata nuovamente inviata il **4 novembre 2026** ed e **In certification**. Tutte le sei sezioni erano Complete prima dell'invio; la timeline verificata mostra **Submission Complete**, **Pre-processing In progress**, **Certification Not started**, **Publishing Not started**. Il prodotto resta gratuito in tutti i 240 mercati selezionati, con pubblicazione automatica dopo il superamento della certificazione. **Lo Store non e ancora pubblicato.** Non sono attestati installazione del MSIX o WACK della 1.0.2.0.
+La **Submission 1**, ID **1152921505702314630** del prodotto **9NPKPPCBNBM8**, ha completato il percorso di certificazione: la 0.3.2 / Store 1.0.2.0 risulta ora **In Microsoft Store**. E stata osservata l'installazione del pacchetto completo **1.0.2.0**, con **SignatureKind: Store**. La precedente timeline di certificazione e storica; i report immutabili conservano lo stato precedente all'upload. Il prodotto e gratuito nei 240 mercati selezionati. Il WACK non e stato eseguito; questa installazione non attesta un collaudo del futuro MSIX 1.0.3.0.
 
 ## Verifiche della 0.3.1 prima del ritiro della certificazione
 

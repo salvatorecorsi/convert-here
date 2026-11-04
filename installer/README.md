@@ -2,9 +2,9 @@
 
 `TheConverter.iss` genera l'installer di Convert Here con Inno Setup per Windows x64 (Windows 10 build 19041 o successivo), installato per l'utente corrente in `%LOCALAPPDATA%\Programs\The Converter`. La disinstallazione è disponibile nelle App installate di Windows come **Convert Here** e nel menu Start. Le nuove installazioni usano il gruppo e i collegamenti **Convert Here**; un aggiornamento conserva il gruppo Start precedente e i vecchi collegamenti. Per compatibilita rimangono stabili il percorso di installazione, i nomi degli eseguibili e gli identificativi. Dalla versione 0.2.0 gli artefatti pubblici usano il prefisso `ConvertHere`.
 
-L'installer contiene l'applicazione Rust, la DLL di Esplora file, la CLI e la documentazione. Il task consigliato scarica FFmpeg e Poppler direttamente dai rispettivi distributori tramite `scripts/install-runtime-tools.ps1`, che verifica gli hash dei pacchetti. Nessun runtime Python, Node o Rust è richiesto per usare l'applicazione.
+L'installer contiene l'applicazione Rust, la DLL di Esplora file, la CLI, la documentazione e `LICENSE` con la GPL-3.0-only del codice applicativo. Le dipendenze mantengono le rispettive licenze. Nessun runtime Python, Node o Rust è richiesto per usare l'applicazione.
 
-Il collegamento **Installa o aggiorna motori di conversione** nel menu Start permette di ripetere il download su richiesta. La console resta visibile per leggere avanzamento ed eventuali errori e può essere chiusa al termine.
+Il setup non scarica motori, anche in modalità silenziosa, e non crea un collegamento Start dedicato al download. FFmpeg e Poppler si acquisiscono da **Impostazioni → Motori** nell'app dopo conferma esplicita. `scripts/install-runtime-tools.ps1` resta disponibile come alternativa manuale.
 
 La voce **Converti in** del menu classico viene aggiunta per default senza privilegi amministrativi; su Windows 11 compare in **Mostra altre opzioni**. L'opzione del menu moderno viene compilata nel setup solo quando `build-installer.ps1` trova un pacchetto MSIX con firma valida; il computer destinatario verifica nuovamente la firma prima della registrazione. Non vengono creati certificati né modificati gli archivi attendibili.
 
@@ -16,14 +16,14 @@ Serve Inno Setup 7 o successivo. Dopo la preparazione della distribuzione:
 .\scripts\build-installer.ps1 -CompilerPath C:\Percorso\ISCC.exe
 ```
 
-Lo script legge la versione da `Cargo.toml`, usa `dist\ConvertHere` come sorgente predefinita e produce `dist\release\ConvertHere-<versione>-windows-x64-setup.exe`. Accetta `-SourceDirectory`, `-OutputDirectory` e `-Version` per una pipeline di release. La preparazione pubblica raccoglie setup, portable e checksum in `dist\releases\v<versione>\`. Il setup pubblico include il solo menu classico quando non e disponibile un MSIX con firma attendibile; gli artefatti unsigned non vengono presentati come firmati.
+Lo script legge la versione da `Cargo.toml`, usa `dist\ConvertHere` come sorgente predefinita e produce `dist\release\ConvertHere-<versione>-windows-x64-setup.exe`. Accetta `-SourceDirectory`, `-OutputDirectory` e `-Version` per una pipeline di release. La preparazione pubblica raccoglie setup, portable, `ConvertHere-<versione>-source.zip` con dipendenze Rust vendorizzate e checksum dei tre asset in `dist\releases\v<versione>\`. Il setup pubblico include il solo menu classico quando non e disponibile un MSIX con firma attendibile; gli artefatti unsigned non vengono presentati come firmati.
 
 Gli script eseguiti dal setup usano esplicitamente PowerShell x64, anche quando il compilatore genera un setup a 32 bit. Output, errori e codice di uscita sono inclusi nel log dell'installazione.
 
-Per una prova silenziosa senza download di motori:
+Per una prova silenziosa:
 
 ```powershell
-.\ConvertHere-0.3.2-windows-x64-setup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /TASKS="contextmenu" /LOG="install.log"
+.\ConvertHere-0.4.0-windows-x64-setup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /TASKS="contextmenu" /LOG="install.log"
 ```
 
 La disinstallazione conserva le preferenze, la coda e i file convertiti nelle loro cartelle. Rimuove il contenuto applicativo e la cartella privata `tools` nell'installazione. Non usare la cartella dell'applicazione o `tools` come cartella per salvare documenti personali.

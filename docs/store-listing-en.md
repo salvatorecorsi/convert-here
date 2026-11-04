@@ -1,6 +1,6 @@
 # Microsoft Store listing — English (en-US)
 
-Texts for Convert Here **0.3.2**, Store package **1.0.2.0**, uploaded and Validated; the submission was sent again on 4 November 2026 and is **In certification**, not yet published. Publisher and developer: **Salvatore Corsi**, approved with account Active and verification Authorized. The three native 0.3.1 screenshots are reused because the UI is identical. The application UI is Italian. Do not copy this preamble into public listing fields.
+Draft for Convert Here **0.4.0**, Store package **1.0.3.0**, in preparation: no new upload, submission or publication is claimed. Publisher and developer: **Salvatore Corsi**, with account Active and verification Authorized. Text and screenshots must be checked against the new version. The app UI is Italian. Do not copy this preamble into public listing fields.
 
 ## Short description
 
@@ -8,15 +8,15 @@ Convert files from the Windows 11 context menu with a queue, custom settings and
 
 ## Description
 
-Native image formats and image-to-PDF conversion work immediately, as do PDF compression, splitting and merging. Audio/video requires FFmpeg; PDF export requires Poppler; Office, Excel/CSV and HTML-to-PDF requires LibreOffice. HEIC/HEIF and AVIF require libheif; OCR requires Tesseract and language models, plus Poppler for scanned PDFs. These optional engines are not included. The application UI is Italian.
+Native image formats and image-to-PDF conversion work immediately, as do PDF compression, splitting and merging. Audio/video requires FFmpeg; PDF export requires Poppler; Office, Excel/CSV and HTML-to-PDF requires LibreOffice. HEIC/HEIF and AVIF require libheif; OCR requires Tesseract and language models, plus Poppler for scanned PDFs. These optional engines are not included. The application UI is Italian. Impostazioni > Motori lets you request FFmpeg, Poppler or both after confirming the source, version, size, licenses and folder. Internet is needed for this optional download; conversion and OCR remain local.
 
 Convert Here brings conversion to the folder where you work. In the Windows 11 context menu, choose Converti in and a compatible format. The job joins a queue with your saved settings, without opening the options window every time.
 
 A placeholder with a pending icon immediately shows where the result will appear. Open it to check progress or cancel the job. When conversion finishes, the completed file replaces the placeholder. Outputs are saved beside their originals by default; numbered names preserve files that already exist.
 
-There are 44 destination formats and 93 recognized input extensions across compatible categories. Native image conversions cover PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR and PNM, plus a separate A4 PDF for each source image. Adjust JPEG quality and image width.
+There are 44 destination formats and 93 recognized input extensions across compatible categories. Native image conversions cover PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR and PNM, plus a separate A4 PDF for each source image. Adjust JPEG quality and image width. Choose which outputs appear in the GUI and Explorer menu in Impostazioni: defaults are MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4. Other outputs can be enabled; all 93 input extensions remain recognized, and the menu refreshes without restarting Explorer.
 
-With libheif, read HEIC/HEIF and AVIF files or create HEIC and AVIF from supported images. Configure heif-dec.exe and heif-enc.exe in Strumenti, keeping the build's DLLs and plugins together. Availability depends on installed HEVC/AV1 decoders and encoders. Choose output quality and width. Only the first image in a container is converted; image sequences and animations are not preserved.
+With libheif, read HEIC/HEIF and AVIF files or create HEIC and AVIF from supported images. Configure heif-dec.exe and heif-enc.exe in Impostazioni > Motori, keeping the build's DLLs and plugins together. Availability depends on installed HEVC/AV1 decoders and encoders. Choose output quality and width. Only the first image in a container is converted; image sequences and animations are not preserved.
 
 With optional FFmpeg, convert audio to MP3, WAV, FLAC, AAC, OGG, Opus, AIFF, M4A with AAC, WMA, AC3, AU and CAF with ALAC; convert video to MP4, MKV, MOV, WebM, AVI, MPEG, WMV, FLV, MPEG-TS, M4V, 3GP and animated GIF; or extract its audio. Codec availability depends on the selected FFmpeg engine. Settings include quality presets, bitrate, sample rate, channels, normalization, video quality, width, frame rate and time trimming.
 
@@ -31,6 +31,8 @@ With LibreOffice, convert compatible Word documents, other documents, spreadshee
 Convert simple HTML files to PDF with LibreOffice. Complex CSS may change the layout, and JavaScript is not executed. Resources linked from the HTML may access local files or the network during conversion.
 
 Convert Here is free, with no subscriptions, in-app purchases or usage-based charges. No payment is required to keep using it. Format conversion runs on your PC and does not require an in-app account. Preferences, file paths, queue status and error details are stored locally.
+
+The project's original code is free software licensed under GPL-3.0-only; source code is available at https://github.com/salvatorecorsi/convert-here. Dependencies, fonts and engines retain their own licenses. Conversion does not change rights in the contents of your files.
 
 Limitations: free editing of PDF page content is not available. OCR recognizes text without reconstructing graphics or layout. Animated GIFs, multipage TIFFs and HEIC/AVIF containers use their first frame or image. PDF (Bulk) keeps separate results; PDF (Merge) includes every prepared page once, up to 10,000 pages. Office document layout depends on LibreOffice and available fonts. The modern context menu requires Windows 11 x64. The application UI is Italian.
 
@@ -54,6 +56,8 @@ Local OCR for images and scanned PDFs with optional Tesseract and language model
 Separate PDF Bulk outputs or one PDF Merge with individual page drag and drop
 Preserve original files and use numbered output names for existing files
 Format conversion processed on your PC without an in-app account
+Choose visible outputs: eight defaults and 93 recognized input extensions
+Optional FFmpeg and Poppler downloads with confirmation, SHA-256 verification and retained licenses
 ```
 
 ## Search terms
@@ -74,25 +78,45 @@ conversion queue
 
 ```text
 Windows 11 x64 for the modern context menu
-FFmpeg for audio/video; Poppler for PDF export; LibreOffice for Office/HTML to PDF and Excel/CSV conversion. Optional engines are not included. The application UI is Italian.
+FFmpeg for audio/video; Poppler for PDF export; LibreOffice for Office/HTML to PDF and Excel/CSV conversion. Optional engines are not included. The application UI is Italian. Optional FFmpeg/Poppler downloads from Impostazioni > Motori require Internet.
 libheif with heif-dec.exe, heif-enc.exe, DLLs and plugins for HEIC/AVIF; Tesseract and language models for OCR, plus Poppler for PDFs. Not included.
 ```
 
 ## What's new
 
-Leave blank for the first Microsoft Store submission. Add release-specific notes for later updates.
+```text
+Choose visible formats in Impostazioni: eight default outputs, with all 93 input extensions still recognized. Download FFmpeg and Poppler only on request, with confirmation and SHA-256 verification. Original code is GPL-3.0-only with public source.
+```
 
-## Captions for screenshots to capture
+## Screenshot captions
 
-1. Converti in in the Windows 11 context menu. App UI shown in Italian.
-2. The queue shows file formats, status and destinations. App UI shown in Italian.
-3. Image quality and resizing settings. App UI shown in Italian.
-4. Configure optional executables on the Strumenti page. App UI shown in Italian.
+1. Two local image-to-JPEG conversions completed. App UI shown in Italian.
+2. Reorder individual pages in PDF Merge to create one document. App UI shown in Italian.
+3. Choose visible outputs in Impostazioni, with eight defaults and separate categories. App UI shown in Italian.
+4. Confirm sources, versions, sizes and folder before downloading FFmpeg and Poppler. App UI shown in Italian.
+
+Screenshots 1, 3 and 4 show 0.4.0; screenshot 2 reuses the unchanged PDF Merge UI from 0.3.1. [Screenshot paths](store-assets/README.md).
+
+## Copyright and additional license terms
+
+Copyright:
+
+```text
+Copyright (C) 2026 Salvatore Corsi.
+```
+
+For Additional license terms, use this single URL after publishing and checking the 0.4.0 tag. The Store displays it as a link to the complete GPLv3 text:
+
+```text
+https://github.com/salvatorecorsi/convert-here/blob/v0.4.0/LICENSE
+```
+
+The project uses GPL-3.0-only. The planned `ConvertHere-0.4.0-source.zip` asset includes source code, vendored Cargo dependencies and offline build instructions. These field-entry instructions are not part of the public description.
 
 ## Submission references
 
-Data controller and developer: **Salvatore Corsi**; publisher: **Salvatore Corsi**. Privacy and support contact: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Public privacy statement](https://github.com/salvatorecorsi/convert-here/blob/v0.3.2/docs/privacy.md). Reserved name: **Convert Here**. See the [submission procedure](store-submission.md) for licensing, identity and current status.
+Data controller and developer: **Salvatore Corsi**; publisher: **Salvatore Corsi**. Privacy and support contact: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Draft 0.4.0 privacy statement](privacy.md), to be published and checked before using its versioned URL in the new submission; the [0.3.2 statement](https://github.com/salvatorecorsi/convert-here/blob/v0.3.2/docs/privacy.md) remains the previous verified public reference. Reserved name: **Convert Here**. See the [submission procedure](store-submission.md) for licensing, identity and current status.
 
-The Partner Center listings are Complete and included in the 1.0.2.0 submission sent for certification; this status does not attest Store publication.
+These texts prepare the new 0.4.0; they do not attest that its listings have been saved or submitted in Partner Center. Previous-version evidence remains historical.
 
 Description: 10,000 characters maximum; short description: 1,000 maximum (this draft is below 270); up to 20 features of 200 characters each; release notes: 1,500 maximum, empty for the first submission. [Official MSIX listing limits](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).

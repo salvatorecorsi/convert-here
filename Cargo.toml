@@ -1,6 +1,7 @@
 [package]
 name = "the-converter"
-version = "0.3.2"
+version = "0.4.0"
+license = "GPL-3.0-only"
 edition = "2024"
 description = "Conversioni di audio, video, immagini e PDF, integrate in Windows"
 repository = "https://github.com/salvatorecorsi/convert-here"
@@ -34,10 +35,10 @@ tempfile = "3"
 which = "8"
 url = "2"
 time = { version = "0.3", features = ["formatting"] }
-zip = { version = "6", default-features = false }
+zip = { version = "6", default-features = false, features = ["deflate-flate2"] }
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_System_Console", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_Security"] }
+windows-sys = { version = "0.61", features = ["Win32_System_Console", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_Security", "Win32_Networking_WinHttp"] }
 
 [target.'cfg(not(windows))'.dependencies]
 open = "5"

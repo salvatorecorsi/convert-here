@@ -166,6 +166,7 @@ New-StorePackageAssets -SourceImage (Join-Path $root 'assets\app.png') -OutputDi
 [IO.File]::WriteAllText((Join-Path $stage 'store-runtime.json'), (@{ execution_alias = $identity.ExecutionAlias } | ConvertTo-Json), (New-Object Text.UTF8Encoding($false)))
 Copy-Item -LiteralPath (Join-Path $definitions 'README.package.txt') -Destination (Join-Path $stage 'README.txt')
 Copy-Item -LiteralPath (Join-Path $root 'THIRD-PARTY-NOTICES.md') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $root 'LICENSE') -Destination $stage
 New-Item -ItemType Directory -Path (Join-Path $stage 'Docs') | Out-Null
 Copy-Item -LiteralPath $licenseSource -Destination (Join-Path $stage 'Docs\licenses') -Recurse
 Assert-StorePackageLayout -StageDirectory $stage -Identity $identity
@@ -188,12 +189,12 @@ $payload = @(Get-ChildItem -LiteralPath $stage -File -Recurse | Sort-Object Full
 })
 $packageHash = (Get-FileHash -LiteralPath $package -Algorithm SHA256).Hash.ToLowerInvariant()
 $report = [ordered]@{
-    SchemaVersion = 1; Mode = $identity.Mode; BuiltAtUtc = [DateTime]::UtcNow.ToString('o'); SourceCommit = $sourceCommit; SourceDirty = $sourceWorkingTreeDirty
+    SchemaVersion = 2; Mode = $identity.Mode; BuiltAtUtc = [DateTime]::UtcNow.ToString('o'); SourceCommit = $sourceCommit; SourceDirty = $sourceWorkingTreeDirty
     ApplicationVersion = $cargoVersion; StoreVersion = $identity.Version; Architecture = 'x64'; MinimumOSVersion = '10.0.22000.0'; Identity = $identity
     Package = $fileName; PackageSHA256 = $packageHash; Signed = $false; FullPackage = $true; ExternalContent = $false
-    ApplicationCount = 1; ConsoleCliBundled = $false; EnginesBundled = $false; RuntimeDownloaderBundled = $false; CertificateStoreChanged = $false; PackageInstalled = $false
+    ApplicationCount = 1; ConsoleCliBundled = $false; EnginesBundled = $false; NativeRuntimeInstallerBundled = $true; RuntimeDownloadScriptBundled = $false; CertificateStoreChanged = $false; PackageInstalled = $false
     MakeAppxValidation = 'Passed (no /nv)'; WindowsAppCertificationKit = 'Not run'; PartnerCenterUpload = 'Not performed'
-    RunFullTrustJustification = 'Local Win32 file conversions, user-selected installed conversion tools and File Explorer integration. No elevation requested.'
+    RunFullTrustJustification = 'Local Win32 file conversions, user-confirmed native acquisition of pinned FFmpeg/Poppler tools in user data, user-selected tools and File Explorer integration. No elevation requested.'
     DependencyNoticeRecords = $components.Count; ImportedLibraries = $imports; Payload = $payload
 }
 $reportPath = Join-Path $runDirectory 'submission-report.json'
@@ -207,7 +208,7 @@ $submissionText = @(
     'Full Windows 11 x64 MSIX (minimum build 22000), packagedClassicApp/mediumIL, visible app-list entry and packaged Explorer COM command.',
     'MakeAppx semantic validation passed without /nv. All application binaries, runtime metadata, logos and dependency notices are inside the package.',
     'Exactly one GUI application is declared. Its executable and the Explorer DLL are the only binary payloads; the console CLI belongs to the separate GitHub distribution.',
-    'No external conversion engines or PowerShell downloader are bundled.',
+    'No conversion engines or PowerShell downloader are bundled. Native engine installation is available in Settings after explicit user confirmation.',
     'The package is unsigned. Microsoft Store signs accepted submissions; this build did not use a signing certificate or modify trust.', '',
     'Remaining review: Windows App Certification Kit, clean-machine app/menu/queue tests, Store listing and privacy information, runFullTrust justification and Partner Center certification.',
     'No Partner Center upload or package installation was performed.'

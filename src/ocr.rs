@@ -64,7 +64,7 @@ pub(crate) fn extract_text(
     cancelled(cancel)?;
     validate_language(&settings.ocr.language)?;
     let tesseract = tools.tesseract.as_ref().context(
-        "Per OCR locale serve Tesseract. Apri Strumenti e seleziona tesseract.exe con i modelli delle lingue richieste.",
+        "Per OCR locale serve Tesseract. Apri Impostazioni → Motori e seleziona tesseract.exe con i modelli delle lingue richieste.",
     )?;
     let tessdata = adjacent_tessdata(tesseract, &settings.ocr.language)?;
     let stage = tempfile::Builder::new()
@@ -84,7 +84,7 @@ pub(crate) fn extract_text(
             }
             drop(document);
             let pdftoppm = tools.pdftoppm.as_ref().context(
-                "Per OCR dei PDF serve anche Poppler. Apri Strumenti e seleziona pdftoppm.exe.",
+                "Per OCR dei PDF serve anche Poppler. Apri Impostazioni → Motori per installarlo oppure seleziona pdftoppm.exe.",
             )?;
             let image_base = stage.path().join("page");
             let image_path = image_base.with_extension("png");

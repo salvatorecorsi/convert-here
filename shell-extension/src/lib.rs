@@ -6,14 +6,21 @@
 use std::{
     ffi::{c_void, OsString},
     fs::OpenOptions,
-    io::Write,
-    os::windows::{ffi::OsStringExt, process::CommandExt},
+    io::{Read, Write},
+    os::windows::{
+        ffi::{OsStrExt, OsStringExt},
+        process::CommandExt,
+    },
     path::{Path, PathBuf},
     process::Command,
     ptr,
     sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
+
+#[path = "../../src/output_preferences_shared.rs"]
+mod output_preferences_shared;
+use output_preferences_shared as output_preferences;
 
 type HResult = i32;
 const S_OK: HResult = 0;
@@ -35,6 +42,7 @@ const UNKNOWN_SELECTION_MASK: u64 = u64::MAX;
 const SELECTION_CONTAINS_IMAGE: u64 = 1 << 62;
 const SELECTION_CONTAINS_PDF: u64 = 1 << 61;
 const SELECTION_MULTIPLE: u64 = 1 << 60;
+const SELECTION_SUPPORTED: u64 = 1 << 59;
 const PDF_TARGET: u64 = 1 << 19;
 const PDF_MERGE_GUID_SLOT: usize = 45;
 const AUDIO_TARGETS: u64 = ((1 << 7) - 1) | (((1 << 5) - 1) << 21);
@@ -86,12 +94,7 @@ const IID_IENUMEXPLORERCOMMAND: Guid = Guid {
 };
 
 // Keep these identifiers aligned with OutputFormat in the application core.
-const TARGETS: [&str; 44] = [
-    "mp3", "wav", "flac", "aac", "ogg", "opus", "aiff", "mp4", "mkv", "mov", "webm", "avi", "gif",
-    "png", "jpg", "webp", "bmp", "tiff", "ico", "pdf", "txt", "m4a", "wma", "ac3", "au", "caf",
-    "mpeg", "wmv", "flv", "ts", "m4v", "3gp", "qoi", "tga", "ff", "exr", "hdr", "pnm", "csv",
-    "xlsx", "docx", "html", "avif", "heic",
-];
+const TARGETS: [&str; 44] = output_preferences::ALL_OUTPUT_EXTENSIONS;
 const ALL_TARGETS: u64 = (1 << TARGETS.len()) - 1;
 
 fn text_target_title(selection: u64) -> &'static str {
@@ -129,6 +132,11 @@ extern "system" {
 extern "system" {
     fn GetModuleHandleExW(flags: u32, name: *const u16, module: *mut *mut c_void) -> i32;
     fn GetModuleFileNameW(module: *mut c_void, path: *mut u16, size: u32) -> u32;
+    fn PackageFamilyNameFromFullName(
+        full_name: *const u16,
+        length: *mut u32,
+        family: *mut u16,
+    ) -> i32;
 }
 
 static OBJECTS: AtomicUsize = AtomicUsize::new(0);
@@ -371,7 +379,7 @@ fn enumeration_entry(index: usize, mask: u64) -> Option<(Option<&'static str>, b
     };
     if target_index < TARGETS.len() {
         (mask & (1 << target_index) != 0).then_some((Some(TARGETS[target_index]), false))
-    } else if target_index == TARGETS.len() && mask & ALL_TARGETS != 0 {
+    } else if target_index == TARGETS.len() && mask & (ALL_TARGETS | SELECTION_SUPPORTED) != 0 {
         Some((None, false))
     } else {
         None
@@ -603,7 +611,7 @@ unsafe extern "system" fn explorer_enumerate(this: *mut c_void, out: *mut *mut c
         .load(Ordering::Acquire);
     // Some callers enumerate before GetState. Only filter an actual per-object
     // selection snapshot; child GetState and Invoke always validate their inputs.
-    *out = allocate_enumerator(0, mask);
+    *out = allocate_enumerator(0, visible_target_mask(mask, enabled_target_mask()));
     S_OK
 }
 
@@ -708,6 +716,109 @@ fn common_target_mask<'a>(paths: impl IntoIterator<Item = &'a Path>) -> u64 {
     paths.fold(target_mask(first), |mask, path| mask & target_mask(path))
 }
 
+fn extension_mask(extensions: impl IntoIterator<Item = &'static str>) -> u64 {
+    extensions.into_iter().fold(0, |mask, extension| {
+        mask | TARGETS
+            .iter()
+            .position(|target| *target == extension)
+            .map_or(0, |index| 1 << index)
+    })
+}
+
+fn visible_target_mask(selection: u64, enabled: u64) -> u64 {
+    if selection == UNKNOWN_SELECTION_MASK {
+        enabled | SELECTION_SUPPORTED
+    } else if selection & ALL_TARGETS != 0 {
+        (selection & !ALL_TARGETS) | SELECTION_SUPPORTED | (selection & enabled & ALL_TARGETS)
+    } else {
+        0
+    }
+}
+
+fn package_family_name(full_name: &std::ffi::OsStr) -> Option<String> {
+    let full_name: Vec<_> = full_name.encode_wide().chain(Some(0)).collect();
+    let mut length = 0;
+    unsafe {
+        if PackageFamilyNameFromFullName(full_name.as_ptr(), &mut length, ptr::null_mut()) != 122
+            || length == 0
+            || length > 256
+        {
+            return None;
+        }
+        let mut family = vec![0; length as usize];
+        if PackageFamilyNameFromFullName(full_name.as_ptr(), &mut length, family.as_mut_ptr()) != 0
+        {
+            return None;
+        }
+        String::from_utf16(family.get(..length.checked_sub(1)? as usize)?).ok()
+    }
+}
+
+fn preferences_paths(
+    module_directory: Option<&Path>,
+    roaming: Option<&Path>,
+    local: Option<&Path>,
+) -> Vec<PathBuf> {
+    const RELATIVE: &str = r"SalvatoreCorsi\TheConverter\config\preferences.json";
+    let mut paths = Vec::new();
+    if let Some(family) = module_directory
+        .and_then(Path::file_name)
+        .and_then(package_family_name)
+    {
+        if let Some(local) = local.filter(|path| path.is_absolute()) {
+            paths.push(
+                local
+                    .join("Packages")
+                    .join(family)
+                    .join(r"LocalCache\Roaming")
+                    .join(RELATIVE),
+            );
+        }
+    }
+    if let Some(roaming) = roaming.filter(|path| path.is_absolute()) {
+        paths.push(roaming.join(RELATIVE));
+    }
+    paths
+}
+
+fn enabled_target_mask_at_paths(paths: &[PathBuf]) -> u64 {
+    const MAX_PREFERENCES_BYTES: u64 = 64 * 1024;
+    for path in paths {
+        let file = match std::fs::File::open(path) {
+            Ok(file) => file,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(_) => break,
+        };
+        let mut bytes = Vec::new();
+        if file
+            .take(MAX_PREFERENCES_BYTES + 1)
+            .read_to_end(&mut bytes)
+            .is_err()
+            || bytes.len() as u64 > MAX_PREFERENCES_BYTES
+        {
+            break;
+        }
+        let saved: Option<serde_json::Value> = serde_json::from_slice(&bytes).ok();
+        return extension_mask(output_preferences::decode_extensions(
+            saved
+                .as_ref()
+                .and_then(|saved| saved.get("enabled_output_formats")),
+        ));
+    }
+    extension_mask(output_preferences::COMMON_OUTPUT_EXTENSIONS)
+}
+
+fn enabled_target_mask() -> u64 {
+    let executable = executable_path();
+    let roaming = std::env::var_os("APPDATA").map(PathBuf::from);
+    let local = std::env::var_os("LOCALAPPDATA").map(PathBuf::from);
+    enabled_target_mask_at_paths(&preferences_paths(
+        executable.as_deref().and_then(Path::parent),
+        roaming.as_deref(),
+        local.as_deref(),
+    ))
+}
+
 unsafe extern "system" fn explorer_state(
     this: *mut c_void,
     items: *mut c_void,
@@ -775,7 +886,10 @@ unsafe extern "system" fn explorer_state(
         },
         Ordering::Release,
     );
-    if mask != 0 && required.is_none_or(|required| mask & required != 0) {
+    if mask != 0
+        && required.is_none_or(|required| mask & required != 0)
+        && required.is_none_or(|required| enabled_target_mask() & required != 0)
+    {
         *out = ECS_ENABLED;
     }
     S_OK
@@ -822,12 +936,13 @@ unsafe extern "system" fn explorer_invoke(
         }
     }
     let mask = common_target_mask(selected_paths.iter().map(PathBuf::as_path));
+    let enabled = enabled_target_mask();
     if mask == 0
         || command.target.as_deref().is_some_and(|target| {
             TARGETS
                 .iter()
                 .position(|value| *value == target)
-                .is_none_or(|index| mask & (1 << index) == 0)
+                .is_none_or(|index| mask & enabled & (1 << index) == 0)
         })
     {
         return E_FAIL;
@@ -932,11 +1047,128 @@ pub extern "system" fn DllCanUnloadNow() -> HResult {
 #[cfg(test)]
 #[allow(dead_code)]
 #[path = "../../src/model.rs"]
-mod core_model;
+mod model;
+
+#[cfg(test)]
+use model as core_model;
+
+#[cfg(test)]
+#[path = "../../src/output_preferences.rs"]
+#[rustfmt::skip]
+mod core_output_preferences;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn preferences_filter_destinations_without_hiding_supported_inputs_or_custom() {
+        let defaults = extension_mask(output_preferences::COMMON_OUTPUT_EXTENSIONS);
+        let audio = common_target_mask([Path::new("input.flac"), Path::new("clip.mp4")]);
+        let filtered = visible_target_mask(audio, defaults);
+        assert_eq!(filtered & ALL_TARGETS, (1 << 0) | (1 << 1));
+        assert_eq!(
+            enumeration_entry(TARGETS.len() + 1, filtered),
+            Some((None, false))
+        );
+        let no_targets = visible_target_mask(audio, 0);
+        assert_eq!(no_targets, SELECTION_SUPPORTED);
+        assert_eq!(
+            enumeration_entry(TARGETS.len() + 1, no_targets),
+            Some((None, false))
+        );
+        assert_eq!(visible_target_mask(0, ALL_TARGETS), 0);
+        assert_eq!(enumeration_entry(TARGETS.len() + 1, 0), None);
+        let pdf_batch =
+            PDF_TARGET | SELECTION_CONTAINS_IMAGE | SELECTION_CONTAINS_PDF | SELECTION_MULTIPLE;
+        let enabled = visible_target_mask(pdf_batch, defaults);
+        assert_eq!(enumeration_entry(19, enabled), Some((Some("pdf"), false)));
+        assert_eq!(enumeration_entry(20, enabled), Some((Some("pdf"), true)));
+        let disabled = visible_target_mask(pdf_batch, defaults & !PDF_TARGET);
+        assert_eq!(enumeration_entry(19, disabled), None);
+        assert_eq!(enumeration_entry(20, disabled), None);
+        assert_eq!(
+            enumeration_entry(TARGETS.len() + 1, disabled),
+            Some((None, false))
+        );
+        let flac_only = visible_target_mask(audio, extension_mask(["flac"]));
+        assert_eq!(flac_only & ALL_TARGETS, 1 << 2);
+    }
+
+    #[test]
+    fn packaged_preferences_paths_use_the_module_identity_and_stable_fallback() {
+        let roaming = Path::new(r"C:\Fixture\Roaming");
+        let local = Path::new(r"C:\Fixture\Local");
+        let package = Path::new(
+            r"C:\Program Files\WindowsApps\Contoso.OutputPreferences_1.2.3.0_x64__m3ejbhsgg5t2y",
+        );
+        let paths = preferences_paths(Some(package), Some(roaming), Some(local));
+        assert_eq!(paths, [
+            local.join(r"Packages\Contoso.OutputPreferences_m3ejbhsgg5t2y\LocalCache\Roaming\SalvatoreCorsi\TheConverter\config\preferences.json"),
+            roaming.join(r"SalvatoreCorsi\TheConverter\config\preferences.json"),
+        ]);
+        assert_eq!(
+            preferences_paths(
+                Some(Path::new(r"C:\Programs\The Converter")),
+                Some(roaming),
+                Some(local)
+            ),
+            [paths[1].clone()]
+        );
+        assert!(preferences_paths(Some(package), Some(Path::new("relative")), None).is_empty());
+    }
+
+    #[test]
+    fn preferences_are_reread_and_corrupt_or_oversized_files_use_common_defaults() {
+        let directory = std::env::temp_dir().join(format!(
+            "convert-here-output-preferences-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&directory).unwrap();
+        struct Cleanup(PathBuf);
+        impl Drop for Cleanup {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_dir_all(&self.0);
+            }
+        }
+        let _cleanup = Cleanup(directory.clone());
+        let package = directory.join("packaged.json");
+        let legacy = directory.join("standalone.json");
+        let paths = [package.clone(), legacy.clone()];
+        let defaults = extension_mask(output_preferences::COMMON_OUTPUT_EXTENSIONS);
+        assert_eq!(enabled_target_mask_at_paths(&paths), defaults);
+        std::fs::write(
+            &legacy,
+            br#"{"enabled_output_formats":["flac","txt","invalid",7]}"#,
+        )
+        .unwrap();
+        assert_eq!(enabled_target_mask_at_paths(&paths), (1 << 2) | TEXT_TARGET);
+        std::fs::write(&package, br#"{"enabled_output_formats":[]}"#).unwrap();
+        assert_eq!(enabled_target_mask_at_paths(&paths), 0);
+        std::fs::write(
+            &package,
+            br#"{"enabled_output_formats":["avif","heic","pdf"]}"#,
+        )
+        .unwrap();
+        assert_eq!(enabled_target_mask_at_paths(&paths), (3 << 42) | PDF_TARGET);
+        for bytes in [
+            br#"{broken"#.as_slice(),
+            br#"{"enabled_output_formats":{"flac":true}}"#,
+            br#"{"enabled_output_formats":["unknown"]}"#,
+            br#"{"settings":{"format":"Flac"}}"#,
+        ] {
+            std::fs::write(&package, bytes).unwrap();
+            assert_eq!(enabled_target_mask_at_paths(&paths), defaults);
+        }
+        std::fs::write(&package, vec![b' '; 64 * 1024 + 1]).unwrap();
+        assert_eq!(enabled_target_mask_at_paths(&paths), defaults);
+        std::fs::remove_file(&package).unwrap();
+        assert_eq!(enabled_target_mask_at_paths(&paths), (1 << 2) | TEXT_TARGET);
+    }
 
     #[test]
     fn com_lifetime_and_interface_contract() {
@@ -983,6 +1215,9 @@ mod tests {
             assert_eq!(flags, 1);
             let mut enumerator = ptr::null_mut();
             assert_eq!(explorer_enumerate(command, &mut enumerator), S_OK);
+            assert_eq!(enumerator_release(enumerator), 0);
+            // Exercise the full ABI inventory independently of the user's file.
+            enumerator = allocate_enumerator(0, UNKNOWN_SELECTION_MASK);
             let mut children = [ptr::null_mut(); 2];
             let mut fetched = 0;
             assert_eq!(

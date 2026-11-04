@@ -104,4 +104,14 @@ jobs:
           $windowsPowerShell = Join-Path $env:WINDIR 'System32/WindowsPowerShell/v1.0/powershell.exe'
           & $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ./scripts/test-release-branding.ps1
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Corresponding source and runtime installer fixtures
+        shell: pwsh
+        run: |
+          ./scripts/test-corresponding-source.ps1
+          ./scripts/test-runtime-tools.ps1
+          $windowsPowerShell = Join-Path $env:WINDIR 'System32/WindowsPowerShell/v1.0/powershell.exe'
+          foreach ($fixture in @('./scripts/test-corresponding-source.ps1', './scripts/test-runtime-tools.ps1')) {
+            & $windowsPowerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $fixture
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          }
 

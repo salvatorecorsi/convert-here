@@ -168,7 +168,7 @@ public static class ConverterShellSmokeV2 {
         bytes[15] ^= xor;
         return new Guid(bytes);
     }
-    static void ValidatePdfActions(IntPtr parent, string image, string pdf, string audio) {
+    static void ValidatePdfActions(IntPtr parent, string image, string pdf, string audio, string preferences) {
         WithSelection(new string[]{image, pdf}, delegate(IntPtr valid) {
             uint state;
             Check(((GetState)Slot(parent, 7, typeof(GetState)))(parent, valid, 1, out state));
@@ -206,6 +206,15 @@ public static class ConverterShellSmokeV2 {
                         if (((InvokeCommand)Slot(child, 8, typeof(InvokeCommand)))(child, incompatible, IntPtr.Zero) >= 0) throw new Exception("Invoke usa una selezione PDF obsoleta");
                     }
                 });
+                string previous = System.IO.File.ReadAllText(preferences);
+                try {
+                    System.IO.File.WriteAllText(preferences, "{\"enabled_output_formats\":[]}");
+                    foreach (IntPtr child in new IntPtr[]{bulk, merge}) {
+                        Check(((GetState)Slot(child, 7, typeof(GetState)))(child, valid, 1, out state));
+                        if (state != 2) throw new Exception("Azione PDF disabilitata ancora visibile");
+                        if (((InvokeCommand)Slot(child, 8, typeof(InvokeCommand)))(child, valid, IntPtr.Zero) >= 0) throw new Exception("Invoke PDF ignora le preferenze aggiornate");
+                    }
+                } finally { System.IO.File.WriteAllText(preferences, previous); }
             } finally {
                 if (bulk != IntPtr.Zero) Marshal.Release(bulk);
                 if (merge != IntPtr.Zero) Marshal.Release(merge);
@@ -261,7 +270,7 @@ public static class ConverterShellSmokeV2 {
             if (initialized >= 0) CoUninitialize();
         }
     }
-    public static string Run(string library, string supported, string unsupported, string audio, string video, string pdf, string document, string text, string mpga, string directory, string spreadsheet, string csv, string html, string qoi, string avif, string heif) {
+    public static string Run(string library, string supported, string unsupported, string audio, string video, string pdf, string document, string text, string mpga, string directory, string spreadsheet, string csv, string html, string qoi, string avif, string heif, string preferences) {
         int initialized = CoInitializeEx(IntPtr.Zero, 2);
         IntPtr module = LoadLibrary(library), factory = IntPtr.Zero, command = IntPtr.Zero;
         if (module == IntPtr.Zero) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
@@ -281,6 +290,22 @@ public static class ConverterShellSmokeV2 {
             if (State(command, supported) != 0) throw new Exception("PNG non abilitato");
             if (State(command, unsupported) != 2) throw new Exception("Estensione sconosciuta non nascosta");
             const string custom = "Impostazioni personalizzate…";
+            Expect("Default FLAC", Visible(command, audio), new string[]{"MP3", "WAV", custom});
+            Expect("Default PNG + PDF", Visible(command, supported, pdf), new string[]{"PNG", "JPEG", "PDF (Bulk)", "PDF (Merge)", custom});
+            System.IO.File.WriteAllText(preferences, "{\"enabled_output_formats\":[\"flac\",\"txt\",\"avif\",\"unknown\"]}");
+            Expect("FLAC attivato senza riavvio", Visible(command, audio), new string[]{"FLAC", custom});
+            Expect("OCR attivato senza PDF", Visible(command, supported, pdf), new string[]{"TXT · OCR / testo PDF", custom});
+            Expect("AVIF attivato", Visible(command, heif), new string[]{"TXT · OCR", "AVIF", custom});
+            System.IO.File.WriteAllText(preferences, "{\"enabled_output_formats\":[]}");
+            if (State(command, supported) != 0) throw new Exception("Input valido nascosto con tutte le destinazioni disabilitate");
+            Expect("Destinazioni vuote FLAC", Visible(command, audio), new string[]{custom});
+            Expect("Destinazioni vuote PDF batch", Visible(command, supported, pdf), new string[]{custom});
+            Expect("Destinazioni vuote sconosciuto", Visible(command, unsupported), new string[]{});
+            foreach (string invalid in new string[]{"{broken", "{\"enabled_output_formats\":{}}", "{\"enabled_output_formats\":[\"unknown\"]}", "{\"settings\":{\"format\":\"Flac\"}}"}) {
+                System.IO.File.WriteAllText(preferences, invalid);
+                Expect("Preferenze non valide", Visible(command, audio), new string[]{"MP3", "WAV", custom});
+            }
+            System.IO.File.WriteAllText(preferences, "{\"enabled_output_formats\":[\"mp3\",\"wav\",\"flac\",\"aac\",\"ogg\",\"opus\",\"aiff\",\"mp4\",\"mkv\",\"mov\",\"webm\",\"avi\",\"gif\",\"png\",\"jpg\",\"webp\",\"bmp\",\"tiff\",\"ico\",\"pdf\",\"txt\",\"m4a\",\"wma\",\"ac3\",\"au\",\"caf\",\"mpeg\",\"wmv\",\"flv\",\"ts\",\"m4v\",\"3gp\",\"qoi\",\"tga\",\"ff\",\"exr\",\"hdr\",\"pnm\",\"csv\",\"xlsx\",\"docx\",\"html\",\"avif\",\"heic\"]}");
             Expect("Audio + video", Visible(command, audio, video), new string[]{"MP3", "WAV", "FLAC", "AAC", "OGG", "Opus", "AIFF", "M4A", "WMA", "AC3", "AU", "CAF", custom});
             Expect("PNG + PDF", Visible(command, supported, pdf), new string[]{"PNG", "JPEG", "PDF (Bulk)", "PDF (Merge)", "TXT · OCR / testo PDF", custom});
             Expect("DOCX + PNG", Visible(command, document, supported), new string[]{"PDF (Bulk)", "PDF (Merge)", custom});
@@ -303,11 +328,11 @@ public static class ConverterShellSmokeV2 {
             Expect("AVIF", Visible(command, avif), Visible(command, supported));
             Expect("HEIF", Visible(command, heif), Visible(command, supported));
             Expect("Sconosciuto", Visible(command, unsupported), new string[]{});
-            ValidatePdfActions(command, supported, pdf, audio);
+            ValidatePdfActions(command, supported, pdf, audio, preferences);
             Marshal.Release(command); command = IntPtr.Zero;
             Marshal.Release(factory); factory = IntPtr.Zero;
             if (unload() != 0) throw new Exception("Oggetti COM non rilasciati");
-            return "COM smoke test OK: " + label + "; enumerazione sottomenu, filtri batch audio/video/immagini/PDF/documenti, selezioni reali IShellItemArray e unload OK.";
+            return "COM smoke test OK: " + label + "; preferenze default/personalizzate/vuote/non valide e aggiornamento live, filtri batch, PDF disabilitato blocca Invoke, selezioni reali IShellItemArray e unload OK.";
         } finally {
             if (command != IntPtr.Zero) Marshal.Release(command);
             if (factory != IntPtr.Zero) Marshal.Release(factory);
@@ -321,7 +346,7 @@ public static class ConverterShellSmokeV2 {
 $token = [Guid]::NewGuid().ToString('N')
 $supported = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token città & mare.png"
 $unsupported = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.unknown"
-$audio = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.wav"
+$audio = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.flac"
 $video = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.mp4"
 $pdf = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.pdf"
 $document = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.docx"
@@ -335,10 +360,28 @@ $qoi = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.qoi"
 $avif = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.avif"
 $heif = Join-Path ([IO.Path]::GetTempPath()) "the-converter-smoke-$token.heif"
 $testFiles = @($supported, $unsupported, $audio, $video, $pdf, $document, $text, $mpga, $spreadsheet, $csv, $html, $qoi, $avif, $heif)
+$preferencesRoot = Join-Path ([IO.Path]::GetTempPath()) "convert-here-preferences-$token"
+$previousAppData = [Environment]::GetEnvironmentVariable('APPDATA', 'Process')
+$previousLocalAppData = [Environment]::GetEnvironmentVariable('LOCALAPPDATA', 'Process')
 try {
+    $env:APPDATA = Join-Path $preferencesRoot 'Roaming'
+    $env:LOCALAPPDATA = Join-Path $preferencesRoot 'Local'
+    $preferences = Join-Path $env:APPDATA 'SalvatoreCorsi\TheConverter\config\preferences.json'
+    New-Item -ItemType Directory -Path (Split-Path -Parent $preferences) -Force | Out-Null
+    $packageName = [regex]::Match((Split-Path -Leaf (Split-Path -Parent $library)), '^([A-Za-z0-9.-]+)_\d+\.\d+\.\d+\.\d+_(?:x64|x86|arm64|arm|neutral)_[^_]*_([a-z0-9]{13})$')
+    if ($packageName.Success) {
+        # Data-only package-path fixture: the DLL must prefer its own LocalCache
+        # over conflicting historical Roaming settings, without installing MSIX.
+        [IO.File]::WriteAllText($preferences, '{"enabled_output_formats":["heic"]}')
+        $family = $packageName.Groups[1].Value + '_' + $packageName.Groups[2].Value
+        $preferences = Join-Path $env:LOCALAPPDATA "Packages\$family\LocalCache\Roaming\SalvatoreCorsi\TheConverter\config\preferences.json"
+        New-Item -ItemType Directory -Path (Split-Path -Parent $preferences) -Force | Out-Null
+        [IO.File]::WriteAllText($preferences, '{}')
+        Write-Output "Package preferences fixture: $family; conflicting historical preferences remain isolated."
+    }
     foreach ($file in $testFiles) { [IO.File]::WriteAllBytes($file, [byte[]]@()) }
     New-Item -ItemType Directory -Path $directory | Out-Null
-    [ConverterShellSmokeV2]::Run($library, $supported, $unsupported, $audio, $video, $pdf, $document, $text, $mpga, $directory, $spreadsheet, $csv, $html, $qoi, $avif, $heif)
+    [ConverterShellSmokeV2]::Run($library, $supported, $unsupported, $audio, $video, $pdf, $document, $text, $mpga, $directory, $spreadsheet, $csv, $html, $qoi, $avif, $heif, $preferences)
     if ($InvokeCaptureFile) {
         foreach ($case in @(
             @{ Command = 'mp3'; Files = @($audio, $video); Prefix = @('--quick', '--target', 'mp3', '--selection-file') },
@@ -368,8 +411,14 @@ try {
         Write-Output 'Invoke smoke test OK: MP3 e PDF Bulk rapidi; PDF Merge apre GUI senza --quick; personalizzate e ordine/percorso JSON conservati.'
     }
 } finally {
+    [Environment]::SetEnvironmentVariable('APPDATA', $previousAppData, 'Process')
+    [Environment]::SetEnvironmentVariable('LOCALAPPDATA', $previousLocalAppData, 'Process')
     foreach ($file in $testFiles) {
         if (Test-Path -LiteralPath $file) { Remove-Item -LiteralPath $file -Force }
     }
     if (Test-Path -LiteralPath $directory -PathType Container) { Remove-Item -LiteralPath $directory -Force }
+    $temporaryRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\')
+    $checked = [IO.Path]::GetFullPath($preferencesRoot)
+    if (-not $checked.StartsWith($temporaryRoot + '\', [StringComparison]::OrdinalIgnoreCase) -or [IO.Path]::GetFileName($checked) -notlike 'convert-here-preferences-*') { throw 'Unexpected preferences fixture directory.' }
+    if (Test-Path -LiteralPath $checked) { Remove-Item -LiteralPath $checked -Recurse -Force }
 }

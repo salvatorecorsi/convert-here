@@ -21,7 +21,7 @@ if (-not $Version) {
 }
 if ($Version -notmatch '^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$') { throw "Versione non valida: $Version" }
 $fileVersion = ($Version -split '[-+]', 2)[0] + '.0'
-foreach ($required in @('the-converter.exe', 'the-converter-cli.exe', 'the_converter_shell.dll', 'README.md', 'THIRD-PARTY-NOTICES.md')) {
+foreach ($required in @('the-converter.exe', 'the-converter-cli.exe', 'the_converter_shell.dll', 'README.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md')) {
     if (-not (Test-Path -LiteralPath (Join-Path $source $required) -PathType Leaf)) { throw "Distribuzione incompleta: manca $required. Esegui prima build-release.ps1." }
 }
 if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'install-runtime-tools.ps1') -PathType Leaf)) {
@@ -58,7 +58,7 @@ if (Test-Path -LiteralPath $package -PathType Leaf) {
     }
 }
 # The installer deliberately includes no FFmpeg/Poppler binaries from tools/.
-# Those are downloaded directly from upstream by the selected installation task.
+# Runtime acquisition is an explicit action in the application, never a setup task.
 & $compiler ('/DAppVersion=' + $Version) ('/DFileVersion=' + $fileVersion) ('/DSourceDir=' + $source) ('/DOutputPath=' + $output) ('/DModernMenuAvailable=' + $modern) (Join-Path $root 'installer\TheConverter.iss')
 if ($LASTEXITCODE -ne 0) { throw "Compilazione installer fallita (ISCC: $LASTEXITCODE)." }
 $artifact = Join-Path $output "ConvertHere-$Version-windows-x64-setup.exe"

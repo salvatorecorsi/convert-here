@@ -1,9 +1,9 @@
 ; Small, per-user installer. Conversion runtimes are obtained from their upstream publishers.
 #ifndef AppVersion
-  #define AppVersion "0.3.2"
+  #define AppVersion "0.4.0"
 #endif
 #ifndef FileVersion
-  #define FileVersion "0.3.2.0"
+  #define FileVersion "0.4.0.0"
 #endif
 #ifndef SourceDir
   #define SourceDir "..\dist\ConvertHere"
@@ -62,34 +62,25 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [CustomMessages]
 italian.AdditionalIntegration=Integrazione con Windows:
 italian.ContextMenu=Aggiungi il menu classico come compatibilita e ripiego (Windows 11: Mostra altre opzioni)
-italian.DownloadTools=Scarica FFmpeg e Poppler per audio, video e PDF (consigliato; circa 160 MB, richiede Internet)
 italian.ModernContextMenu=Aggiungi "Converti in" direttamente al menu di Windows 11
 italian.DesktopShortcut=Crea un collegamento sul desktop
 italian.LaunchApp=Apri Convert Here
 italian.UninstallApp=Disinstalla Convert Here
-italian.InstallTools=Installa o aggiorna motori di conversione
-italian.DownloadingTools=Download e verifica dei motori di conversione...
-italian.ToolsFailed=Convert Here è installato, ma non è stato possibile scaricare FFmpeg e Poppler.%n%nLe conversioni di immagini restano disponibili. Per riprovare in seguito, apri "Installa o aggiorna motori di conversione" nella cartella dell'app nel menu Start.%n%nVuoi riprovare il download adesso?
 italian.ModernFailed=Non è stato possibile registrare il menu moderno di Windows 11. Il pacchetto deve avere una firma attendibile su questo computer. Il menu classico resta disponibile se selezionato.%n%nConsulta docs\windows-integration.md per i dettagli.
 italian.ModernRemovalFailed=Non è stato possibile rimuovere il menu di Windows 11. La registrazione e i file applicazione sono conservati: riprova dopo aver chiuso le conversioni in corso. Consulta il registro del setup per i dettagli.
 italian.PendingCleanup=Il menu è stato rimosso. Windows sta ancora usando la DLL dell'estensione: la pulizia verrà ritentata al prossimo accesso, senza riavviare Esplora file.
 english.AdditionalIntegration=Windows integration:
 english.ContextMenu=Add the classic menu for compatibility and fallback (Windows 11: Show more options)
-english.DownloadTools=Download FFmpeg and Poppler for audio, video and PDF (recommended; about 160 MB, requires Internet)
 english.ModernContextMenu=Add "Convert to" directly to the Windows 11 menu
 english.DesktopShortcut=Create a desktop shortcut
 english.LaunchApp=Open Convert Here
 english.UninstallApp=Uninstall Convert Here
-english.InstallTools=Install or update conversion engines
-english.DownloadingTools=Downloading and verifying conversion engines...
-english.ToolsFailed=Convert Here is installed, but FFmpeg and Poppler could not be downloaded.%n%nImage conversions remain available. To retry later, open "Install or update conversion engines" in the app's Start menu folder.%n%nRetry the download now?
 english.ModernFailed=The modern Windows 11 menu could not be registered. The package must have a trusted signature on this computer. The classic menu remains available if selected.%n%nSee docs\windows-integration.md for details.
 english.ModernRemovalFailed=The Windows 11 menu could not be removed. Its registration and application files have been preserved: retry after closing any running conversions. See the setup log for details.
 english.PendingCleanup=The menu has been removed. Windows is still using the extension DLL: cleanup will be retried at your next sign-in without restarting File Explorer.
 
 [Tasks]
 Name: "contextmenu"; Description: "{cm:ContextMenu}"; GroupDescription: "{cm:AdditionalIntegration}"
-Name: "downloadtools"; Description: "{cm:DownloadTools}"; GroupDescription: "{cm:AdditionalIntegration}"
 #if ModernMenuAvailable == "1"
 Name: "moderncontextmenu"; Description: "{cm:ModernContextMenu}"; GroupDescription: "{cm:AdditionalIntegration}"; Check: IsWindows11
 #endif
@@ -100,6 +91,7 @@ Source: "{#SourceDir}\the-converter.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\the-converter-cli.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\the_converter_shell.dll"; DestDir: "{app}"; Flags: ignoreversion uninsneveruninstall
 Source: "{#SourceDir}\README.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceDir}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\docs\*"; DestDir: "{app}\docs"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceDir}\scripts\install-context-menu.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
@@ -113,7 +105,6 @@ Source: "{#SourceDir}\Assets\*"; DestDir: "{app}\Assets"; Flags: ignoreversion r
 
 [Icons]
 Name: "{group}\Convert Here"; Filename: "{app}\the-converter.exe"
-Name: "{group}\{cm:InstallTools}"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -NoExit -ExecutionPolicy Bypass -File ""{app}\scripts\install-runtime-tools.ps1"" -InstallDirectory ""{app}"""; WorkingDir: "{app}"; IconFilename: "{app}\the-converter.exe"
 Name: "{group}\{cm:UninstallApp}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\Convert Here"; Filename: "{app}\the-converter.exe"; Tasks: desktopicon
 
@@ -273,7 +264,6 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  Retry: Integer;
   ModernInstalled: Boolean;
 begin
   if CurStep = ssInstall then
@@ -282,16 +272,6 @@ begin
   begin
     if not WizardIsTaskSelected('contextmenu') then
       UnregisterClassic;
-    if WizardIsTaskSelected('downloadtools') then
-    begin
-      WizardForm.StatusLabel.Caption := CustomMessage('DownloadingTools');
-      repeat
-        if RunScript('install-runtime-tools.ps1', '-InstallDirectory ' + Quoted(ExpandConstant('{app}'))) then
-          Retry := IDNO
-        else
-          Retry := SuppressibleMsgBox(CustomMessage('ToolsFailed'), mbError, MB_YESNO, IDNO);
-      until Retry <> IDYES;
-    end;
     ModernInstalled := False;
 #if ModernMenuAvailable == "1"
     if WizardIsTaskSelected('moderncontextmenu') then

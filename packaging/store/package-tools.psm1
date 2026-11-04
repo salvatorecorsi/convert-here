@@ -150,7 +150,7 @@ function Assert-StorePackageLayout {
     $verbs = @($manifest.SelectNodes('//desktop5:Verb', $ns))
     if ($classes.Count -ne 1 -or $classes[0].GetAttribute('Id') -ine $classId -or $classes[0].GetAttribute('Path') -cne 'the_converter_shell.dll' -or
         $verbs.Count -ne 1 -or $verbs[0].GetAttribute('Clsid') -ine $classId) { throw 'Invalid packaged Explorer command registration.' }
-    $required = @('AppxManifest.xml', 'the-converter.exe', 'the_converter_shell.dll', 'store-runtime.json', 'README.txt', 'THIRD-PARTY-NOTICES.md', 'Docs\licenses\RUST-THIRD-PARTY-LICENSES.txt', 'Docs\licenses\rust-components.json')
+    $required = @('AppxManifest.xml', 'the-converter.exe', 'the_converter_shell.dll', 'store-runtime.json', 'README.txt', 'LICENSE', 'THIRD-PARTY-NOTICES.md', 'Docs\licenses\RUST-THIRD-PARTY-LICENSES.txt', 'Docs\licenses\rust-components.json')
     foreach ($relative in $required) {
         if (-not (Test-Path -LiteralPath (Join-Path $stage $relative) -PathType Leaf)) { throw "Store layout file missing: $relative" }
     }

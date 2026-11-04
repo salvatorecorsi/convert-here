@@ -1,6 +1,6 @@
 # Convert Here — informativa sulla privacy / privacy statement
 
-Informativa aggiornata al 4 novembre 2026, relativa alle funzioni di Convert Here 0.3.2.
+Informativa aggiornata al 4 novembre 2026, relativa alle funzioni di Convert Here 0.4.0.
 
 | Dato | Valore |
 | --- | --- |
@@ -30,7 +30,7 @@ Compressione, divisione e unione dei PDF avvengono nell'app sul PC, senza un ser
 
 ### Informazioni conservate sul dispositivo
 
-L'app salva preferenze di conversione, lingua e attivazione OCR, separatore CSV, operazione PDF, cartella di destinazione e percorsi degli strumenti nelle proprie cartelle utente. La coda rapida registra nomi e percorsi dei file, destinazioni, formato, impostazioni, motori utilizzati, date, avanzamento ed eventuali errori. L'ultimo resoconto contiene data, formato, risultati e messaggi di errore, che possono includere percorsi o diagnostica dei motori.
+L'app salva preferenze di conversione, elenco dei formati di uscita visibili, lingua e attivazione OCR, separatore CSV, operazione PDF, cartella di destinazione e percorsi degli strumenti nelle proprie cartelle utente. La coda rapida registra nomi e percorsi dei file, destinazioni, formato, impostazioni, motori utilizzati, date, avanzamento ed eventuali errori. L'ultimo resoconto contiene data, formato, risultati e messaggi di errore, che possono includere percorsi o diagnostica dei motori.
 
 Questi dati sono memorizzati come file locali, fra cui `preferences.json`, `report-last.json` e i record `job.json`, nelle cartelle dati dell'app sotto `%APPDATA%` e `%LOCALAPPDATA%`. In un'installazione MSIX Windows puo reindirizzare tali percorsi nei dati privati del pacchetto. I file di preferenze, stato e risultato non sono cifrati dall'app: sono soggetti ai permessi e alle protezioni dell'account Windows e del dispositivo.
 
@@ -42,9 +42,13 @@ Preferenze e ultimo resoconto non hanno una scadenza automatica. Per rimuovere m
 
 ### Collegamenti e servizi esterni
 
-La pagina Strumenti contiene collegamenti ai siti di FFmpeg, Poppler, LibreOffice, Tesseract e libheif. Si aprono solo quando li selezioni, nel browser configurato. Il browser, il sito visitato e gli strumenti esterni applicano le proprie regole. Anche cartelle di rete, sincronizzazione cloud, antivirus e funzioni diagnostiche di Windows dipendono dalle impostazioni del tuo dispositivo: questa informativa riguarda il codice di Convert Here.
+La sezione **Motori** delle **Impostazioni** contiene collegamenti ai siti di FFmpeg, Poppler, LibreOffice, Tesseract e libheif. Selezionare un collegamento apre il browser configurato, cui si applicano le regole del sito visitato e del browser.
 
-L'edizione Store non scarica automaticamente motori o aggiornamenti eseguibili. Installazione e aggiornamenti Store sono gestiti da Microsoft. L'eventuale script per scaricare motori della distribuzione EXE separata contatta i distributori indicati nello script quando viene avviato; non fa parte del pacchetto Store.
+Nella 0.4.0 puoi richiedere esplicitamente il download di FFmpeg e Poppler nelle Impostazioni, anche nell'edizione Store. La conferma mostra origine, versione, dimensioni, licenze e destinazione. Il download usa HTTPS verso le distribuzioni Gyan e Poppler per Windows ospitate su GitHub e i relativi CDN. I destinatari ricevono l'indirizzo IP e i normali dati della richiesta HTTP, fra cui User-Agent e versione dell'app; **non vengono caricati i file scelti per la conversione**. I distributori applicano le proprie regole ai dati delle richieste.
+
+Gli archivi sono verificati con SHA-256 prima dell'estrazione nella cartella utente `%LOCALAPPDATA%\ConvertHere\tools`, mantenendo licenze e documentazione upstream. I motori restano disponibili per gli avvii successivi; i temporanei di download ed estrazione vengono rimossi normalmente dopo completamento, annullamento o errore, ma un arresto improvviso puo lasciare residui. I percorsi possono essere reindirizzati da Windows nelle installazioni MSIX. Le conversioni e l'OCR continuano a essere locali. Il download non e un aggiornamento automatico dell'app: installazione e aggiornamenti Store sono gestiti da Microsoft. Gli eventuali script della distribuzione EXE separata contattano i distributori soltanto quando avviati.
+
+Anche cartelle di rete, sincronizzazione cloud, antivirus e funzioni diagnostiche di Windows dipendono dalle impostazioni del dispositivo e dagli strumenti esterni; questa informativa descrive il codice di Convert Here.
 
 ### Controlli e richieste
 
@@ -69,7 +73,7 @@ PDF compression, splitting and merging run in the app on your PC without a remot
 
 ### Information stored on your device
 
-The app stores conversion preferences, OCR language and enablement, CSV delimiter, PDF operation, output-folder and tool paths. Its persistent quick-conversion queue stores source and destination paths, formats, settings, tool paths, timestamps, progress and errors. The latest report stores its date, format, results and error messages, which may contain paths or engine diagnostics.
+The app stores conversion preferences, the list of visible output formats, OCR language and enablement, CSV delimiter, PDF operation, output-folder and tool paths. Its persistent quick-conversion queue stores source and destination paths, formats, settings, tool paths, timestamps, progress and errors. The latest report stores its date, format, results and error messages, which may contain paths or engine diagnostics.
 
 Local files include `preferences.json`, `report-last.json` and `job.json` records in the app's user-data folders under `%APPDATA%` and `%LOCALAPPDATA%`. In an MSIX installation, Windows may redirect these locations into private package data. The app does not encrypt preferences, state or output files; Windows account permissions and device protections apply.
 
@@ -81,9 +85,13 @@ Preferences and the last report have no automatic expiry. To remove local data m
 
 ### External links and services
 
-The Strumenti page links to the FFmpeg, Poppler, LibreOffice, Tesseract and libheif websites. Selecting a link opens your configured browser; the browser and destination website apply their own policies. External engines, network folders, cloud synchronization, antivirus and Windows diagnostics are governed by their own behavior and your device settings. This statement describes Convert Here's application code.
+The **Motori** section of **Impostazioni** links to the FFmpeg, Poppler, LibreOffice, Tesseract and libheif websites. Selecting a link opens the configured browser, subject to the browser's and destination site's own policies.
 
-The Store edition does not automatically download conversion engines or executable updates. Microsoft manages Store installation and updates. A separate EXE distribution may offer an engine-download script that contacts the distributors named in that script when run; that script is not part of the Store package.
+In 0.4.0 you can explicitly request FFmpeg and Poppler downloads in Impostazioni, including in the Store edition. The confirmation shows the source, version, size, licenses and destination. Downloads use HTTPS to the Gyan and Poppler Windows distributions hosted on GitHub and their CDNs. Recipients receive your IP address and normal HTTP request data, including the User-Agent and app version; **files selected for conversion are not uploaded**. Download providers apply their own policies to request data.
+
+Archives are verified using SHA-256 before extraction into the user's `%LOCALAPPDATA%\ConvertHere\tools` folder, retaining upstream licenses and documentation. Engines remain available for later use. Download and extraction temporary files are normally removed after completion, cancellation or error; an unexpected shutdown may leave residual files. Windows may redirect paths in MSIX installations. Conversion and OCR remain local. Engine downloads are not automatic application updates: Microsoft manages Store installation and app updates. Separate EXE-distribution scripts contact the providers only when run.
+
+Network folders, cloud synchronization, antivirus and Windows diagnostics depend on your device settings and external tools; this statement describes Convert Here's application code.
 
 ### Controls and questions
 

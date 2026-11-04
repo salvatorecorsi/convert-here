@@ -1,10 +1,20 @@
 # Microsoft Store: preparazione della submission
 
-Stato al 4 novembre 2026: [Convert Here **0.3.2**](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.2) e pubblicata come latest su GitHub dal commit `8f7532bf9d16f80ef65b5229dba93929e11c1d82`. Il nome editore **Salvatore Corsi** e approvato: Verification Summary **Authorized**, account **Active** e Public Info Publisher Name **Salvatore Corsi**. Il MSIX Store **1.0.2.0** e stato caricato e salvato, risulta **Validated** e ha sostituito il precedente 1.0.1.0. La **Submission 1**, ID **1152921505702314630**, e stata nuovamente inviata il **4 novembre 2026** ed e **In certification**. **Lo Store non e ancora pubblicato.**
+Preparazione della **0.4.0 / Store 1.0.3.0**: uscite visibili configurabili e download facoltativo dei motori su richiesta, editore **Salvatore Corsi**. Non sono ancora attestati build pubblica, checksum, caricamento o invio del nuovo pacchetto.
+
+Le Impostazioni mostrano otto uscite per default: MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4. Restano supportate 93 estensioni in ingresso e 44 destinazioni del motore. Il filtro riguarda GUI e menu Explorer, senza bloccare CLI, richieste rapide esplicite o lavori gia accodati.
+
+In **Impostazioni → Motori** puoi richiedere FFmpeg, Poppler o entrambi con conferma di origine, versione, dimensioni, licenze e destinazione. Il download HTTPS verifica lo SHA-256 prima dell'estrazione nel profilo utente, conservando licenze e documentazione. IP e normali dati HTTP raggiungono i distributori; i file da convertire non vengono caricati. La dipendenza e il download sono descritti all'inizio delle schede IT/EN e nella [bozza privacy 0.4.0](privacy.md).
+
+Le [Store Policies 7.20](https://learn.microsoft.com/en-us/windows/apps/publish/store-policies#102-security), efficaci dal 22 ottobre 2026, richiedono consenso e coerenza delle estensioni con la funzione dichiarata; non stabiliscono un divieto generale di acquisire dipendenze. Resta necessaria la certificazione Microsoft.
+
+## Ultimo stato verificato 0.3.2 / Store 1.0.2.0
+
+Stato al 4 novembre 2026: [Convert Here **0.3.2**](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.2) e pubblicata su GitHub dal commit `8f7532bf9d16f80ef65b5229dba93929e11c1d82` e risulta **In Microsoft Store**. Il nome editore **Salvatore Corsi** e approvato, con account Active e verifica Authorized. E stata osservata l'installazione del pacchetto completo **1.0.2.0** con **SignatureKind: Store**. La Submission 1, ID1152921505702314630, aveva seguito il percorso di certificazione documentato; la nuova **Submission 2**, ID **1152921505702316905**, e **In draft**, senza nuovo pacchetto 1.0.3.0 ancora attestato.
 
 Il prodotto resta **9NPKPPCBNBM8**, `Name` **SalvatoreCorsi.ConvertHere** e `Publisher` **CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17**; identita e GUID tecnici non cambiano. Il nuovo `ConvertHere-1.0.2.0-x64-store.msix` e di **6165973 byte**, SHA-256 `c6d655b58156e4a14e13653a0f5115f3bffc2ba5ff086dbe435bc34440a053b7`, generato dal commit pulito `8f7532bf9d16f80ef65b5229dba93929e11c1d82` e verificato prima del caricamento.
 
-Tutte le sei sezioni erano **Complete** prima del nuovo invio. La timeline mostra **Submission Complete**, **Pre-processing In progress**, **Certification Not started**, **Publishing Not started**. Restano prezzo gratuito, tutti i 240 mercati selezionati e pubblicazione automatica appena il prodotto supera la certificazione.
+Tutte le sei sezioni erano **Complete** prima dell'invio della 1.0.2.0. La precedente timeline **Submission Complete**, **Pre-processing In progress**, **Certification Not started**, **Publishing Not started** e un'evidenza storica anteriore alla pubblicazione ora verificata. Restano prezzo gratuito e tutti i 240 mercati selezionati.
 
 La [privacy 0.3.2](https://github.com/salvatorecorsi/convert-here/blob/v0.3.2/docs/privacy.md) e pubblica verificata e salvata, con persistenza confermata al ricaricamento. Additional Testing Information di **1977 caratteri**, aggiornate alle versioni 0.3.2 / 1.0.2.0, sono salvate e rilette. I campi telefono e indirizzo restano vuoti. Le schede riutilizzano le tre catture native 0.3.1 perche l'interfaccia e identica; non sono nuove catture della 0.3.2.
 
@@ -58,12 +68,14 @@ Il menu moderno usa la DLL `IExplorerCommand`, COM surrogate e `windows.fileExpl
 | Publisher display name | **Salvatore Corsi**, approvato; profilo **Authorized**, account **Active** e nome pubblico confermato in Legal info. |
 | Store ID | `9NPKPPCBNBM8`; l'identificativo non attesta la pubblicazione dell'app. |
 | Titolare e contatto | **Salvatore Corsi**, **salvo@salvatorecorsi.com**. |
-| Informativa privacy | [Versione 0.3.2](https://github.com/salvatorecorsi/convert-here/blob/v0.3.2/docs/privacy.md), pubblica verificata e salvata nelle Properties; titolare e contatto reali nell'informativa IT/EN. |
+| Informativa privacy | [Bozza 0.4.0](privacy.md) con download facoltativo e formati visibili; la [versione 0.3.2](https://github.com/salvatorecorsi/convert-here/blob/v0.3.2/docs/privacy.md) resta l'URL verificato della precedente submission. |
 | Supporto | **salvo@salvatorecorsi.com** oppure [pagina contatti](https://www.salvatorecorsi.com/contatti/), gia pubblici. Per PC il campo e facoltativo, ma consigliato. |
 | Prezzo, mercati e calendario | Scelte confermate dal proprietario e salvate: **Gratuita**, **tutti i 240 mercati disponibili**, **pubblicazione appena approvata**. |
-| Licenza applicazione Store | Il campo Additional license terms puo rimanere vuoto per usare gli Standard Application License Terms; termini diversi vanno inseriti esplicitamente. Questo non assegna una licenza open source al repository. |
+| Licenza applicazione Store | Codice originale **GPL-3.0-only**, Copyright (C) 2026 Salvatore Corsi. Per la nuova submission compilare Additional license terms con il singolo URL `https://github.com/salvatorecorsi/convert-here/blob/v0.4.0/LICENSE`, dopo aver pubblicato e verificato il tag. Non lasciare il campo vuoto per affidarsi soltanto ai termini standard. Le licenze dei componenti terzi restano invariate. |
 
 Riferimenti Microsoft: [privacy e supporto](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/support-info), [termini di licenza aggiuntivi](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-additional-information#additional-license-terms).
+
+Microsoft accetta un singolo URL come collegamento cliccabile ai termini, oppure fino a 10000 caratteri di testo semplice. Il collegamento alla licenza completa evita di troncare la GPL; le schede IT/EN riportano anche il repository dei sorgenti. La nuova release prevede `ConvertHere-0.4.0-source.zip` con dipendenze Cargo vendorizzate e ricetta di build offline. Licenza, avvisi terzi e collegamento ai sorgenti sono inclusi nel materiale dell'app; la conversione non cambia i diritti sui file dell'utente.
 
 ## Identita, versione e lingue
 
@@ -87,14 +99,14 @@ In alternativa, aprire [Actions → Microsoft Store package → Run workflow](ht
 
 [Windows checks](https://github.com/salvatorecorsi/convert-here/actions/workflows/windows-ci.yml) esegue automaticamente formattazione, test Rust e fixture PowerShell. Una pipeline verde verifica queste operazioni; non sostituisce la certificazione Microsoft o il collaudo dell'installazione su Windows 11.
 
-- Versione Store del candidato caricato e inviato: `1.0.2.0`, distinta dalla versione applicazione Rust `0.3.2` e maggiore del precedente upload `1.0.1.0`. Il primo segmento Store deve essere maggiore di zero; il quarto rimane zero. Ogni segmento e al massimo 65535. [Versioni dei pacchetti](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/app-package-requirements#version-numbering-for-windows-10-and-11-packages).
+- Versione Store del nuovo candidato in preparazione: `1.0.3.0`, distinta dalla versione applicazione Rust `0.4.0` e maggiore del precedente upload `1.0.2.0`. Il primo segmento Store deve essere maggiore di zero; il quarto rimane zero. Ogni segmento e al massimo 65535. [Versioni dei pacchetti](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/app-package-requirements#version-numbering-for-windows-10-and-11-packages).
 - Nome e Publisher devono corrispondere esattamente ai dati Partner Center, comprese maiuscole e punteggiatura. Il builder ricompila gli eseguibili con il manifest dedicato al pacchetto completo, senza l'elemento di identita sparse dell'installer EXE.
 - La UI e attualmente in italiano. La scheda inglese e una traduzione della descrizione, non una traduzione dell'interfaccia. Non dichiarare supporto UI inglese finche non implementato e verificato.
 - Target previsto: Windows 11 desktop x64 per il menu moderno. Il limite OS e quello effettivamente impostato e collaudato nel manifest Store; non promettere ARM64 nativo.
 
 ## Funzioni incluse e motori opzionali
 
-Il pacchetto leggero offre subito conversioni immagini native e immagini in PDF, compressione PDF senza perdita, divisione e unione di PDF, coda, impostazioni e menu contestuale. Il modello espone 44 destinazioni per le categorie compatibili e riconosce 93 estensioni in ingresso. FFmpeg serve per audio/video; Poppler per PDF in immagini e testo (TXT, DOCX o HTML); LibreOffice per documenti Office/HTML in PDF ed Excel/CSV; Tesseract con dati delle lingue per OCR locale; libheif (`heif-dec` e `heif-enc`, con i codec necessari) per leggere e scrivere HEIC/AVIF. OCR dei PDF richiede anche Poppler per rasterizzare le pagine. Sono programmi esterni gia disponibili sul PC o selezionati dall'utente nella pagina Strumenti. La build Store non deve includere il downloader PowerShell del setup EXE.
+Il pacchetto leggero offre subito conversioni immagini native e immagini in PDF, compressione PDF senza perdita, divisione e unione di PDF, coda, impostazioni e menu contestuale. Il modello espone 44 destinazioni per le categorie compatibili e riconosce 93 estensioni in ingresso. FFmpeg serve per audio/video; Poppler per PDF in immagini e testo (TXT, DOCX o HTML); LibreOffice per documenti Office/HTML in PDF ed Excel/CSV; Tesseract con dati delle lingue per OCR locale; libheif (`heif-dec` e `heif-enc`, con i codec necessari) per leggere e scrivere HEIC/AVIF. OCR dei PDF richiede anche Poppler per rasterizzare le pagine. Sono programmi esterni gia disponibili sul PC o selezionati dall'utente in Impostazioni → Motori. La build Store non deve includere il downloader PowerShell del setup EXE. Nella 0.4.0 FFmpeg e Poppler possono essere scaricati su richiesta con conferma nell'app; LibreOffice, Tesseract, modelli OCR e libheif restano da selezionare da installazioni locali. Nessun motore e incluso nel MSIX.
 
 PDF in DOCX/HTML ricostruisce solo il testo: le scansioni richiedono l'opzione OCR locale; immagini, tabelle e impaginazione non vengono ricostruite. CSV esporta il primo foglio senza formule o formattazione; il separatore di importazione/esportazione e selezionabile. Le risorse collegate nei documenti HTML possono accedere a file locali o alla rete. Compressione PDF non garantisce una riduzione delle dimensioni: se il candidato e piu grande, viene conservata una copia identica dell'originale. Divisione e unione conservano le pagine ma omettono metadati del documento, segnalibri e struttura accessibile; PDF firmati o con moduli interattivi richiedono una copia statica senza firme.
 
@@ -132,17 +144,17 @@ Il Windows App Certification Kit non e stato eseguito sul nuovo candidato. Micro
 
 Per il CSV attendere l'esportazione del prodotto reale da Partner Center: preservare colonne Field, ID e Type; trasferire i testi preparati nei campi della lingua corretta. Non inventare un template con ID presunti. [Importazione/esportazione delle schede](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/import-and-export-store-listings).
 
-## Note per il certificatore: riferimento per 0.3.2
+## Note per il certificatore: bozza per 0.4.0
 
-Nel portale sono state salvate e rilette Additional Testing Information di 1977 caratteri per 0.3.2 / 1.0.2.0. Il riferimento esteso seguente descrive le procedure dell'app; non attesta un collaudo d'installazione del MSIX.
+La precedente 0.3.2 / 1.0.2.0 aveva istruzioni di test di 1977 caratteri salvate nel portale. Il riferimento seguente prepara la nuova 0.4.0; non attesta salvataggio, invio o collaudo del nuovo MSIX.
 
-> Convert Here 0.3.2 / Store package 1.0.2.0. Publisher: Salvatore Corsi; developer: Salvatore Corsi. The UI is Italian. The software is free, with no subscriptions, in-app purchases or usage-based charges. Conversion and OCR run locally and need no app account or login. Target: Windows 11 x64.
+> Convert Here 0.4.0 / Store package 1.0.3.0. Publisher and developer: Salvatore Corsi. The UI is Italian. The software is free, with no subscriptions, in-app purchases or usage-based charges. No payment is required to keep using it. Conversion and OCR run locally and need no app account or login. Target: Windows 11 x64.
 >
-> Native test: launch Convert Here from Start, use Aggiungi file or drop a PNG/JPEG, select another image format or PDF, then Converti file. Outputs use the selected folder or the source folder; existing files are preserved. PDF compression, splitting and merging need no external engine. Use unsigned, unencrypted PDFs without interactive forms.
+> Native test: launch Convert Here from Start, use Aggiungi file or drop a PNG/JPEG, select another image format or PDF, then Converti file. Outputs use the selected folder or the source folder; existing files are preserved. PDF compression, splitting and merging need no external engine. Use unsigned, unencrypted PDFs without interactive forms. Impostazioni lets users choose visible outputs; defaults are MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4. Enable a hidden output before testing it in the GUI. Explorer rereads preferences without a restart; all 93 input extensions remain recognized.
 >
 > Explorer test: select two PNG/JPEG files, right-click > Converti in > PDF (Bulk). Each input gets a separate queued result. A temporary shortcut opens job status. With the same selection choose PDF (Merge): wait for preparation, drag individual page handles or use arrows/Alt+Up/Down, then Crea PDF unico. Multipage PDFs can be mixed with images and pages interleaved across sources. Cambia cartella changes the destination. Merge also opens from the main app. Annulla cancels active work; closing the session attempts to remove its temporary snapshots.
 >
-> External engines are not bundled or automatically downloaded. Strumenti > Seleziona programma selects existing local executables. FFmpeg handles audio/video; Poppler handles PDF image/text export; LibreOffice handles Office/HTML and Excel/CSV; Tesseract and language data handle OCR; libheif tools/codecs handle HEIC/AVIF. PDF OCR also needs Poppler. Missing dependencies are reported. HTML linked resources may access local files or the network.
+> External engines are not bundled. In Impostazioni > Motori, users may select existing local executables or explicitly request FFmpeg, Poppler or both. A confirmation shows the source, version, size, licenses and user-folder destination before downloading. HTTPS requests go to the Gyan/Poppler Windows distributions on GitHub and their CDNs, exposing IP and normal HTTP metadata; conversion files are not uploaded. SHA-256 is checked before extraction into the user's ConvertHere tools folder, retaining upstream licenses and documentation. Other engines remain local user-selected installations. HTML linked resources may access local files or the network.
 >
 > PDF-to-DOCX/HTML reconstructs text only. OCR does not reconstruct original page layout. Animated images and multipage image containers use the first frame/image. Audio and video do not offer TXT output.
 >

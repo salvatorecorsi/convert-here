@@ -18,8 +18,10 @@ use the_converter::{
         ConversionSettings, CsvDelimiter, MediaKind, OutputFormat, PdfAction, VideoCodec,
         supported_formats,
     },
+    output_preferences::OutputPreferences,
     platform,
     queue::{self, JobState as QuickJobState, QueueJob},
+    runtime_install::{self, InstallPhase, InstallProgress, RuntimeEngine},
     tools::{ToolPaths, executable_available},
 };
 
@@ -100,6 +102,7 @@ fn configure_style(ctx: &egui::Context) {
 struct SavedState {
     settings: ConversionSettings,
     overrides: BTreeMap<String, PathBuf>,
+    enabled_output_formats: OutputPreferences,
     preset: usize,
 }
 
@@ -166,6 +169,7 @@ impl Default for SavedState {
         Self {
             settings: ConversionSettings::default(),
             overrides: BTreeMap::new(),
+            enabled_output_formats: OutputPreferences::default(),
             preset: 1,
         }
     }
@@ -195,6 +199,18 @@ enum Event {
     End,
 }
 
+enum RuntimeInstallEvent {
+    Progress(InstallProgress),
+    Installed(RuntimeEngine, PathBuf),
+    Finished(Result<(), String>),
+}
+
+struct RuntimeInstallTask {
+    progress: InstallProgress,
+    cancel: Arc<AtomicBool>,
+    receiver: mpsc::Receiver<RuntimeInstallEvent>,
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 enum MainView {
     #[default]
@@ -216,6 +232,10 @@ pub struct ConverterApp {
     cancel: Arc<AtomicBool>,
     receiver: Option<mpsc::Receiver<Event>>,
     show_tools: bool,
+    pending_runtime_install: Option<Vec<RuntimeEngine>>,
+    runtime_install: Option<RuntimeInstallTask>,
+    runtime_notice: Option<(String, bool)>,
+    show_license: bool,
     advanced: bool,
     notice: Option<String>,
     settings_dirty: bool,
@@ -244,6 +264,10 @@ impl ConverterApp {
             cancel: Arc::new(AtomicBool::new(false)),
             receiver: None,
             show_tools: false,
+            pending_runtime_install: None,
+            runtime_install: None,
+            runtime_notice: None,
+            show_license: false,
             advanced: false,
             notice: None,
             settings_dirty: false,
@@ -318,7 +342,345 @@ impl ConverterApp {
     }
 
     fn common_formats(&self) -> Vec<OutputFormat> {
-        the_converter::model::common_formats(self.items.iter().map(|item| item.path.as_path()))
+        self.saved
+            .enabled_output_formats
+            .filter(the_converter::model::common_formats(
+                self.items.iter().map(|item| item.path.as_path()),
+            ))
+            .collect()
+    }
+
+    fn sync_output_choice(&mut self) {
+        let available = if self.items.is_empty() {
+            self.saved
+                .enabled_output_formats
+                .filter(OutputFormat::ALL)
+                .collect()
+        } else {
+            self.common_formats()
+        };
+        if !available.contains(&self.saved.settings.format)
+            && let Some(format) = available.first()
+        {
+            self.saved.settings.format = *format;
+            self.saved.settings.audio.sample_rate = 0;
+        }
+    }
+
+    fn begin_runtime_install(&mut self, engines: Vec<RuntimeEngine>, ctx: &egui::Context) {
+        if self.runtime_install.is_some() || engines.is_empty() {
+            return;
+        }
+        let engine = engines[0];
+        let cancel = Arc::new(AtomicBool::new(false));
+        let (sender, receiver) = mpsc::channel();
+        self.runtime_notice = None;
+        self.runtime_install = Some(RuntimeInstallTask {
+            progress: InstallProgress {
+                engine,
+                phase: InstallPhase::Connecting,
+                fraction: 0.0,
+                downloaded_bytes: 0,
+                total_bytes: engine.manifest().download_bytes,
+                message: "Connessione al distributore…".into(),
+            },
+            cancel: cancel.clone(),
+            receiver,
+        });
+        let ctx = ctx.clone();
+        std::thread::spawn(move || {
+            let result = (|| {
+                for engine in engines {
+                    let directory = runtime_install::install(engine, &cancel, |progress| {
+                        let _ = sender.send(RuntimeInstallEvent::Progress(progress));
+                        ctx.request_repaint();
+                    })
+                    .map_err(|error| format!("{error:#}"))?;
+                    let _ = sender.send(RuntimeInstallEvent::Installed(engine, directory));
+                    ctx.request_repaint();
+                }
+                Ok(())
+            })();
+            let _ = sender.send(RuntimeInstallEvent::Finished(result));
+            ctx.request_repaint();
+        });
+    }
+
+    fn receive_runtime_events(&mut self) {
+        let mut installed = Vec::new();
+        let mut finished = None;
+        if let Some(task) = &mut self.runtime_install {
+            loop {
+                match task.receiver.try_recv() {
+                    Ok(RuntimeInstallEvent::Progress(progress)) => task.progress = progress,
+                    Ok(RuntimeInstallEvent::Installed(engine, directory)) => {
+                        installed.push((engine, directory));
+                    }
+                    Ok(RuntimeInstallEvent::Finished(result)) => finished = Some(result),
+                    Err(mpsc::TryRecvError::Empty) => break,
+                    Err(mpsc::TryRecvError::Disconnected) => {
+                        if finished.is_none() {
+                            finished = Some(Err(
+                                "L’installazione si è interrotta. Puoi riprovare.".into(),
+                            ));
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        if !installed.is_empty() {
+            for (engine, directory) in installed {
+                for (key, path) in engine.tool_paths(&directory) {
+                    if executable_available(&path) {
+                        self.saved.overrides.insert(key.into(), path);
+                    }
+                }
+            }
+            self.tools = ToolPaths::configured(&self.saved.overrides);
+            self.settings_dirty = true;
+            self.persist_with_force(true);
+        }
+        if let Some(result) = finished {
+            self.runtime_install = None;
+            self.runtime_notice = Some(match result {
+                Ok(()) => (
+                    "Installazione completata. I motori sono pronti per le conversioni locali."
+                        .into(),
+                    false,
+                ),
+                Err(error) => (error, true),
+            });
+        }
+    }
+
+    fn output_format_settings(&mut self, ui: &mut egui::Ui) {
+        let before = self.saved.enabled_output_formats.clone();
+        theme::show_card(ui, |ui| {
+            ui.label(theme::heading("Formati di uscita", theme::SUBTITLE));
+            ui.label("Scegli i formati da mostrare nell’app e in «Converti in». Tutti i formati in ingresso restano supportati.");
+            ui.horizontal_wrapped(|ui| {
+                let count = self
+                    .saved
+                    .enabled_output_formats
+                    .filter(OutputFormat::ALL)
+                    .count();
+                ui.label(format!("{count} di {} attivi", OutputFormat::ALL.len()));
+                if ui.button("Più comuni").clicked() {
+                    self.saved.enabled_output_formats.reset_common();
+                }
+                if ui.button("Attiva tutti").clicked() {
+                    self.saved.enabled_output_formats.enable_all();
+                }
+                if ui.button("Disattiva tutti").clicked() {
+                    self.saved.enabled_output_formats.disable_all();
+                }
+            });
+            for (index, title) in ["Audio", "Video", "Immagini", "Documenti e PDF"]
+                .into_iter()
+                .enumerate()
+            {
+                let formats: Vec<_> = OutputFormat::ALL
+                    .into_iter()
+                    .filter(|format| match index {
+                        0 => format.kind() == MediaKind::Audio,
+                        1 => format.kind() == MediaKind::Video,
+                        2 => format.kind() == MediaKind::Image,
+                        _ => matches!(
+                            format.kind(),
+                            MediaKind::Pdf
+                                | MediaKind::Document
+                                | MediaKind::Spreadsheet
+                                | MediaKind::Html
+                        ),
+                    })
+                    .collect();
+                let enabled = self
+                    .saved
+                    .enabled_output_formats
+                    .filter(formats.iter().copied())
+                    .count();
+                egui::CollapsingHeader::new(format!("{title} · {enabled}/{}", formats.len()))
+                    .id_salt(("enabled_output_category", index))
+                    .default_open(index == 0)
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            if ui.small_button("Tutti").clicked() {
+                                for format in &formats {
+                                    self.saved.enabled_output_formats.set_enabled(*format, true);
+                                }
+                            }
+                            if ui.small_button("Nessuno").clicked() {
+                                for format in &formats {
+                                    self.saved
+                                        .enabled_output_formats
+                                        .set_enabled(*format, false);
+                                }
+                            }
+                        });
+                        ui.horizontal_wrapped(|ui| {
+                            for format in formats {
+                                let mut enabled =
+                                    self.saved.enabled_output_formats.contains(format);
+                                if ui
+                                    .checkbox(
+                                        &mut enabled,
+                                        format!("{} (.{})", format.label(), format.extension()),
+                                    )
+                                    .changed()
+                                {
+                                    self.saved
+                                        .enabled_output_formats
+                                        .set_enabled(format, enabled);
+                                }
+                            }
+                        });
+                    });
+            }
+            if self.saved.enabled_output_formats.is_empty() {
+                info_bar(
+                    ui,
+                    "Non ci sono uscite attive. Abilita almeno un formato per convertire; puoi comunque aggiungere i file.",
+                    InfoKind::Info,
+                );
+            }
+            ui.label(RichText::new("Per esempio: un FLAC resta selezionabile e offre MP3 e WAV con le impostazioni iniziali.").small().weak());
+        });
+        if self.saved.enabled_output_formats != before {
+            self.sync_output_choice();
+            self.settings_dirty = true;
+            self.persist_with_force(true);
+        }
+    }
+
+    fn runtime_install_progress(&mut self, ui: &mut egui::Ui) {
+        if let Some((message, error)) = &self.runtime_notice {
+            info_bar(
+                ui,
+                message,
+                if *error {
+                    InfoKind::Warning
+                } else {
+                    InfoKind::Info
+                },
+            );
+            if ui.small_button("Chiudi messaggio").clicked() {
+                self.runtime_notice = None;
+            }
+        }
+        if let Some(task) = &self.runtime_install {
+            theme::show_card(ui, |ui| {
+                ui.label(theme::heading(
+                    task.progress.engine.manifest().name,
+                    theme::BODY,
+                ));
+                ui.label(&task.progress.message);
+                ui.add(
+                    egui::ProgressBar::new(task.progress.fraction.clamp(0.0, 1.0))
+                        .desired_height(3.0),
+                );
+                if matches!(task.progress.phase, InstallPhase::Downloading) {
+                    ui.label(format!(
+                        "{:.1} / {:.1} MB",
+                        task.progress.downloaded_bytes as f64 / 1_000_000.0,
+                        task.progress.total_bytes as f64 / 1_000_000.0
+                    ));
+                }
+                let cancelling = task.cancel.load(Ordering::Relaxed);
+                if ui
+                    .add_enabled(
+                        !cancelling,
+                        egui::Button::new(if cancelling {
+                            "Annullamento…"
+                        } else {
+                            "Annulla installazione"
+                        }),
+                    )
+                    .clicked()
+                {
+                    task.cancel.store(true, Ordering::Relaxed);
+                }
+            });
+        }
+    }
+
+    fn runtime_install_confirmation(&mut self, ctx: &egui::Context) {
+        let Some(engines) = self.pending_runtime_install.clone() else {
+            return;
+        };
+        let mut confirmed = false;
+        let mut dismissed = false;
+        egui::Modal::new(egui::Id::new("confirm_runtime_install")).show(ctx, |ui| {
+            ui.set_width(490.0);
+            ui.label(theme::heading("Installa motori opzionali", theme::SUBTITLE));
+            ui.label("Scarica i motori dalle distribuzioni indicate e li verifica prima di estrarli. Il download richiede Internet; i tuoi file da convertire restano sul PC.");
+            ui.add_space(8.0);
+            for engine in &engines {
+                let manifest = engine.manifest();
+                ui.label(format!("{} {} · {:.1} MB · {}", manifest.name, manifest.version, manifest.download_bytes as f64 / 1_000_000.0, manifest.license));
+                ui.label(format!("Spazio dopo l’estrazione: {:.1} MB", manifest.expanded_bytes as f64 / 1_000_000.0));
+                let source = match engine {
+                    RuntimeEngine::Ffmpeg => "https://www.gyan.dev/ffmpeg/builds/",
+                    RuntimeEngine::Poppler => "https://github.com/oschwartz10612/poppler-windows/releases/tag/v26.09.0-0",
+                };
+                if ui.link("Distribuzione e licenze").on_hover_text(source).clicked()
+                    && let Err(error) = platform::open_website(source)
+                {
+                    self.notice = Some(format!("{error:#}"));
+                }
+            }
+            if let Some(directory) = the_converter::tools::user_tools_dir() {
+                ui.add_space(8.0);
+                ui.label("Cartella di installazione:");
+                ui.add(egui::Label::new(display_path(&directory)).wrap());
+            }
+            ui.label(RichText::new("Le licenze dei motori restano incluse. Non occorrono abbonamenti o pagamenti.").small().weak());
+            ui.add_space(12.0);
+            ui.horizontal(|ui| {
+                confirmed = ui.button("Scarica e installa").clicked();
+                dismissed = ui.button("Annulla").clicked();
+            });
+        });
+        if confirmed {
+            self.pending_runtime_install = None;
+            self.begin_runtime_install(engines, ctx);
+        } else if dismissed || ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
+            self.pending_runtime_install = None;
+        }
+    }
+
+    fn license_dialog(&mut self, ctx: &egui::Context) {
+        if !self.show_license {
+            return;
+        }
+        let mut close = false;
+        egui::Modal::new(egui::Id::new("application_license")).show(ctx, |ui| {
+            ui.set_width(600.0_f32.min((ctx.content_rect().width() - 70.0).max(300.0)));
+            ui.label(theme::heading("GNU GPL versione 3", theme::SUBTITLE));
+            ui.label("Convert Here · Copyright © 2026 Salvatore Corsi · GPL-3.0-only");
+            egui::ScrollArea::vertical()
+                .id_salt("application_license_scroll")
+                .max_height((ctx.content_rect().height() - 230.0).max(180.0))
+                .show(ui, |ui| {
+                    ui.add(
+                        egui::Label::new(
+                            RichText::new(include_str!("../LICENSE"))
+                                .monospace()
+                                .size(12.0),
+                        )
+                        .wrap(),
+                    );
+                });
+            ui.horizontal(|ui| {
+                if ui.button("Copia testo").clicked() {
+                    ctx.copy_text(include_str!("../LICENSE").into());
+                }
+                close = ui.button("Chiudi").clicked();
+            });
+        });
+        if close || ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
+            self.show_license = false;
+        }
     }
 
     fn prerequisite(&self) -> Option<String> {
@@ -335,6 +697,13 @@ impl ConverterApp {
             return Some("La fine dell’intervallo deve essere successiva all’inizio.".into());
         }
         if self.common_formats().is_empty() {
+            if !the_converter::model::common_formats(
+                self.items.iter().map(|item| item.path.as_path()),
+            )
+            .is_empty()
+            {
+                return Some("Per questi file non ci sono formati di uscita attivi. Abilitali nelle Impostazioni; i formati dei file in ingresso restano supportati.".into());
+            }
             return Some("Questi file richiedono formati di uscita diversi. Crea una coda con file compatibili.".into());
         }
         if !self.common_formats().contains(&self.saved.settings.format) {
@@ -497,7 +866,7 @@ impl ConverterApp {
                 {
                     self.show_tools = false;
                 }
-                ui.label(theme::heading("Strumenti", theme::SUBTITLE));
+                ui.label(theme::heading("Impostazioni", theme::SUBTITLE));
             } else {
                 navigation_tabs(ui, &mut self.view);
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -505,7 +874,7 @@ impl ConverterApp {
                         .add(
                             egui::Button::new(theme::button_text(
                                 FluentIcon::Settings,
-                                "Strumenti",
+                                "Impostazioni",
                                 colors.text,
                             ))
                             .frame(false),
@@ -532,7 +901,7 @@ impl ConverterApp {
                     .selected_text(if self.items.is_empty() {
                         "Aggiungi un file"
                     } else if formats.is_empty() {
-                        "Nessun formato comune"
+                        "Nessuna uscita attiva"
                     } else {
                         self.saved.settings.format.label()
                     })
@@ -558,6 +927,9 @@ impl ConverterApp {
                     });
             });
         });
+        if ui.link("Scegli i formati di uscita…").clicked() {
+            self.show_tools = true;
+        }
         if before != self.saved.settings.format {
             self.settings_dirty = true;
             if self
@@ -1601,11 +1973,13 @@ impl ConverterApp {
             }
             centered_column(ui, 1000.0, |ui| {
                 ui.label(RichText::new("Immagini e PDF da immagini, subito disponibili.").family(egui::FontFamily::Name(theme::SEMIBOLD_FAMILY.into())));
-                ui.label("Audio, video, pagine PDF e documenti Office usano strumenti opzionali. Se sono già installati, Convert Here li rileva o ti permette di selezionarli.");
+                ui.label("Audio, video, pagine PDF e documenti Office usano motori opzionali. Puoi installare FFmpeg e Poppler con un clic oppure selezionare programmi già presenti.");
                 ui.label("Convert Here è gratuito, senza abbonamenti, acquisti in-app o costi a consumo.");
                 ui.label(RichText::new("Le conversioni avvengono sul PC con i motori locali. I documenti HTML possono caricare risorse collegate; i siti ufficiali si aprono nel browser.").small().weak());
                 ui.add_space(5.0);
                 egui::ScrollArea::vertical().id_salt("tools_scroll").max_height((ui.available_height()-60.0).max(120.0)).show(ui, |ui| {
+                    ui.add_enabled_ui(!self.running, |ui| self.output_format_settings(ui));
+                    ui.add_space(8.0);
                     theme::show_card(ui, |ui| {
                         ui.label(theme::heading("Aspetto",theme::SUBTITLE));
                         ui.label(RichText::new("Segui Windows oppure prova un tema.").color(theme::palette(ui.ctx()).secondary));
@@ -1616,6 +1990,13 @@ impl ConverterApp {
                             }
                         });
                     });
+                    ui.add_space(8.0);
+                    ui.label(theme::heading("Motori di conversione", theme::SUBTITLE));
+                    ui.label("FFmpeg include FFprobe; Poppler include gli strumenti per immagini, testo e conteggio pagine PDF.");
+                    if ui.add_enabled(self.runtime_install.is_none(), egui::Button::new("Installa FFmpeg e Poppler…")).clicked() {
+                        self.pending_runtime_install = Some(vec![RuntimeEngine::Ffmpeg, RuntimeEngine::Poppler]);
+                    }
+                    self.runtime_install_progress(ui);
                     ui.add_space(8.0);
                     for (key, label, description, website) in [
                         ("ffmpeg", "FFmpeg", "Necessario per audio, video e GIF da video.", "https://ffmpeg.org/download.html"),
@@ -1643,6 +2024,16 @@ impl ConverterApp {
                                 }
                             }
                             ui.horizontal_wrapped(|ui| {
+                                let engine = match key {
+                                    "ffmpeg" => Some(RuntimeEngine::Ffmpeg),
+                                    "pdftoppm" => Some(RuntimeEngine::Poppler),
+                                    _ => None,
+                                };
+                                if let Some(engine) = engine
+                                    && ui.add_enabled(self.runtime_install.is_none(), egui::Button::new("Scarica e installa…")).clicked()
+                                {
+                                    self.pending_runtime_install = Some(vec![engine]);
+                                }
                                 if ui.small_button("Seleziona programma…").clicked()
                                     && let Some(path) = rfd::FileDialog::new()
                                         .set_title(format!("Seleziona {key}.exe già installato"))
@@ -1674,12 +2065,30 @@ impl ConverterApp {
                         });
                     }
                     egui::CollapsingHeader::new("Cartella personale degli strumenti").show(ui, |ui| {
-                        ui.label(RichText::new("Puoi usare gli strumenti già presenti in questa cartella personale. Non occorre modificare la cartella di installazione dell’app.").small().weak());
+                        ui.label(RichText::new("I download vengono installati qui. Puoi anche aggiungere strumenti già presenti, mantenendo le rispettive DLL e licenze. Non occorre modificare la cartella dell’app.").small().weak());
                         if let Some(path) = the_converter::tools::user_tools_dir() {
                             ui.add(egui::Label::new(RichText::new(display_path(&path)).small()).wrap());
                             if ui.small_button("Copia percorso").clicked() { ui.ctx().copy_text(display_path(&path)); }
                         }
                         ui.label(RichText::new("Sono riconosciute anche le cartelle bin, ffmpeg/bin e poppler/Library/bin. Le DLL necessarie devono restare insieme ai rispettivi programmi.").small().weak());
+                    });
+                    ui.add_space(8.0);
+                    theme::show_card(ui, |ui| {
+                        ui.label(theme::heading("Informazioni e licenze", theme::SUBTITLE));
+                        ui.label(format!("Convert Here {} · © 2026 Salvatore Corsi", env!("CARGO_PKG_VERSION")));
+                        ui.label("Software libero, GPL-3.0-only. Puoi usare, modificare e redistribuire il programma secondo la licenza. Il software è fornito senza garanzie, nei limiti consentiti dalla legge.");
+                        ui.label("Questa licenza riguarda il programma, non i file convertiti. Dipendenze e motori mantengono le rispettive licenze.");
+                        ui.horizontal_wrapped(|ui| {
+                            if ui.button("Leggi la licenza").clicked() {
+                                self.show_license = true;
+                            }
+                            if ui.link("Codice sorgente").clicked() {
+                                let url = format!("https://github.com/salvatorecorsi/convert-here/releases/tag/v{}", env!("CARGO_PKG_VERSION"));
+                                if let Err(error) = platform::open_website(&url) {
+                                    self.notice = Some(format!("{error:#}"));
+                                }
+                            }
+                        });
                     });
                 });
                 ui.separator();
@@ -1693,16 +2102,37 @@ impl ConverterApp {
 
 impl eframe::App for ConverterApp {
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        if let Some(task) = &self.runtime_install {
+            task.cancel.store(true, Ordering::Relaxed);
+        }
         if self.settings_dirty {
             self.persist_with_force(true);
         }
     }
 
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        self.receive_runtime_events();
+        if let Some(task) = &self.runtime_install
+            && ctx.input(|input| input.viewport().close_requested())
+        {
+            task.cancel.store(true, Ordering::Relaxed);
+            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            self.runtime_notice = Some((
+                "Annullamento dell’installazione. Chiudi la finestra al termine.".into(),
+                false,
+            ));
+        }
         if self.pdf_merge.is_some() {
             let busy = self.pdf_merge.as_ref().is_some_and(|merge| merge.is_busy());
             let mut go_back = false;
             egui::TopBottomPanel::top("merge_return_to_files").show(ctx, |ui| {
+                if self
+                    .runtime_install
+                    .as_ref()
+                    .is_some_and(|task| task.cancel.load(Ordering::Relaxed))
+                {
+                    ui.label("Annullamento dell’installazione. Chiudi la finestra al termine.");
+                }
                 go_back = ui
                     .add_enabled(!busy, egui::Button::new("← Torna ai file da convertire"))
                     .clicked();
@@ -1805,6 +2235,8 @@ impl eframe::App for ConverterApp {
         if self.settings_dirty && !self.running {
             self.persist();
         }
+        self.runtime_install_confirmation(ctx);
+        self.license_dialog(ctx);
         if self.running {
             ctx.request_repaint_after(std::time::Duration::from_millis(100));
         }

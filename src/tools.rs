@@ -100,13 +100,13 @@ impl ToolPaths {
         let kind = MediaKind::from_path(input);
         let modern_input = kind == MediaKind::Image && crate::modern_images::is_modern_input(input);
         if modern_input && !tool_exists(&self.heif_dec) {
-            return Some("Per leggere HEIC/HEIF e AVIF serve libheif. Apri Strumenti e seleziona heif-dec.exe con le sue DLL e i plugin.".into());
+            return Some("Per leggere HEIC/HEIF e AVIF serve libheif. Apri Impostazioni → Motori e seleziona heif-dec.exe con le sue DLL e i plugin.".into());
         }
         if kind == MediaKind::Image
             && matches!(settings.format, OutputFormat::Avif | OutputFormat::Heic)
             && !tool_exists(&self.heif_enc)
         {
-            return Some("Per creare HEIC e AVIF serve libheif con i relativi encoder. Apri Strumenti e seleziona heif-enc.exe con le sue DLL e i plugin.".into());
+            return Some("Per creare HEIC e AVIF serve libheif con i relativi encoder. Apri Impostazioni → Motori e seleziona heif-enc.exe con le sue DLL e i plugin.".into());
         }
         let pdf_ocr = kind == MediaKind::Pdf
             && settings.ocr.enabled
@@ -116,10 +116,10 @@ impl ToolPaths {
             );
         if kind == MediaKind::Image && settings.format == OutputFormat::Txt || pdf_ocr {
             if !tool_exists(&self.tesseract) {
-                return Some("Per riconoscere il testo serve Tesseract OCR con i dati delle lingue selezionate. Apri Strumenti e seleziona tesseract.exe.".into());
+                return Some("Per riconoscere il testo serve Tesseract OCR con i dati delle lingue selezionate. Apri Impostazioni → Motori e seleziona tesseract.exe.".into());
             }
             if pdf_ocr && !tool_exists(&self.pdftoppm) {
-                return Some("Per riconoscere le pagine PDF con OCR serve anche Poppler. Apri Strumenti e seleziona pdftoppm.exe.".into());
+                return Some("Per riconoscere le pagine PDF con OCR serve anche Poppler. Apri Impostazioni → Motori per installarlo oppure seleziona pdftoppm.exe già presente.".into());
             }
             return None;
         }
@@ -128,7 +128,7 @@ impl ToolPaths {
     pub fn missing_for(&self, kind: MediaKind, format: OutputFormat) -> Option<String> {
         let missing = match kind {
             MediaKind::Audio | MediaKind::Video if !tool_exists(&self.ffmpeg) => Some(
-                "Per convertire audio e video serve FFmpeg. Apri Strumenti e seleziona ffmpeg.exe già installato sul PC.",
+                "Per convertire audio e video serve FFmpeg. Apri Impostazioni → Motori per installarlo oppure seleziona ffmpeg.exe già presente sul PC.",
             ),
             MediaKind::Pdf
                 if matches!(
@@ -137,7 +137,7 @@ impl ToolPaths {
                 ) && !tool_exists(&self.pdftotext) =>
             {
                 Some(
-                    "Per esportare il testo incorporato dei PDF serve Poppler. Apri Strumenti e seleziona pdftotext.exe, oppure abilita OCR locale per le scansioni.",
+                    "Per esportare il testo incorporato dei PDF serve Poppler. Apri Impostazioni → Motori per installarlo oppure seleziona pdftotext.exe. Per le scansioni puoi abilitare OCR locale.",
                 )
             }
             MediaKind::Pdf
@@ -145,14 +145,14 @@ impl ToolPaths {
                     && !tool_exists(&self.pdftoppm) =>
             {
                 Some(
-                    "Per esportare le pagine PDF serve Poppler. Apri Strumenti e seleziona pdftoppm.exe già installato sul PC.",
+                    "Per esportare le pagine PDF serve Poppler. Apri Impostazioni → Motori per installarlo oppure seleziona pdftoppm.exe già presente sul PC.",
                 )
             }
             MediaKind::Document | MediaKind::Spreadsheet | MediaKind::Html
                 if !tool_exists(&self.soffice) =>
             {
                 Some(
-                    "Per convertire documenti Office, fogli di calcolo, CSV e HTML serve LibreOffice. Apri Strumenti e seleziona soffice.exe nella sua cartella program.",
+                    "Per convertire documenti Office, fogli di calcolo, CSV e HTML serve LibreOffice. Apri Impostazioni → Motori e seleziona soffice.exe nella sua cartella program.",
                 )
             }
             _ => None,
@@ -242,22 +242,25 @@ fn executable_name(name: &str) -> String {
     }
 }
 
-/// User-managed engine location shared by the portable and packaged app. Discovery
-/// only reads this directory: installing the app never downloads or copies engines.
+/// Personal engine location shared by portable and packaged builds. Merely
+/// discovering tools never downloads or creates anything.
 pub fn user_tools_dir() -> Option<PathBuf> {
-    directories::BaseDirs::new()
-        .map(|dirs| dirs.data_local_dir().join("Corsivo/TheConverter/tools"))
+    directories::BaseDirs::new().map(|dirs| dirs.data_local_dir().join("ConvertHere").join("tools"))
 }
 
 fn user_tools_directories() -> Vec<PathBuf> {
     let Some(base) = directories::BaseDirs::new() else {
         return Vec::new();
     };
+    user_tools_directories_at(base.data_local_dir())
+}
+
+fn user_tools_directories_at(base: &Path) -> Vec<PathBuf> {
     vec![
-        base.data_local_dir().join("Corsivo/TheConverter/tools"),
-        base.data_local_dir()
-            .join("SalvatoreCorsi/TheConverter/tools"),
-        base.data_local_dir().join("Programs/The Converter/tools"),
+        base.join("ConvertHere").join("tools"),
+        base.join("Corsivo/TheConverter/tools"),
+        base.join("SalvatoreCorsi/TheConverter/tools"),
+        base.join("Programs/The Converter/tools"),
     ]
 }
 
@@ -314,6 +317,33 @@ mod tests {
     use super::*;
 
     #[test]
+    fn personal_tools_prefer_the_new_location_and_keep_legacy_discovery() {
+        let directory = tempfile::tempdir().unwrap();
+        let roots = user_tools_directories_at(directory.path());
+        assert_eq!(roots[0], directory.path().join("ConvertHere").join("tools"));
+        let legacy = roots[1].join("ffmpeg/bin");
+        std::fs::create_dir_all(&legacy).unwrap();
+        let name = executable_name("ffmpeg");
+        std::fs::write(legacy.join(&name), b"inert legacy engine").unwrap();
+        assert_eq!(find_in_roots(&name, &roots), Some(legacy.join(&name)));
+        assert!(!roots[0].exists());
+        let current = roots[0].join("ffmpeg/bin");
+        std::fs::create_dir_all(&current).unwrap();
+        std::fs::write(current.join(&name), b"inert current engine").unwrap();
+        assert_eq!(find_in_roots(&name, &roots), Some(current.join(&name)));
+        assert!(
+            roots
+                .iter()
+                .any(|path| path.ends_with("SalvatoreCorsi/TheConverter/tools"))
+        );
+        assert!(
+            roots
+                .iter()
+                .any(|path| path.ends_with("Programs/The Converter/tools"))
+        );
+    }
+
+    #[test]
     fn packaged_discovery_does_not_escape_the_application_directory() {
         let package = PathBuf::from("WindowsApps/Corsivo.TheConverter_1.0.0.0_x64/example");
         let roots = application_roots(&package.join("the-converter.exe"));
@@ -365,7 +395,7 @@ mod tests {
             tools
                 .missing_for(MediaKind::Audio, OutputFormat::Mp3)
                 .unwrap()
-                .contains("Strumenti")
+                .contains("Motori")
         );
         assert!(
             tools

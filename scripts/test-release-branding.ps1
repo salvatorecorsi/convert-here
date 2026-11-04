@@ -21,6 +21,9 @@ try {
     Assert ($installer -match '(?m)^AppPublisher=Salvatore Corsi\r?$') 'Installer public publisher is incorrect.'
     $resources = Get-Content -LiteralPath (Join-Path $root 'build.rs') -Raw
     Assert ($resources.Contains('resource.set("CompanyName", "Salvatore Corsi")')) 'PE public company metadata is incorrect.'
+    Assert ($installer.Contains('Source: "{#SourceDir}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion')) 'Installer omits the application GPL license.'
+    Assert ($installer -notmatch 'WizardIsTaskSelected\(''downloadtools''\)|Name: "downloadtools"|\{cm:InstallTools\}|RunScript\(''install-runtime-tools\.ps1''') 'Installer still downloads runtimes or creates a separate runtime-acquisition shortcut.'
+    Assert ($installer -notmatch '(?m)^LicenseFile=') 'Executing the application must not require a GPL acceptance checkbox.'
     Assert ($installer -match '(?m)^AppId=\{\{441C8D1C-A78E-4D93-9221-2FA8B207E408\}') 'Installer upgrade identity changed.'
     Assert ($installer -match '(?m)^DefaultDirName=\{localappdata\}\\Programs\\The Converter\r?$') 'Legacy installation directory changed.'
     Assert ($installer -match '(?m)^UsePreviousAppDir=yes\r?$' -and $installer -match '(?m)^UsePreviousGroup=yes\r?$') 'Upgrade must retain remembered directory and Start group.'
@@ -49,11 +52,19 @@ try {
     Write-Fixture 'Cargo.toml' "[package]`nname = `"fixture`"`nversion = `"$appVersion`"`n"
     foreach ($name in @('the-converter.exe', 'the-converter-cli.exe', 'the_converter_shell.dll')) { Write-Fixture "dist/ConvertHere/$name" }
     Write-Fixture 'dist/ConvertHere/tools/ffmpeg.exe' 'Must not be packaged'
-    foreach ($name in @('README.md', 'THIRD-PARTY-NOTICES.md')) { Write-Fixture $name }
+    foreach ($name in @('README.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md')) { Write-Fixture $name }
     foreach ($name in @('README.md', 'RUST-THIRD-PARTY-LICENSES.txt', 'option-ext-0.2.0/LICENSE.txt', 'option-ext-0.2.0/src/lib.rs', 'option-ext-0.2.0/src/impl.rs', 'rust-runtime/COPYRIGHT-library.html')) { Write-Fixture "docs/release-licenses/$name" }
     Write-Fixture 'docs/release-licenses/rust-components.json' '[{"name":"fixture","version":"1","notice_count":1}]'
     # build-installer also validates these inputs before invoking the compiler.
-    foreach ($name in @('README.md', 'THIRD-PARTY-NOTICES.md')) { Write-Fixture "dist/ConvertHere/$name" }
+    foreach ($name in @('README.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md')) { Write-Fixture "dist/ConvertHere/$name" }
+    # The actual Git/vendor exporter is tested by test-corresponding-source.ps1.
+    # This inert fixture tests the public packaging/checksum handoff only.
+    Write-Fixture 'release-support/build-corresponding-source.ps1' @'
+param($Version, $OutputDirectory, $CargoPath, $RustcPath, $DistributionDirectory, $StoreIdentityConfig)
+$archive = Join-Path $OutputDirectory "ConvertHere-$Version-source.zip"
+[IO.File]::WriteAllText($archive, 'Inert source-archive fixture; never execute')
+[pscustomobject]@{ SourceArchive = $archive }
+'@
     Write-Fixture 'compiler-capture.ps1' @'
 $ErrorActionPreference = 'Stop'
 $arguments = @($args)
@@ -70,8 +81,10 @@ $global:LASTEXITCODE = 0
     $output = Join-Path $fixture "dist/releases/v$appVersion"
     $setup = Join-Path $output "ConvertHere-$appVersion-windows-x64-setup.exe"
     $portable = Join-Path $output "ConvertHere-$appVersion-windows-x64-portable.zip"
+    $sourceArchive = Join-Path $output "ConvertHere-$appVersion-source.zip"
     Assert (Test-Path -LiteralPath $setup -PathType Leaf) 'Public setup filename does not match the compiler output.'
     Assert (Test-Path -LiteralPath $portable -PathType Leaf) 'Public portable filename has old branding.'
+    Assert (Test-Path -LiteralPath $sourceArchive -PathType Leaf) 'Corresponding source is missing from the public assets.'
     $arguments = Get-Content -LiteralPath (Join-Path $fixture 'compiler-arguments.json') -Raw | ConvertFrom-Json
     Assert ($arguments -contains "/DAppVersion=$appVersion" -and $arguments -contains "/DFileVersion=${appVersion}.0") 'Release version did not reach the compiler.'
     Assert ($arguments -contains '/DModernMenuAvailable=0') 'Unsigned classic fixture unexpectedly enables modern registration.'
@@ -82,11 +95,12 @@ $global:LASTEXITCODE = 0
         $entries = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\', '/') })
         Assert (@($entries | Where-Object { -not $_.StartsWith('ConvertHere/') }).Count -eq 0) 'Portable root folder has old branding.'
         foreach ($name in @('the-converter.exe', 'the-converter-cli.exe', 'the_converter_shell.dll')) { Assert ($entries -contains "ConvertHere/$name") 'Portable internal binary contract changed.' }
+        Assert ($entries -contains 'ConvertHere/LICENSE') 'Portable archive omits the application license.'
         Assert (@($entries | Where-Object { $_ -match '(^|/)tools/|TheConverter\.Identity\.msix$' }).Count -eq 0) 'Classic public fixture contains runtime binaries or an unsigned identity package.'
     } finally { $archive.Dispose() }
     $checksums = @(Get-Content -LiteralPath (Join-Path $output 'SHA256SUMS.txt'))
-    Assert ($checksums.Count -eq 2) 'Checksum inventory has unexpected assets.'
-    foreach ($asset in @($setup, $portable)) {
+    Assert ($checksums.Count -eq 3) 'Checksum inventory must include setup, portable and corresponding source.'
+    foreach ($asset in @($setup, $portable, $sourceArchive)) {
         $expected = (Get-FileHash -LiteralPath $asset -Algorithm SHA256).Hash.ToLowerInvariant() + '  ' + [IO.Path]::GetFileName($asset)
         Assert ($checksums -ccontains $expected) 'Checksum does not match its renamed artifact.'
     }
