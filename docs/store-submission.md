@@ -1,10 +1,18 @@
 # Microsoft Store: preparazione della submission
 
-Stato al 4 novembre 2026: la verifica diretta in Partner Center conferma il prodotto **Convert Here**, `Name` **SalvatoreCorsi.ConvertHere**, `Publisher` **CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17** e `PublisherDisplayName` **Corsivo**. Lo Store ID attuale e **9NPKPPCBNBM8**, con URL [apps.microsoft.com/detail/9NPKPPCBNBM8](https://apps.microsoft.com/detail/9NPKPPCBNBM8). L'applicazione e alla versione **0.3.0**; la versione del pacchetto Store e **1.0.0.0**. Titolare, autore e sviluppatore: **Salvatore Corsi**; contatto pubblico: **salvo@salvatorecorsi.com**, riportato nella [pagina contatti](https://www.salvatorecorsi.com/contatti/). Il candidato e stato caricato e validato dal portale, ma **non e ancora stato inviato per certificazione**. Installazione e WACK del candidato finale non sono stati eseguiti; le precedenti preview sono artefatti distinti.
+Stato al 4 novembre 2026: la nuova applicazione **Convert Here 0.3.1**, gratuita e con conversioni e OCR locali, e il candidato Store **1.0.1.0** sono in preparazione. Il nuovo pacchetto **non e ancora stato caricato**. Il prodotto resta **9NPKPPCBNBM8**, [pagina Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8), `Name` **SalvatoreCorsi.ConvertHere**, `Publisher` **CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17**, `PublisherDisplayName` **Corsivo**. Titolare, autore e sviluppatore: **Salvatore Corsi**; contatto pubblico: **salvo@salvatorecorsi.com**, riportato nella [pagina contatti](https://www.salvatorecorsi.com/contatti/). Il precedente MSIX 1.0.0.0 e stato validato dal portale ma non inviato per certificazione; deve essere sostituito dopo le verifiche della nuova build. IARC non e stato accettato.
 
-## Stato della submission corrente
+## Stato della nuova preparazione 0.3.1 / 1.0.1.0
 
-Verifica diretta della submission **1152921505702314630** del prodotto **9NPKPPCBNBM8**:
+- **Pacchetto:** da generare e verificare come `ConvertHere-1.0.1.0-x64-store.msix`, Desktop x64, minimo Windows `10.0.22000.0`. Nessun nuovo upload o stato Validated attestato.
+- **Schede:** i testi IT/EN locali sono aggiornati alle sole conversioni e all'OCR locali; devono sostituire quelli della 0.3.0 nel portale.
+- **Properties e Submission options:** allineare le dichiarazioni delle funzioni e le istruzioni di test alla nuova 0.3.1.
+- **Prezzo e disponibilita:** restano le scelte del proprietario gia salvate: gratuita, tutti i 240 mercati disponibili, pubblicazione appena approvata.
+- **IARC e invio:** accettazione IARC non eseguita; nessun invio per certificazione o pubblicazione. La validazione precedente non attesta il nuovo candidato.
+
+## Storico: candidato 1.0.0.0, applicazione 0.3.0
+
+Stato osservato per il precedente candidato 1.0.0.0, applicazione 0.3.0, nella submission **1152921505702314630** del prodotto **9NPKPPCBNBM8**:
 
 | Sezione | Evidenza osservata |
 | --- | --- |
@@ -15,7 +23,7 @@ Verifica diretta della submission **1152921505702314630** del prodotto **9NPKPPC
 | Properties | **Complete**. |
 | Submission options | **Complete**; motivazione `runFullTrust` di 469 caratteri e pubblicazione appena approvata. |
 | Additional Testing Information | Istruzioni di 2306 caratteri salvate; persistenza verificata nel portale. |
-| Age ratings / IARC | **In Progress**; anteprima 3+, non ancora finalizzata. La conferma del proprietario per l'accettazione IARC e stata richiesta e resta in attesa. |
+| Age ratings / IARC | **In Progress**; anteprima 3+, non finalizzata e non accettata. Il proprietario ha sospeso questo passaggio. |
 | Invio e certificazione | **Non eseguiti**. Nessuna approvazione o pubblicazione attestata. |
 
 Il file caricato conserva SHA-256 `e130564d34e88b3e9f60ba6de76b06536adaa109957e1673a0043886ad2fe1de`. Il report di build e i relativi checksum restano immutati: descrivono lo stato al momento della creazione, prima dell'upload. La validazione del portale non equivale alla certificazione o a una prova d'installazione.
@@ -67,7 +75,7 @@ In alternativa, aprire [Actions → Microsoft Store package → Run workflow](ht
 
 [Windows checks](https://github.com/salvatorecorsi/convert-here/actions/workflows/windows-ci.yml) esegue automaticamente formattazione, test Rust e fixture PowerShell. Una pipeline verde verifica queste operazioni; non sostituisce la certificazione Microsoft o il collaudo dell'installazione su Windows 11.
 
-- Versione Store iniziale predisposta: `1.0.0.0`, distinta dalla versione applicazione Rust `0.3.0`. Il primo segmento Store deve essere maggiore di zero; il quarto rimane zero. Ogni segmento e al massimo 65535. [Versioni dei pacchetti](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/app-package-requirements#version-numbering-for-windows-10-and-11-packages).
+- Versione Store del nuovo candidato: `1.0.1.0`, distinta dalla versione applicazione Rust `0.3.1` e maggiore del precedente upload `1.0.0.0`. Il primo segmento Store deve essere maggiore di zero; il quarto rimane zero. Ogni segmento e al massimo 65535. [Versioni dei pacchetti](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/app-package-requirements#version-numbering-for-windows-10-and-11-packages).
 - Nome e Publisher devono corrispondere esattamente ai dati Partner Center, comprese maiuscole e punteggiatura. Il builder ricompila gli eseguibili con il manifest dedicato al pacchetto completo, senza l'elemento di identita sparse dell'installer EXE.
 - La UI e attualmente in italiano. La scheda inglese e una traduzione della descrizione, non una traduzione dell'interfaccia. Non dichiarare supporto UI inglese finche non implementato e verificato.
 - Target previsto: Windows 11 desktop x64 per il menu moderno. Il limite OS e quello effettivamente impostato e collaudato nel manifest Store; non promettere ARM64 nativo.
@@ -78,17 +86,16 @@ Il pacchetto leggero offre subito conversioni immagini native e immagini in PDF,
 
 PDF in DOCX/HTML ricostruisce solo il testo: le scansioni richiedono l'opzione OCR locale; immagini, tabelle e impaginazione non vengono ricostruite. CSV esporta il primo foglio senza formule o formattazione; il separatore di importazione/esportazione e selezionabile. Le risorse collegate nei documenti HTML possono accedere a file locali o alla rete. Compressione PDF non garantisce una riduzione delle dimensioni: se il candidato e piu grande, viene conservata una copia identica dell'originale. Divisione e unione conservano le pagine ma omettono metadati del documento, segnalibri e struttura accessibile; PDF firmati o con moduli interattivi richiedono una copia statica senza firme.
 
-Per un PDF singolo, **PDF · comprimi** forza la compressione indipendentemente dall'operazione salvata. Per selezioni multiple PDF-compatibili, **PDF (Bulk)** mantiene lavori e risultati individuali; **PDF (Merge)** apre l'editor delle singole pagine per creare un PDF unico da immagini, PDF, Office, Excel/CSV e HTML. Le pagine possono essere intercalate con trascinamento o frecce. La sessione Merge usa snapshot temporanei nascosti e non crea lavori persistenti nella coda rapida. Divisione e unione restano disponibili nella GUI e con `--pdf-action split`/`--pdf-action merge` nella CLI. I titoli **TXT · OCR**, **TXT**, **TXT con OpenAI** e le varianti per selezioni miste distinguono il riconoscimento locale delle immagini dall'estrazione PDF e dalla trascrizione audio online. La DLL usa maschere a 64 bit; i GUID dei comandi esistenti e della voce personalizzate restano stabili. Whitelist dell'installer, registrazione classica, DLL e modello dell'app vengono confrontati nei test per tutte le 93 estensioni e le 44 destinazioni.
+Per un PDF singolo, **PDF · comprimi** forza la compressione indipendentemente dall'operazione salvata. Per selezioni multiple PDF-compatibili, **PDF (Bulk)** mantiene lavori e risultati individuali; **PDF (Merge)** apre l'editor delle singole pagine per creare un PDF unico da immagini, PDF, Office, Excel/CSV e HTML. Le pagine possono essere intercalate con trascinamento o frecce. La sessione Merge usa snapshot temporanei nascosti e non crea lavori persistenti nella coda rapida. Divisione e unione restano disponibili nella GUI e con `--pdf-action split`/`--pdf-action merge` nella CLI. I titoli **TXT · OCR**, **TXT** e **TXT · OCR / testo PDF** distinguono il riconoscimento locale delle immagini dall'estrazione PDF. Audio e video non hanno una destinazione TXT. La DLL usa maschere a 64 bit; i GUID dei comandi esistenti e della voce personalizzate restano stabili. Whitelist dell'installer, registrazione classica, DLL e modello dell'app vengono confrontati nei test per tutte le 93 estensioni e le 44 destinazioni.
 
-La trascrizione audio TXT aggiunge un servizio online facoltativo, distinto dalle conversioni locali: usa la chiave OpenAI API dell'utente e invia l'audio a `api.openai.com` solo quando viene richiesta. Richiede internet e accesso API con eventuali costi a carico dell'utente, separati dall'abbonamento ChatGPT. Dichiarare invio, dipendenza e costi all'inizio delle schede e nel consenso in app. La chiave resta nel Gestore credenziali Windows; nessuna chiave e inclusa nel pacchetto, nelle preferenze, nei record della coda o nei log.
+Convert Here e gratuito, senza abbonamenti, acquisti in-app o costi a consumo. Le conversioni e l'OCR vengono elaborati sul PC con le funzioni native e i motori locali selezionati dall'utente. Il comportamento di risorse HTML collegate, browser e cartelle di rete e descritto nell'[informativa privacy](privacy.md).
 
-Il backend attuale e `gpt-transcribe`: richiede JSON e salva il campo `text` in un TXT UTF-8. Una lingua eventualmente gia salvata nelle preferenze viene trasmessa con `languages[]`, senza il vecchio parametro API singolare. [Migrazione ufficiale OpenAI](https://developers.openai.com/cookbook/examples/migrating_from_whisper_to_gpt_transcribe).
 
 La dipendenza va dichiarata all'inizio delle descrizioni: la policy 10.2.4 ammette software non integrato con questa trasparenza. E un percorso ragionevole da sottoporre alla certificazione, non un'approvazione garantita. Mantenere le funzioni native utilizzabili senza motori e messaggi chiari quando un motore manca. La policy 10.2.2 vieta l'introduzione dinamica di funzionalita incoerenti con quanto dichiarato. [Store policies](https://learn.microsoft.com/en-us/windows/apps/publish/store-policies#102-security).
 
 ## Capability e motivazione per la certificazione
 
-`runFullTrust` e dichiarato per l'app desktop `mediumIL` e il COM packaged. La motivazione della capability e stata salvata nelle Submission options (469 caratteri). Scopo tecnico:
+`runFullTrust` e dichiarato per l'app desktop `mediumIL` e il COM packaged. Una motivazione di 469 caratteri era stata salvata per il precedente candidato; lo scopo tecnico resta:
 
 > Convert Here is a native Rust desktop file conversion application. It reads files explicitly selected by the user, writes converted outputs to the selected folder, and provides an IExplorerCommand shell extension through packaged COM. Optional conversion engines already installed or explicitly selected by the user run as child processes with the user's permissions. The app does not require administrator privileges, a service, a driver, or elevation.
 
@@ -96,42 +103,35 @@ Non aggiungere `unvirtualizedResources` per abitudine ereditandolo dal pacchetto
 
 ## Stato dei materiali e delle verifiche
 
-Consultare lo [stato delle verifiche](store-validation.md): le prove su una preview precedente non certificano la build con trascrizione online. Nel portale resta **In Progress** soltanto IARC; le caselle non selezionate relative al collaudo documentano prove non eseguite sul candidato finale.
+Le prove e i campi Complete del candidato 1.0.0.0 sono storici. Lo [stato delle verifiche](store-validation.md) distingue la nuova 0.3.1 dai report precedenti.
 
-- [x] Identita reale Partner Center configurata; candidato unsigned caricato e validato, senza presentare una firma di sviluppo come firma pubblica.
-- [x] Informativa privacy IT/EN completata con titolare, contatto reale e URL HTTPS pubblico riportato sopra. [Requisiti privacy](https://learn.microsoft.com/en-us/windows/apps/publish/store-policies#105-personal-information).
-- [x] Schede [italiana](store-listing-it.md) e [inglese](store-listing-en.md) salvate come **Complete**; Pricing, Properties e Submission options anch'esse **Complete**.
-- [ ] Questionario IARC finalizzato dopo la conferma del proprietario; l'anteprima 3+ non e ancora una classificazione completata.
-- [x] Asset del pacchetto inclusi e risolti dal manifest: Square44x44Logo, Square150x150Logo e StoreLogo con varianti di scala; validazione MakeAppx e del portale completate. [Icone e risorse](https://learn.microsoft.com/en-us/windows/apps/design/iconography/app-icon-construction).
-- [x] Due schermate PNG aggiornate della 0.3.0 con didascalie e logo Store 300 x 300 salvati in ciascuna scheda linguistica. [Screenshot e immagini](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/screenshots-and-images).
-- [x] Istruzioni operative Additional Testing Information e motivazione `runFullTrust` salvate; persistenza verificata nel portale.
-- [ ] Installazione, aggiornamento, disinstallazione e avvio da Start del candidato finale controllati su ambiente pulito; non ancora eseguiti.
-- [ ] Verificati menu moderno, selezione multipla, conversione rapida senza finestra opzioni, segnaposto, annullamento, nomi duplicati e percorsi con spazi/accenti.
-- [ ] Provate le funzioni native senza motori; separatamente provati i motori opzionali e il selettore di eseguibili. Verificati percorsi di dati realmente usati sotto MSIX e comportamento della disinstallazione.
-- [ ] Verificati consenso e informativa per l'invio audio a OpenAI, salvataggio/rimozione della chiave, selezioni compatibili, errori API e assenza della chiave da preferenze/coda/resoconti. Non incorporare credenziali del proprietario per i certificatori.
-- [ ] Per la trascrizione: distinguere test con server simulato da richieste reali autorizzate. Non presentare test simulati come prova di disponibilita del servizio. Verificare il contratto GPT-Transcribe: risposta JSON, estrazione di `text`, suggerimento lingua con `languages[]` e continuita delle preferenze salvate. [Guida ufficiale OpenAI](https://developers.openai.com/api/docs/guides/speech-to-text).
-- [ ] Associare ogni report al pacchetto e al commit verificati. Le prove locali o WACK precedenti all'integrazione OpenAI non attestano il funzionamento della nuova trascrizione.
-- [x] Report del candidato: nessun motore o downloader incluso, pacchetto unsigned e nessuna modifica agli archivi dei certificati.
-- [ ] Submission completa inviata per certificazione, con pubblicazione automatica appena approvata secondo l'autorizzazione del proprietario.
+- [x] Identita reale Partner Center e contatto confermati.
+- [x] Informativa privacy IT/EN e schede locali aggiornate alla 0.3.1.
+- [x] Scelte del proprietario salvate: gratuita, 240 mercati disponibili, pubblicazione appena approvata.
+- [ ] Build 0.3.1 e controlli associati al nuovo commit completati; nuovo MSIX 1.0.1.0 generato, validato e identificato con checksum.
+- [ ] Nuovo candidato verificato dal responsabile della build e caricato al posto del precedente 1.0.0.0.
+- [ ] Schede IT/EN, Properties e Additional Testing Information aggiornate nel portale al comportamento della 0.3.1.
+- [ ] Catture e asset ricontrollati per il nuovo candidato; le due PNG e il logo gia caricati documentano la 0.3.0.
+- [ ] Questionario IARC finalizzato; l'anteprima 3+ precedente non costituisce accettazione o classificazione completata.
+- [ ] Eventuale collaudo installazione/aggiornamento/disinstallazione, menu moderno, coda e motori su ambiente pulito documentato per il candidato finale.
+- [ ] Submission inviata per certificazione; nessun invio e attestato al momento.
 
-Il Windows App Certification Kit non e stato eseguito sul candidato finale. Microsoft descrive il WACK come controllo locale deprecato e facoltativo; non e un requisito locale da presentare come completato per l'upload. Il suo eventuale esito non garantisce l'approvazione Store. Il precedente report riguarda una preview diversa, come indicato nello [stato delle verifiche](store-validation.md). [Validazione locale MSIX](https://learn.microsoft.com/en-us/windows/msix/package/packaging-uwp-apps#validate-your-app-package-locally).
+Il Windows App Certification Kit non e stato eseguito sul nuovo candidato. Microsoft descrive il WACK come controllo locale deprecato e facoltativo; il suo eventuale esito non garantisce l'approvazione Store. Il precedente report riguarda una preview distinta, come indicato nello [stato delle verifiche](store-validation.md). [Validazione locale MSIX](https://learn.microsoft.com/en-us/windows/msix/package/packaging-uwp-apps#validate-your-app-package-locally).
 
 Per il CSV attendere l'esportazione del prodotto reale da Partner Center: preservare colonne Field, ID e Type; trasferire i testi preparati nei campi della lingua corretta. Non inventare un template con ID presunti. [Importazione/esportazione delle schede](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/import-and-export-store-listings).
 
-## Note per il certificatore: riferimento esteso
+## Note per il certificatore: bozza per 0.3.1
 
-Nel portale sono state salvate istruzioni operative sintetiche di 2306 caratteri. Il testo seguente e un riferimento esteso sul comportamento previsto da sorgenti e manifest, non un'attestazione di collaudo del MSIX finale.
+Istruzioni da sostituire nel portale dopo aver verificato il nuovo candidato; non ancora salvate come note della 1.0.1.0. Descrivono procedure previste dal codice e dal manifest, non prove d'installazione gia eseguite.
 
-> The publisher brand is Corsivo; the application is developed by Salvatore Corsi. The application UI is currently Italian. Local conversions do not require an account or login. Optional online transcription requires the user's own OpenAI API key and separately billed API access; it does not use a ChatGPT subscription.
+> Convert Here 0.3.1 / Store package 1.0.1.0. Publisher: Corsivo; developer: Salvatore Corsi. The UI is Italian. The software is free, with no subscriptions, in-app purchases or usage-based charges. Conversion and OCR run locally and need no app account or login. Target: Windows 11 x64.
 >
-> The package includes native image conversion, image-to-PDF conversion and local PDF compression, splitting and merging. It does not bundle or automatically download conversion engines. Audio/video conversion requires FFmpeg; PDF page/text export requires Poppler; Office/HTML-to-PDF and Excel/CSV conversion require LibreOffice; local OCR requires Tesseract with the selected language data; HEIC/AVIF conversion requires libheif tools and the required codecs. PDF OCR also uses Poppler. PDF-to-DOCX/HTML reconstructs text only, using optional OCR for scans; original images, tables and layout are not reconstructed. CSV exports the first worksheet without formulas or formatting, with a selectable separator. Existing local executables can be selected under Strumenti using Seleziona programma…. Missing engines are reported in the UI. These dependencies and HTML linked-resource behavior are disclosed in the Store description.
+> Native test: launch Convert Here from Start, use Aggiungi file or drop a PNG/JPEG, select another image format or PDF, then Converti file. Outputs use the selected folder or the source folder; existing files are preserved. PDF compression, splitting and merging need no external engine. Use unsigned, unencrypted PDFs without interactive forms.
 >
-> Optional audio-to-TXT uses OpenAI's gpt-transcribe model through HTTPS at api.openai.com/v1/audio/transcriptions. The API response is JSON; the app extracts its text field and writes a UTF-8 TXT file. An optional saved language is sent as languages[], with no legacy language request field. The app discloses audio upload and API charges before the user saves a key and enables transcription. Choosing TXT con OpenAI for an audio file initiates upload. Compatible smaller audio files can be sent directly; other audio files require local FFmpeg preparation. No developer-supplied credential is bundled. Native image/PDF tests below do not need an API key or a network request. Key storage uses Windows Credential Manager for the current user and excludes preferences, queue records, reports and logs. There is no video-to-TXT operation.
+> Explorer test: select two PNG/JPEG files, right-click > Converti in > PDF (Bulk). Each input gets a separate queued result. A temporary shortcut opens job status. With the same selection choose PDF (Merge): wait for preparation, drag individual page handles or use arrows/Alt+Up/Down, then Crea PDF unico. Multipage PDFs can be mixed with images and pages interleaved across sources. Cambia cartella changes the destination. Merge also opens from the main app. Annulla cancels active work; closing the session attempts to remove its temporary snapshots.
 >
-> To test without dependencies: launch Convert Here from Start, add a PNG/JPEG using Aggiungi file or drag and drop, select a different image format or PDF, and press Converti file. Output is written beside the source unless the user selects another folder. Existing files are preserved through numbered output names.
+> External engines are not bundled or automatically downloaded. Strumenti > Seleziona programma selects existing local executables. FFmpeg handles audio/video; Poppler handles PDF image/text export; LibreOffice handles Office/HTML and Excel/CSV; Tesseract and language data handle OCR; libheif tools/codecs handle HEIC/AVIF. PDF OCR also needs Poppler. Missing dependencies are reported. HTML linked resources may access local files or the network.
 >
-> On Windows 11 x64, right-click a supported image in File Explorer and select Converti in, then choose a compatible format. The conversion is queued without opening the settings window. A temporary shortcut with a pending icon appears in the output folder and is replaced by the completed output. Double-clicking the shortcut opens job status. Impostazioni personalizzate opens the main options window. The shell extension is registered declaratively through the MSIX manifest.
+> PDF-to-DOCX/HTML reconstructs text only. OCR does not reconstruct original page layout. Animated images and multipage image containers use the first frame/image. Audio and video do not offer TXT output.
 >
-> For a PDF input, the quick PDF · comprimi command always selects lossless compression. With multiple PDF-compatible inputs, PDF (Bulk) creates separate queued outputs; PDF (Merge) opens a page-order editor for a single PDF, also available from the main app. Drag pages or use the arrow controls to interleave pages from images, PDFs and compatible Office/HTML documents. Splitting and merging are also available through the CLI. Compression never produces a larger result than the input snapshot and may preserve the original bytes. Merging and splitting omit document-level metadata, bookmarks and accessibility tagging; signed PDFs and interactive forms require a static unsigned copy. TXT · OCR identifies local image recognition; TXT con OpenAI identifies online audio transcription, including explicit labels for mixed selections. The shell and application support 44 output formats across compatible categories and 93 input extensions; an offered output still requires its optional engine when applicable.
->
-> General PDF content editing is not included. Animated image inputs, multipage TIFF inputs and HEIC/AVIF collections use their first frame/page/image. Normal image-to-PDF conversion creates a separate A4 PDF for each image; PDF (Merge) combines the prepared pages in the selected order. The app contains no advertising, subscription or in-app purchase code.
+> runFullTrust supports the medium-integrity desktop app, user-selected file I/O, child conversion engines and packaged COM Explorer integration. No administrator elevation, service or driver is required.

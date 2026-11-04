@@ -4,7 +4,9 @@ This packaging path targets **Windows 11 x64, build 22000 or later**, and contai
 
 Product identity was verified in Partner Center on 4 November 2026: `Name` **SalvatoreCorsi.ConvertHere**, `Publisher` **CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17**, `PublisherDisplayName` **Corsivo**, reserved name **Convert Here**, Store ID **9NPKPPCBNBM8**. The developer is **Salvatore Corsi**. The Git-ignored local `identity.partner-center.json` uses these assigned values; a development publisher subject must not be substituted for them.
 
-The unsigned submission candidate built from application version **0.3.0**, commit `d6ad0171dd002d01136e58b511f5e9e5e6dbfffb`, uses Store package version **1.0.0.0** and passed MakeAppx semantic validation. Its report identifies the exact package and payload hashes. This is not a claim of installation testing, WACK completion, upload, certification or publication; consult [submission status](../../docs/store-submission.md) for the current workflow.
+Application **0.3.1**, Store package **1.0.1.0**, is a free local file converter with no subscriptions, in-app purchases or usage-based charges. It is being prepared for submission; consult [submission status](../../docs/store-submission.md) for the actual upload and certification state.
+
+The earlier unsigned candidate built from application **0.3.0**, commit `d6ad0171dd002d01136e58b511f5e9e5e6dbfffb`, uses Store package **1.0.0.0** and was uploaded and validated in Partner Center without being submitted for certification. Its immutable build report and payload hashes describe that earlier artifact. Neither package validation nor a previous preview test proves installation testing, WACK completion, certification or publication of the replacement.
 
 ## Preview build
 

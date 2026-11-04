@@ -49,32 +49,6 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 public static class ConverterShellSmokeV2 {
-    [StructLayout(LayoutKind.Sequential)]
-    struct Credential {
-        public uint Flags, Type;
-        public IntPtr Target, Comment;
-        public System.Runtime.InteropServices.ComTypes.FILETIME LastWritten;
-        public uint BlobSize;
-        public IntPtr Blob;
-        public uint Persist, AttributeCount;
-        public IntPtr Attributes, TargetAlias, UserName;
-    }
-    [DllImport("advapi32", CharSet=CharSet.Unicode, SetLastError=true)]
-    static extern bool CredReadW(string target, uint type, uint flags, out IntPtr credential);
-    [DllImport("advapi32")]
-    static extern void CredFree(IntPtr credential);
-    static bool ApiKeyPresent() {
-        IntPtr pointer;
-        if (!CredReadW("Corsivo.TheConverter.OpenAI", 1, 0, out pointer) || pointer == IntPtr.Zero) return false;
-        try {
-            var credential = (Credential)Marshal.PtrToStructure(pointer, typeof(Credential));
-            bool available = credential.Type == 1 && credential.Blob != IntPtr.Zero && credential.BlobSize >= 20 && credential.BlobSize <= 2048;
-            if (credential.Blob != IntPtr.Zero && credential.BlobSize <= 2560) {
-                for (int offset = 0; offset < credential.BlobSize; offset++) Marshal.WriteByte(credential.Blob, offset, 0);
-            }
-            return available;
-        } finally { CredFree(pointer); }
-    }
     [DllImport("kernel32", CharSet=CharSet.Unicode, SetLastError=true)]
     static extern IntPtr LoadLibrary(string path);
     [DllImport("kernel32", CharSet=CharSet.Ansi)]
@@ -307,23 +281,21 @@ public static class ConverterShellSmokeV2 {
             if (State(command, supported) != 0) throw new Exception("PNG non abilitato");
             if (State(command, unsupported) != 2) throw new Exception("Estensione sconosciuta non nascosta");
             const string custom = "Impostazioni personalizzate…";
-            bool keyAvailable = ApiKeyPresent();
             Expect("Audio + video", Visible(command, audio, video), new string[]{"MP3", "WAV", "FLAC", "AAC", "OGG", "Opus", "AIFF", "M4A", "WMA", "AC3", "AU", "CAF", custom});
             Expect("PNG + PDF", Visible(command, supported, pdf), new string[]{"PNG", "JPEG", "PDF (Bulk)", "PDF (Merge)", "TXT · OCR / testo PDF", custom});
             Expect("DOCX + PNG", Visible(command, document, supported), new string[]{"PDF (Bulk)", "PDF (Merge)", custom});
             Expect("DOCX + PNG + PDF", Visible(command, document, supported, pdf), new string[]{"PDF (Bulk)", "PDF (Merge)", custom});
             Expect("Due PDF", Visible(command, pdf, pdf), new string[]{"PNG", "JPEG", "PDF (Bulk)", "PDF (Merge)", "TXT", "Word (DOCX) · testo", "HTML · testo", custom});
-            Expect("PNG + audio", Visible(command, supported, audio), keyAvailable ? new string[]{"TXT · audio OpenAI / immagini OCR", custom} : new string[]{});
+            Expect("PNG + audio", Visible(command, supported, audio), new string[]{});
             Expect("Testo", Visible(command, text), new string[]{"PDF", custom});
             Expect("Testo + audio", Visible(command, text, audio), new string[]{});
             Expect("Cartella WAV", Visible(command, directory), new string[]{});
             var audioFormats = new List<string>(new string[]{"MP3", "WAV", "FLAC", "AAC", "OGG", "Opus", "AIFF"});
-            if (keyAvailable) audioFormats.Add("TXT con OpenAI");
             audioFormats.AddRange(new string[]{"M4A", "WMA", "AC3", "AU", "CAF"});
             audioFormats.Add(custom);
             Expect("Audio e mpga", Visible(command, audio, mpga), audioFormats.ToArray());
             Expect("PDF", Visible(command, pdf), new string[]{"PNG", "JPEG", "PDF · comprimi", "TXT", "Word (DOCX) · testo", "HTML · testo", custom});
-            Expect("Audio + PDF", Visible(command, audio, pdf), keyAvailable ? new string[]{"TXT con OpenAI", custom} : new string[]{});
+            Expect("Audio + PDF", Visible(command, audio, pdf), new string[]{});
             Expect("Excel e CSV", Visible(command, spreadsheet, csv), new string[]{"PDF (Bulk)", "PDF (Merge)", "CSV", "XLSX", custom});
             Expect("HTML", Visible(command, html), new string[]{"PDF", custom});
             Expect("HTML e Excel", Visible(command, html, spreadsheet), new string[]{"PDF (Bulk)", "PDF (Merge)", custom});

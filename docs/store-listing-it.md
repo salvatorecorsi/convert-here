@@ -1,14 +1,14 @@
 # Scheda Microsoft Store — italiano (it-IT)
 
-Bozza per il MSIX completo, da verificare sul pacchetto finale. Editore: **CORSIVO**. Sviluppatore: **Salvatore Corsi**. Il proprietario ha confermato la prenotazione del nome **Convert Here** in Partner Center il 4 novembre 2026. Non copiare questo preambolo nei campi pubblici.
+Bozza per Convert Here **0.3.1**, pacchetto Store **1.0.1.0**: nuovo candidato ancora in preparazione e non caricato. Da verificare sul pacchetto finale. Editore: **Corsivo**. Sviluppatore: **Salvatore Corsi**. Il proprietario ha confermato la prenotazione del nome **Convert Here** in Partner Center il 4 novembre 2026. Non copiare questo preambolo nei campi pubblici.
 
 ## Descrizione breve
 
-Conversioni di file dal tasto destro di Windows 11, con coda e opzioni. Trascrizione audio TXT online facoltativa con OpenAI e propria API key. Motori esterni per audio/video e alcune funzioni PDF.
+Conversioni di file dal tasto destro di Windows 11, con coda, opzioni e OCR locale. Motori esterni per audio/video e alcune funzioni PDF.
 
 ## Descrizione
 
-Le immagini nei formati nativi e le immagini in PDF funzionano subito, come compressione, divisione e unione dei PDF. Audio/video richiedono FFmpeg; esportazione PDF richiede Poppler; Office, Excel/CSV e HTML in PDF richiedono LibreOffice. HEIC/HEIF e AVIF richiedono libheif; OCR richiede Tesseract e i modelli delle lingue, oltre a Poppler per le scansioni PDF. Questi motori opzionali non sono inclusi. La trascrizione audio TXT con OpenAI e facoltativa: richiede internet, una propria chiave API e fatturazione API separata da ChatGPT; invia l'audio a OpenAI. FFmpeg prepara gli audio che non possono essere inviati direttamente.
+Le immagini nei formati nativi e le immagini in PDF funzionano subito, come compressione, divisione e unione dei PDF. Audio/video richiedono FFmpeg; esportazione PDF richiede Poppler; Office, Excel/CSV e HTML in PDF richiedono LibreOffice. HEIC/HEIF e AVIF richiedono libheif; OCR richiede Tesseract e i modelli delle lingue, oltre a Poppler per le scansioni PDF. Questi motori opzionali non sono inclusi.
 
 Convert Here porta le conversioni nella cartella in cui lavori. Dal menu contestuale di Windows 11 scegli Converti in e il formato desiderato: il lavoro entra in coda con le impostazioni salvate, senza aprire ogni volta la finestra delle opzioni.
 
@@ -22,7 +22,7 @@ Con FFmpeg puoi convertire audio in MP3, WAV, FLAC, AAC, OGG, Opus, AIFF, M4A co
 
 Con Poppler puoi esportare i PDF in immagini PNG/JPEG, estrarne il testo incorporato in TXT oppure ricostruirlo in Word DOCX e HTML modificabili. Le esportazioni DOCX e HTML contengono solo testo: immagini, tabelle e impaginazione originali non vengono ricostruite.
 
-Con Tesseract puoi riconoscere il testo delle immagini in TXT e, attivando OCR locale per i PDF, creare TXT, DOCX o HTML dalle scansioni. OCR dei PDF e disattivato per default e usa anche Poppler. Seleziona lingue installate, per esempio ita+eng, e i DPI delle pagine PDF; conserva i modelli nella cartella tessdata del motore. L'elaborazione resta sul PC, senza OpenAI o costi API. Il testo riconosciuto puo contenere errori e va riletto; OCR non crea un PDF ricercabile.
+Con Tesseract puoi riconoscere il testo delle immagini in TXT e, attivando OCR locale per i PDF, creare TXT, DOCX o HTML dalle scansioni. OCR dei PDF e disattivato per default e usa anche Poppler. Seleziona lingue installate, per esempio ita+eng, e i DPI delle pagine PDF; conserva i modelli nella cartella tessdata del motore. L'elaborazione resta sul PC. Il testo riconosciuto puo contenere errori e va riletto; OCR non crea un PDF ricercabile.
 
 Puoi comprimere i PDF senza perdita o dividerli in un file per pagina. Con piu file convertibili in PDF, PDF (Bulk) crea risultati separati in coda; PDF (Merge) prepara immagini, PDF, Word/Office, Excel/CSV e HTML compatibili per creare un PDF unico. Trascina le singole pagine per intercalarle fra sorgenti, oppure usa le frecce o Alt+su/giu. PDF e immagini native non richiedono motori esterni per l'unione; restano LibreOffice per i documenti e libheif per HEIC/AVIF. Audio e video sono esclusi. La compressione non ricampiona le immagini e non produce un file piu grande dell'originale. Divisione e unione non trasferiscono segnalibri, tag o metadati del documento e rifiutano moduli interattivi. Le operazioni rifiutano PDF cifrati o firmati; la compressione conserva catalogo e moduli e non rimuove i metadati.
 
@@ -30,9 +30,7 @@ Con LibreOffice puoi convertire documenti Word e altri documenti, fogli e presen
 
 Puoi anche convertire file HTML in PDF con LibreOffice. Sono supportati documenti HTML semplici; CSS complessi possono cambiare impaginazione e JavaScript non viene eseguito. Le risorse collegate nell'HTML possono accedere a file locali o alla rete durante la conversione.
 
-Le conversioni di formato vengono elaborate sul PC. Solo scegliendo la trascrizione audio TXT con OpenAI, dopo averla abilitata, invii l'audio al servizio online usando la tua chiave API. La chiave e protetta dal Gestore credenziali Windows e puo essere rimossa dalle impostazioni. Non serve un account nell'app per le conversioni locali. Preferenze, percorsi dei file, stato della coda e dettagli degli errori vengono salvati localmente, senza includere la chiave.
-
-La trascrizione del parlato crea un file TXT e permette il riconoscimento automatico della lingua o la scelta di una lingua. Non e disponibile direttamente per i video. Rileggi sempre il testo ottenuto: possono esserci errori. I costi delle richieste gia inviate possono maturare anche se il lavoro viene annullato.
+Convert Here e gratuito, senza abbonamenti, acquisti in-app o costi a consumo. Nessun pagamento richiesto per continuare a usarlo. Le conversioni di formato vengono elaborate sul PC e non richiedono un account nell'app. Preferenze, percorsi dei file, stato della coda e dettagli degli errori vengono salvati localmente.
 
 Limiti: non e disponibile la modifica libera del contenuto delle pagine PDF. OCR riconosce il testo senza ricostruire la grafica o l'impaginazione. Da GIF animate, TIFF multipagina e contenitori HEIC/AVIF viene convertito il primo fotogramma o la prima immagine. PDF (Bulk) mantiene risultati separati; PDF (Merge) include tutte le pagine preparate una volta, fino a 10.000. L'impaginazione dei documenti Office dipende da LibreOffice e dai font disponibili. L'interfaccia e attualmente in italiano. Il menu moderno richiede Windows 11 x64.
 
@@ -55,8 +53,7 @@ HEIC/HEIF e AVIF in ingresso e HEIC/AVIF in uscita con libheif opzionale
 OCR locale di immagini e scansioni PDF con Tesseract e modelli delle lingue opzionali
 PDF Bulk separati o PDF Merge unico con trascinamento delle singole pagine
 File originali conservati e nomi numerati in caso di conflitto
-Conversioni di formato locali; audio inviato a OpenAI solo per la trascrizione richiesta
-Trascrizione audio TXT opzionale con propria API key OpenAI e costi API separati
+Conversioni di formato elaborate sul PC senza un account nell'app
 ```
 
 ## Termini di ricerca
@@ -79,7 +76,6 @@ coda conversioni
 Windows 11 x64 per il menu contestuale moderno
 FFmpeg per audio/video; Poppler per esportare PDF; LibreOffice per Office/HTML in PDF ed Excel/CSV. Motori opzionali non inclusi.
 libheif con heif-dec.exe, heif-enc.exe, DLL e plugin per HEIC/AVIF; Tesseract con i modelli delle lingue per OCR, oltre a Poppler per i PDF. Non inclusi.
-Trascrizione audio TXT facoltativa: internet, chiave e account OpenAI API con costi separati da ChatGPT; FFmpeg se occorre preparare l'audio.
 ```
 
 ## Novita
@@ -93,8 +89,10 @@ Lasciare vuoto per la prima submission Store. Preparare una nota specifica solta
 3. Impostazioni di qualita e ridimensionamento per le immagini.
 4. Configura gli eseguibili opzionali nella pagina Strumenti.
 
-## Campi da completare
+## Riferimenti submission
 
-URL privacy e supporto, nome prodotto effettivamente riservato, licenza applicazione e dettagli legali del titolare. Non dichiarare una licenza open source finche non scelta e aggiunta al progetto.
+Titolare e sviluppatore: **Salvatore Corsi**; brand editore: **Corsivo**. Contatto privacy e supporto: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Informativa privacy pubblica](https://github.com/salvatorecorsi/convert-here/blob/master/docs/privacy.md). Nome riservato: **Convert Here**. Per licenza, identita e stato operativo vedere la [procedura di submission](store-submission.md).
+
+Questi testi sono predisposti per il nuovo candidato e devono ancora essere applicati alla submission; non attestano il suo caricamento o l'aggiornamento delle schede in Partner Center.
 
 Descrizione entro 10.000 caratteri; breve entro 1.000 (qui meno di 270); massimo 20 funzionalita da 200 caratteri; novita massimo 1.500, vuote alla prima submission. [Limiti ufficiali dei campi MSIX](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).

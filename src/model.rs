@@ -304,9 +304,7 @@ impl std::fmt::Display for OutputFormat {
 pub fn supported_formats(kind: MediaKind) -> Vec<OutputFormat> {
     use OutputFormat::*;
     match kind {
-        MediaKind::Audio => vec![
-            Mp3, Wav, Flac, Aac, Ogg, Opus, Aiff, M4a, Wma, Ac3, Au, Caf, Txt,
-        ],
+        MediaKind::Audio => vec![Mp3, Wav, Flac, Aac, Ogg, Opus, Aiff, M4a, Wma, Ac3, Au, Caf],
         MediaKind::Video => vec![
             Mp4, Mkv, Mov, Webm, Avi, Gif, Mpeg, Wmv, Flv, Ts, M4v, ThreeGp, Mp3, Wav, Flac, Aac,
             Ogg, Opus, Aiff, M4a, Wma, Ac3, Au, Caf,
@@ -323,24 +321,13 @@ pub fn supported_formats(kind: MediaKind) -> Vec<OutputFormat> {
     }
 }
 
-/// Formats shared by every input. Cloud transcription is opt-in; PDF text
-/// extraction stays available independently of an OpenAI credential.
-pub fn common_formats<'a>(
-    inputs: impl IntoIterator<Item = &'a Path>,
-    transcription_enabled: bool,
-) -> Vec<OutputFormat> {
+/// Formats shared by every input, including local OCR and PDF text extraction.
+pub fn common_formats<'a>(inputs: impl IntoIterator<Item = &'a Path>) -> Vec<OutputFormat> {
     let mut inputs = inputs.into_iter();
     let Some(first) = inputs.next() else {
         return Vec::new();
     };
-    let formats_for = |path: &Path| {
-        let kind = MediaKind::from_path(path);
-        let mut formats = supported_formats(kind);
-        if kind == MediaKind::Audio && !transcription_enabled {
-            formats.retain(|format| *format != OutputFormat::Txt);
-        }
-        formats
-    };
+    let formats_for = |path: &Path| supported_formats(MediaKind::from_path(path));
     let mut formats = formats_for(first);
     for path in inputs {
         let supported = formats_for(path);
@@ -358,7 +345,6 @@ pub struct ConversionSettings {
     pub video: VideoSettings,
     pub image: ImageSettings,
     pub pdf: PdfSettings,
-    pub transcription: TranscriptionSettings,
     pub csv: CsvSettings,
     pub ocr: OcrSettings,
 }
@@ -371,18 +357,10 @@ impl Default for ConversionSettings {
             video: VideoSettings::default(),
             image: ImageSettings::default(),
             pdf: PdfSettings::default(),
-            transcription: TranscriptionSettings::default(),
             csv: CsvSettings::default(),
             ocr: OcrSettings::default(),
         }
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-#[serde(default)]
-pub struct TranscriptionSettings {
-    /// None detects the recording's language. A credential is never serialized.
-    pub language: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1078,6 +1078,88 @@ mod tests {
     }
 
     #[test]
+    fn legacy_queued_audio_text_fails_locally_and_the_following_job_completes() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("queue");
+        let image = directory.path().join("first.png");
+        let first = queued_image(&root, &image);
+        let mut old = load(&root, &first.id).unwrap();
+        clean_previews(&old);
+        engine::release_prepared(&old.plan).unwrap();
+        old.previews.clear();
+        // Reserve the same TXT name through a still-supported local OCR route,
+        // then reproduce the input/settings stored by the former audio route.
+        let tools = ToolPaths {
+            tesseract: Some(std::env::current_exe().unwrap()),
+            ..Default::default()
+        };
+        old.plan = engine::prepare(
+            &image,
+            &ConversionSettings {
+                format: OutputFormat::Txt,
+                ..Default::default()
+            },
+            &tools,
+        )
+        .unwrap();
+        let audio = directory.path().join("first.wav");
+        let original_audio = b"original audio must remain untouched";
+        fs::write(&audio, original_audio).unwrap();
+        old.plan.input = audio.canonicalize().unwrap();
+        old.view.input = old.plan.input.clone();
+        old.view.format = "TXT".into();
+        old.view.outputs = old
+            .plan
+            .outputs
+            .iter()
+            .map(|output| output.path.clone())
+            .collect();
+        let reserved = &old.plan.outputs[0];
+        let mut reservation: serde_json::Value =
+            serde_json::from_slice(&fs::read(&reserved.marker).unwrap()).unwrap();
+        reservation["input"] = serde_json::to_value(&old.plan.input).unwrap();
+        let mut marker = OpenOptions::new()
+            .write(true)
+            .open(&reserved.marker)
+            .unwrap();
+        marker.set_len(0).unwrap();
+        serde_json::to_writer(&mut marker, &reservation).unwrap();
+        drop(marker);
+        let mut legacy = serde_json::to_value(&old).unwrap();
+        legacy["plan"]["settings"]["transcription"] = serde_json::json!({"language":"it"});
+        fs::write(
+            job_dir(&root, &first.id).unwrap().join("job.json"),
+            serde_json::to_vec(&legacy).unwrap(),
+        )
+        .unwrap();
+        let second = queued_image(&root, &directory.path().join("second.png"));
+        let (_, warnings) = jobs_with_warnings_at(&root).unwrap();
+        assert!(warnings.is_empty(), "legacy settings must remain readable");
+
+        run_worker_at(&root, None).unwrap();
+
+        let rejected = load(&root, &first.id).unwrap();
+        assert_eq!(rejected.view.state, JobState::Failed);
+        assert!(
+            rejected
+                .view
+                .error
+                .unwrap()
+                .contains("Conversione non supportata")
+        );
+        assert!(!old.view.outputs[0].exists());
+        assert!(!old.plan.work_dir.exists());
+        assert!(!old.plan.outputs[0].marker.exists());
+        assert_eq!(fs::read(audio).unwrap(), original_audio);
+        assert!(image::open(image).is_ok());
+        assert_eq!(
+            load(&root, &second.id).unwrap().view.state,
+            JobState::Completed
+        );
+        assert!(image::open(&second.outputs[0]).is_ok());
+    }
+
+    #[test]
     fn unreadable_record_is_preserved_and_does_not_block_snapshots_or_valid_jobs() {
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path().join("queue");

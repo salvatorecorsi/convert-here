@@ -6,47 +6,48 @@ use the_converter::{
 };
 
 #[test]
-fn selection_offers_only_shared_routes_and_opt_in_transcription() {
+fn selection_offers_only_shared_local_routes() {
     use OutputFormat::*;
-    let cases: &[(&[&str], bool, &[OutputFormat])] = &[
-        (&[], true, &[]),
-        (&["note.txt"], true, &[Pdf]),
-        (&["note.txt", "photo.png"], true, &[Pdf]),
-        (&["note.txt", "clip.mp4"], true, &[]),
+    let cases: &[(&[&str], &[OutputFormat])] = &[
+        (&[], &[]),
+        (&["note.txt"], &[Pdf]),
+        (&["note.txt", "photo.png"], &[Pdf]),
+        (&["note.txt", "clip.mp4"], &[]),
         (
             &["song.WAV", "clip.mp4"],
-            true,
             &[Mp3, Wav, Flac, Aac, Ogg, Opus, Aiff, M4a, Wma, Ac3, Au, Caf],
         ),
-        (&["song.wav", "report.pdf"], true, &[Txt]),
-        (&["song.wav", "report.pdf"], false, &[]),
-        (&["report.pdf"], false, &[Png, Jpg, Txt, Docx, Html, Pdf]),
-        (&["report.xlsx", "data.csv"], false, &[Pdf, Csv, Xlsx]),
-        (&["report.xlsx", "notes.docx", "page.html"], false, &[Pdf]),
-        (&["page.HTM", "photo.qoi"], false, &[Pdf]),
-        (&["notes.docx"], false, &[Pdf]),
-        (&["photo.png", "report.pdf"], true, &[Png, Jpg, Pdf, Txt]),
+        (&["song.wav", "report.pdf"], &[]),
+        (&["report.pdf"], &[Png, Jpg, Txt, Docx, Html, Pdf]),
+        (&["report.xlsx", "data.csv"], &[Pdf, Csv, Xlsx]),
+        (&["report.xlsx", "notes.docx", "page.html"], &[Pdf]),
+        (&["page.HTM", "photo.qoi"], &[Pdf]),
+        (&["notes.docx"], &[Pdf]),
+        (&["photo.png", "report.pdf"], &[Png, Jpg, Pdf, Txt]),
         (
             &["photo.heic", "photo.AVIF"],
-            false,
             &[
                 Png, Jpg, Webp, Bmp, Tiff, Gif, Ico, Pdf, Qoi, Tga, Farbfeld, OpenExr, Hdr, Pnm,
                 Avif, Heic, Txt,
             ],
         ),
-        (&["song.wav", "photo.heic"], true, &[Txt]),
-        (&["song.wav", "photo.heic"], false, &[]),
-        (&["song.wav", "file.xyz"], true, &[]),
+        (&["song.wav", "photo.heic"], &[]),
+        (&["song.wav", "file.xyz"], &[]),
     ];
-    for (inputs, enabled, expected) in cases {
+    for (inputs, expected) in cases {
         assert_eq!(
-            common_formats(inputs.iter().map(Path::new), *enabled),
+            common_formats(inputs.iter().map(Path::new)),
             *expected,
             "{inputs:?}"
         );
     }
-    assert!(!common_formats([Path::new("song.wav")], false).contains(&Txt));
-    assert!(common_formats([Path::new("song.wav")], true).contains(&Txt));
+    assert_eq!(
+        supported_formats(MediaKind::Audio),
+        vec![Mp3, Wav, Flac, Aac, Ogg, Opus, Aiff, M4a, Wma, Ac3, Au, Caf]
+    );
+    assert!(!common_formats([Path::new("song.wav")]).contains(&Txt));
+    assert!(supported_formats(MediaKind::Image).contains(&Txt));
+    assert!(supported_formats(MediaKind::Pdf).contains(&Txt));
 }
 
 #[test]
@@ -149,10 +150,9 @@ fn stale_ocr_language_only_blocks_routes_that_use_ocr() {
 }
 
 #[test]
-fn old_settings_load_without_a_key_or_transcription_configuration() {
+fn old_settings_load_and_obsolete_fields_are_not_written_back() {
     let settings: ConversionSettings =
         serde_json::from_str(r#"{"format":"Txt","audio":{"bitrate_kbps":192}}"#).unwrap();
-    assert_eq!(settings.transcription.language, None);
     assert_eq!(
         settings.pdf.action,
         the_converter::model::PdfAction::Compress
@@ -167,8 +167,71 @@ fn old_settings_load_without_a_key_or_transcription_configuration() {
     assert!(!json.contains("api_key"));
     let saved_with_language: ConversionSettings =
         serde_json::from_str(r#"{"format":"Txt","transcription":{"language":"it"}}"#).unwrap();
-    assert_eq!(
-        saved_with_language.transcription.language.as_deref(),
-        Some("it")
+    assert_eq!(saved_with_language.format, OutputFormat::Txt);
+    assert!(
+        serde_json::to_value(&saved_with_language)
+            .unwrap()
+            .get("transcription")
+            .is_none()
     );
+}
+
+#[test]
+fn obsolete_audio_text_settings_are_rejected_before_output_or_progress() {
+    let directory = tempfile::tempdir().unwrap();
+    let audio = directory.path().join("recording.wav");
+    let original = b"audio input bytes must not be changed";
+    std::fs::write(&audio, original).unwrap();
+    let mut settings: ConversionSettings = serde_json::from_str(
+        r#"{"format":"Txt","transcription":{"language":"obsolete-language"}}"#,
+    )
+    .unwrap();
+    let output = directory.path().join("not-created");
+    settings.output_dir = Some(output.clone());
+    let mut progressed = false;
+    let error = engine::convert(
+        &audio,
+        &settings,
+        &ToolPaths::default(),
+        &AtomicBool::new(false),
+        |_| progressed = true,
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("Conversione non supportata"));
+    assert!(!progressed && !output.exists());
+    assert!(
+        engine::prepare(&audio, &settings, &ToolPaths::default())
+            .unwrap_err()
+            .to_string()
+            .contains("Conversione non supportata")
+    );
+    assert!(!output.exists());
+    assert_eq!(std::fs::read(audio).unwrap(), original);
+}
+
+#[test]
+fn cli_rejects_obsolete_audio_text_settings_without_creating_outputs() {
+    let directory = tempfile::tempdir().unwrap();
+    let audio = directory.path().join("recording.wav");
+    let settings = directory.path().join("old-settings.json");
+    let output = directory.path().join("not-created");
+    std::fs::write(&audio, b"original audio").unwrap();
+    std::fs::write(
+        &settings,
+        br#"{"format":"Txt","transcription":{"language":"it"}}"#,
+    )
+    .unwrap();
+    let result = std::process::Command::new(env!("CARGO_BIN_EXE_the-converter-cli"))
+        .args(["--convert", "--settings"])
+        .arg(settings)
+        .arg("--output-dir")
+        .arg(&output)
+        .arg("--files")
+        .arg(&audio)
+        .output()
+        .unwrap();
+    assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr).contains("Conversione non supportata"));
+    assert!(!output.exists());
+    assert_eq!(std::fs::read(audio).unwrap(), b"original audio");
 }

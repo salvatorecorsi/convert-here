@@ -24,7 +24,7 @@ La preparazione crea snapshot PDF in una cartella temporanea nascosta dell'utent
 
 I PDF cifrati, firmati o con moduli interattivi richiedono una copia statica sbloccata prima dell'unione. Il risultato mantiene i contenuti delle pagine, ma non trasferisce segnalibri, tag o metadati del documento. Non e disponibile la modifica libera del contenuto delle pagine. L'impaginazione di Office e HTML dipende da LibreOffice; le risorse HTML collegate possono accedere a file locali o alla rete durante la preparazione.
 
-Le conversioni PDF in Word/HTML restano ricostruzioni del solo testo. L'OCR locale e la trascrizione audio OpenAI rimangono funzioni separate; il nuovo Merge non invia file a OpenAI.
+Le conversioni PDF in Word/HTML restano ricostruzioni del solo testo.
 
 ## Download e compatibilita
 
@@ -34,6 +34,6 @@ Le conversioni PDF in Word/HTML restano ricostruzioni del solo testo. L'OCR loca
 
 Richiede **Windows 10 build 19041 o successivo, x64**. Setup ed eseguibili pubblici non sono firmati Authenticode. Il setup include il menu classico, mostrato su Windows 11 in **Mostra altre opzioni**; il menu moderno richiede separatamente un'identita MSIX con firma attendibile.
 
-I motori esterni restano opzionali e non inclusi nei pacchetti pubblici. Setup e script possono scaricare FFmpeg e Poppler su richiesta, con hash verificati; LibreOffice, Tesseract e libheif si configurano separatamente. Restano stabili i nomi tecnici degli eseguibili, gli identificativi, i percorsi dati e la credenziale Windows per gli aggiornamenti.
+I motori esterni restano opzionali e non inclusi nei pacchetti pubblici. Setup e script possono scaricare FFmpeg e Poppler su richiesta, con hash verificati; LibreOffice, Tesseract e libheif si configurano separatamente. Restano stabili i nomi tecnici degli eseguibili, gli identificativi e i percorsi dati per gli aggiornamenti.
 
 Dettagli d'uso: [README](https://github.com/salvatorecorsi/convert-here/blob/v0.3.0/README.md). Dati locali e temporanei: [privacy](https://github.com/salvatorecorsi/convert-here/blob/v0.3.0/docs/privacy.md). Esiti delle prove: [verifiche](https://github.com/salvatorecorsi/convert-here/blob/v0.3.0/docs/store-validation.md). Le [note 0.2.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.2.0) rimangono storiche.

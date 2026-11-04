@@ -24,10 +24,6 @@ In caso di errore il segnaposto mostra una X rossa; un doppio clic apre la spieg
 
 Le sorgenti vengono preparate una volta in una cartella temporanea nascosta dell'utente. Nessun PDF intermedio compare nella destinazione; gli originali restano invariati. Il salvataggio produce un solo `primo-unito.pdf`, con numerazione in caso di conflitto. Questa sessione e il suo ordine non vengono salvati nei record `job.json` della coda rapida. Annullamento e chiusura tentano di eliminare gli intermedi; un arresto improvviso puo lasciare residui. Il comando Merge nell'app apre lo stesso editor. Per requisiti dei motori e limiti dei PDF vedi [README](../README.md#comprimi-dividi-e-unisci-pdf).
 
-## Audio in TXT con OpenAI
+## Testo da immagini e PDF
 
-La trascrizione online compare per gli audio dopo l'abilitazione facoltativa con una chiave API nella pagina **Strumenti**. Scegliere **TXT con OpenAI** e l'azione che autorizza l'invio dell'audio al servizio: il lavoro usa la stessa coda e lo stesso segnaposto, ma richiede internet e puo generare costi sul proprio account API. Le conversioni di formato e il TXT estratto dai PDF con Poppler restano locali.
-
-La coda conserva impostazioni, percorsi e stato del lavoro; non conserva la chiave API, che viene letta dal Gestore credenziali Windows al momento dell'esecuzione. Rimuovere la chiave impedisce nuove trascrizioni; per fermare un lavoro gia in corso usare **Annulla**. Chiudere la finestra di stato non ferma l'invio o l'elaborazione.
-
-Se occorre, FFmpeg prepara segmenti audio locali che vengono trascritti in sequenza. Dopo il primo segmento, le richieste possono reinviare come contesto fino a 200 caratteri di parole intere gia trascritte della stessa registrazione. Il file TXT finale compare solo quando tutti i segmenti sono stati elaborati. Errori e annullamenti non pubblicano un TXT parziale; l'app tenta di pulire i temporanei. Non viene ripetuta automaticamente una richiesta fallita. I segmenti gia inviati possono essere stati elaborati e addebitati dal fornitore anche se annulli o il lavoro termina con errore. Vedi [requisiti e limiti](../README.md#trascrizione-audio-txt-con-openai-facoltativa) e [privacy](privacy.md).
+La destinazione TXT e disponibile per immagini tramite OCR locale e per PDF tramite estrazione del testo o OCR locale. Audio e video offrono le conversioni di formato con FFmpeg. Per i motori richiesti vedi [README](../README.md#ocr-locale-di-immagini-e-scansioni-pdf) e [privacy](privacy.md).

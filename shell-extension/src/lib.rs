@@ -32,7 +32,6 @@ const ECS_HIDDEN: u32 = 2;
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 const MAX_SELECTION: u32 = 10_000;
 const UNKNOWN_SELECTION_MASK: u64 = u64::MAX;
-const SELECTION_CONTAINS_AUDIO: u64 = 1 << 63;
 const SELECTION_CONTAINS_IMAGE: u64 = 1 << 62;
 const SELECTION_CONTAINS_PDF: u64 = 1 << 61;
 const SELECTION_MULTIPLE: u64 = 1 << 60;
@@ -40,63 +39,11 @@ const PDF_TARGET: u64 = 1 << 19;
 const PDF_MERGE_GUID_SLOT: usize = 45;
 const AUDIO_TARGETS: u64 = ((1 << 7) - 1) | (((1 << 5) - 1) << 21);
 const VIDEO_TARGETS: u64 = AUDIO_TARGETS | (((1 << 6) - 1) << 7) | (((1 << 6) - 1) << 26);
-const IMAGE_TARGETS: u64 = (((1 << 8) - 1) << 12) | (((1 << 6) - 1) << 32) | (3 << 42) | (1 << 20);
-const PDF_TARGETS: u64 = (1 << 13) | (1 << 14) | (1 << 19) | (1 << 20) | (1 << 40) | (1 << 41);
+const IMAGE_TARGETS: u64 =
+    (((1 << 8) - 1) << 12) | (((1 << 6) - 1) << 32) | (3 << 42) | TEXT_TARGET;
+const PDF_TARGETS: u64 = (1 << 13) | (1 << 14) | (1 << 19) | TEXT_TARGET | (1 << 40) | (1 << 41);
 const SPREADSHEET_TARGETS: u64 = (1 << 19) | (1 << 38) | (1 << 39);
 const TEXT_TARGET: u64 = 1 << 20;
-const OPENAI_CREDENTIAL_TARGET: &str = "Corsivo.TheConverter.OpenAI";
-
-#[repr(C)]
-struct Credential {
-    flags: u32,
-    kind: u32,
-    target_name: *mut u16,
-    comment: *mut u16,
-    last_written: [u32; 2],
-    blob_size: u32,
-    blob: *mut u8,
-    persist: u32,
-    attribute_count: u32,
-    attributes: *mut c_void,
-    target_alias: *mut u16,
-    user_name: *mut u16,
-}
-
-#[link(name = "advapi32")]
-extern "system" {
-    fn CredReadW(target: *const u16, kind: u32, flags: u32, out: *mut *mut Credential) -> i32;
-    fn CredFree(buffer: *mut c_void);
-}
-
-fn credential_metadata_available(credential: &Credential) -> bool {
-    credential.kind == 1
-        && !credential.blob.is_null()
-        && (20..=2048).contains(&credential.blob_size)
-}
-
-fn transcription_key_available() -> bool {
-    let target: Vec<u16> = OPENAI_CREDENTIAL_TARGET
-        .encode_utf16()
-        .chain(Some(0))
-        .collect();
-    let mut credential = ptr::null_mut();
-    unsafe {
-        if CredReadW(target.as_ptr(), 1, 0, &mut credential) == 0 || credential.is_null() {
-            return false;
-        }
-        // Only inspect metadata. The DLL never copies, decodes or logs the key.
-        let available = credential_metadata_available(&*credential);
-        if !(*credential).blob.is_null() && (*credential).blob_size <= 2560 {
-            // WinCred owns this temporary copy, not the saved credential. Wipe
-            // it without reading it before returning the allocation to WinCred.
-            for offset in 0..(*credential).blob_size as usize {
-                ptr::write_volatile((*credential).blob.add(offset), 0);
-            }
-        }
-        CredFree(credential.cast());
-        available
-    }
-}
 
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -151,11 +98,7 @@ fn text_target_title(selection: u64) -> &'static str {
     if selection == UNKNOWN_SELECTION_MASK {
         return "TXT";
     }
-    if selection & SELECTION_CONTAINS_AUDIO != 0 && selection & SELECTION_CONTAINS_IMAGE != 0 {
-        "TXT · audio OpenAI / immagini OCR"
-    } else if selection & SELECTION_CONTAINS_AUDIO != 0 {
-        "TXT con OpenAI"
-    } else if selection & SELECTION_CONTAINS_IMAGE != 0 && selection & SELECTION_CONTAINS_PDF != 0 {
+    if selection & SELECTION_CONTAINS_IMAGE != 0 && selection & SELECTION_CONTAINS_PDF != 0 {
         "TXT · OCR / testo PDF"
     } else if selection & SELECTION_CONTAINS_IMAGE != 0 {
         "TXT · OCR"
@@ -734,7 +677,7 @@ unsafe fn item_path(items: *mut c_void, index: u32) -> Result<PathBuf, HResult> 
     CoTaskMemFree(text as *const c_void);
     Ok(path)
 }
-fn target_mask(path: &Path, transcription_enabled: bool) -> u64 {
+fn target_mask(path: &Path) -> u64 {
     let Some(extension) = path.extension().and_then(|s| s.to_str()) else {
         return 0;
     };
@@ -743,11 +686,6 @@ fn target_mask(path: &Path, transcription_enabled: bool) -> u64 {
         | "aif" | "alac" | "ape" | "m4b" | "mka" | "mp2" | "oga" | "weba" | "ac3" | "au"
         | "caf" | "amr" | "dts" | "tta" | "voc" | "wv" | "tak" | "w64" | "aifc" | "ra" => {
             AUDIO_TARGETS
-                | if transcription_enabled {
-                    TEXT_TARGET
-                } else {
-                    0
-                }
         }
         "mp4" | "mkv" | "mov" | "avi" | "webm" | "wmv" | "m4v" | "mpeg" | "mpg" | "ts" | "mts"
         | "m2ts" | "3gp" | "flv" | "asf" | "vob" | "ogv" | "m2v" | "mxf" | "f4v" | "divx"
@@ -762,25 +700,14 @@ fn target_mask(path: &Path, transcription_enabled: bool) -> u64 {
     }
 }
 
-fn common_target_mask<'a>(
-    paths: impl IntoIterator<Item = &'a Path>,
-    transcription_enabled: bool,
-) -> u64 {
+fn common_target_mask<'a>(paths: impl IntoIterator<Item = &'a Path>) -> u64 {
     let mut paths = paths.into_iter();
     let Some(first) = paths.next() else {
         return 0;
     };
-    paths.fold(target_mask(first, transcription_enabled), |mask, path| {
-        mask & target_mask(path, transcription_enabled)
-    })
+    paths.fold(target_mask(first), |mask, path| mask & target_mask(path))
 }
 
-fn needs_transcription_metadata(paths: &[PathBuf], target: Option<&str>) -> bool {
-    (target.is_none() || target == Some("txt"))
-        && paths
-            .iter()
-            .any(|path| target_mask(path, false) == AUDIO_TARGETS)
-}
 unsafe extern "system" fn explorer_state(
     this: *mut c_void,
     items: *mut c_void,
@@ -831,13 +758,10 @@ unsafe extern "system" fn explorer_state(
             }
         }
     }
-    let transcription_enabled = needs_transcription_metadata(&paths, command.target.as_deref())
-        && transcription_key_available();
-    let mask = common_target_mask(paths.iter().map(PathBuf::as_path), transcription_enabled);
+    let mask = common_target_mask(paths.iter().map(PathBuf::as_path));
     let mut metadata = 0;
     for path in &paths {
-        match target_mask(path, false) {
-            AUDIO_TARGETS => metadata |= SELECTION_CONTAINS_AUDIO,
+        match target_mask(path) {
             IMAGE_TARGETS => metadata |= SELECTION_CONTAINS_IMAGE,
             PDF_TARGETS => metadata |= SELECTION_CONTAINS_PDF,
             _ => {}
@@ -897,13 +821,7 @@ unsafe extern "system" fn explorer_invoke(
             Err(error) => return error,
         }
     }
-    let transcription_enabled =
-        needs_transcription_metadata(&selected_paths, command.target.as_deref())
-            && transcription_key_available();
-    let mask = common_target_mask(
-        selected_paths.iter().map(PathBuf::as_path),
-        transcription_enabled,
-    );
+    let mask = common_target_mask(selected_paths.iter().map(PathBuf::as_path));
     if mask == 0
         || command.target.as_deref().is_some_and(|target| {
             TARGETS
@@ -1183,11 +1101,11 @@ mod tests {
                 .filter_map(|(index, value)| (mask & (1 << index) != 0).then_some(*value))
                 .collect::<Vec<_>>()
         };
-        let audio = target_mask(Path::new("musica.WAV"), false);
-        let video = target_mask(Path::new("clip.mp4"), true);
-        let image = target_mask(Path::new("foto.png"), true);
-        let pdf = target_mask(Path::new("documento.pdf"), false);
-        let document = target_mask(Path::new("testo.docx"), true);
+        let audio = target_mask(Path::new("musica.WAV"));
+        let video = target_mask(Path::new("clip.mp4"));
+        let image = target_mask(Path::new("foto.png"));
+        let pdf = target_mask(Path::new("documento.pdf"));
+        let document = target_mask(Path::new("testo.docx"));
         assert_eq!(
             formats(audio & video),
             vec![
@@ -1198,32 +1116,29 @@ mod tests {
         assert_eq!(formats(image & pdf), vec!["png", "jpg", "pdf", "txt"]);
         assert_eq!(formats(document & image), vec!["pdf"]);
         assert_eq!(audio & image, 0);
-        assert_eq!(target_mask(Path::new("unknown.exe"), true), 0);
+        assert_eq!(target_mask(Path::new("unknown.exe")), 0);
         for extension in [
             "txt", "doc", "docx", "odt", "rtf", "ppt", "pptx", "odp", "html", "htm",
         ] {
             assert_eq!(
-                formats(target_mask(Path::new(&format!("file.{extension}")), true)),
+                formats(target_mask(Path::new(&format!("file.{extension}")))),
                 vec!["pdf"]
             );
         }
-        let audio_with_key = target_mask(Path::new("musica.mpga"), true);
-        assert_eq!(audio_with_key, audio | TEXT_TARGET);
-        assert_eq!(formats(audio_with_key & video), formats(audio)); // Video is never transcribed.
-        assert_eq!(formats(audio_with_key & pdf), vec!["txt"]);
-        assert_eq!(formats(audio_with_key & image), vec!["txt"]);
+        assert_eq!(target_mask(Path::new("musica.mpga")), audio);
+        assert_eq!(audio & TEXT_TARGET, 0);
         assert_eq!(audio & pdf, 0);
         let batch = [Path::new("testo.txt"), Path::new("foto.png")];
-        assert_eq!(formats(common_target_mask(batch, true)), vec!["pdf"]);
+        assert_eq!(formats(common_target_mask(batch)), vec!["pdf"]);
         assert_eq!(
-            common_target_mask([Path::new("testo.txt"), Path::new("audio.wav")], true),
+            common_target_mask([Path::new("testo.txt"), Path::new("audio.wav")]),
             0
         );
         assert_eq!(
-            common_target_mask([Path::new("audio.wav"), Path::new("unknown.exe")], true),
+            common_target_mask([Path::new("audio.wav"), Path::new("unknown.exe")]),
             0
         );
-        assert_eq!(common_target_mask(std::iter::empty(), true), 0);
+        assert_eq!(common_target_mask(std::iter::empty()), 0);
         assert_eq!(text_target_title(UNKNOWN_SELECTION_MASK), "TXT");
         assert_eq!(text_target_title(TEXT_TARGET), "TXT");
         assert_eq!(
@@ -1234,20 +1149,12 @@ mod tests {
             text_target_title(TEXT_TARGET | SELECTION_CONTAINS_IMAGE | SELECTION_CONTAINS_PDF),
             "TXT · OCR / testo PDF"
         );
-        assert_eq!(
-            text_target_title(TEXT_TARGET | SELECTION_CONTAINS_IMAGE | SELECTION_CONTAINS_AUDIO),
-            "TXT · audio OpenAI / immagini OCR"
-        );
         assert_eq!(pdf_target_title(UNKNOWN_SELECTION_MASK), "PDF");
         assert_eq!(pdf_target_title(SELECTION_CONTAINS_PDF), "PDF · comprimi");
         assert_eq!(pdf_target_title(SELECTION_MULTIPLE), "PDF (Bulk)");
         assert_eq!(
             pdf_target_title(SELECTION_MULTIPLE | SELECTION_CONTAINS_PDF),
             "PDF (Bulk)"
-        );
-        assert_eq!(
-            text_target_title(TEXT_TARGET | SELECTION_CONTAINS_AUDIO),
-            "TXT con OpenAI"
         );
     }
 
@@ -1292,14 +1199,9 @@ mod tests {
         for extension in extensions {
             let path = PathBuf::from(format!("sample.{extension}"));
             let kind = core_model::MediaKind::from_path(&path);
-            for enabled in [false, true] {
-                let expected = core_model::supported_formats(kind)
+            let expected =
+                core_model::supported_formats(kind)
                     .into_iter()
-                    .filter(|format| {
-                        enabled
-                            || kind != core_model::MediaKind::Audio
-                            || *format != core_model::OutputFormat::Txt
-                    })
                     .fold(0u64, |mask, format| {
                         mask | (1
                             << TARGETS
@@ -1307,15 +1209,10 @@ mod tests {
                                 .position(|target| *target == format.extension())
                                 .unwrap())
                     });
-                assert_eq!(
-                    target_mask(&path, enabled),
-                    expected,
-                    "{extension}, key={enabled}"
-                );
-            }
+            assert_eq!(target_mask(&path), expected, "{extension}");
         }
-        assert_ne!(target_mask(Path::new("sample.qoi"), false) & (1 << 37), 0);
-        assert_ne!(target_mask(Path::new("sample.pdf"), false) & (1 << 41), 0);
+        assert_ne!(target_mask(Path::new("sample.qoi")) & (1 << 37), 0);
+        assert_ne!(target_mask(Path::new("sample.pdf")) & (1 << 41), 0);
     }
 
     #[test]
@@ -1332,36 +1229,5 @@ mod tests {
         }
         assert!(slots.insert(PDF_MERGE_GUID_SLOT));
         assert_eq!(PDF_MERGE_GUID_SLOT, 45);
-    }
-
-    #[test]
-    fn credential_availability_reads_metadata_without_dereferencing_the_secret() {
-        let mut credential = Credential {
-            flags: 0,
-            kind: 1,
-            target_name: ptr::null_mut(),
-            comment: ptr::null_mut(),
-            last_written: [0, 0],
-            blob_size: 20,
-            blob: ptr::NonNull::<u8>::dangling().as_ptr(),
-            persist: 2,
-            attribute_count: 0,
-            attributes: ptr::null_mut(),
-            target_alias: ptr::null_mut(),
-            user_name: ptr::null_mut(),
-        };
-        assert!(credential_metadata_available(&credential));
-        credential.blob_size = 2048;
-        assert!(credential_metadata_available(&credential));
-        for length in [0, 19, 2049] {
-            credential.blob_size = length;
-            assert!(!credential_metadata_available(&credential));
-        }
-        credential.blob_size = 20;
-        credential.kind = 2;
-        assert!(!credential_metadata_available(&credential));
-        credential.kind = 1;
-        credential.blob = ptr::null_mut();
-        assert!(!credential_metadata_available(&credential));
     }
 }

@@ -1,14 +1,14 @@
 # Microsoft Store listing — English (en-US)
 
-Draft for the complete MSIX, to be checked against the final package. Publisher: **CORSIVO**. Developer: **Salvatore Corsi**. The owner confirmed reservation of **Convert Here** in Partner Center on 4 November 2026. This listing is translated; the application UI is currently Italian. Do not copy this preamble into public listing fields.
+Draft for Convert Here **0.3.1**, Store package **1.0.1.0**: the new candidate is still in preparation and has not been uploaded. Check against the final package. Publisher: **Corsivo**. Developer: **Salvatore Corsi**. The owner confirmed reservation of **Convert Here** in Partner Center on 4 November 2026. This listing is translated; the application UI is currently Italian. Do not copy this preamble into public listing fields.
 
 ## Short description
 
-Convert files from the Windows 11 context menu with a queue and custom settings. Optional online audio-to-text transcription uses OpenAI and your API key. External engines enable more formats. App UI is Italian.
+Convert files from the Windows 11 context menu with a queue, custom settings and local OCR. External engines enable more formats. App UI is Italian.
 
 ## Description
 
-Native image formats and image-to-PDF conversion work immediately, as do PDF compression, splitting and merging. Audio/video requires FFmpeg; PDF export requires Poppler; Office, Excel/CSV and HTML-to-PDF requires LibreOffice. HEIC/HEIF and AVIF require libheif; OCR requires Tesseract and language models, plus Poppler for scanned PDFs. These optional engines are not included. Optional OpenAI audio-to-text transcription requires internet, your API key and separate API billing, not a ChatGPT subscription; it uploads audio to OpenAI. FFmpeg prepares audio that cannot be sent directly. The application UI is Italian.
+Native image formats and image-to-PDF conversion work immediately, as do PDF compression, splitting and merging. Audio/video requires FFmpeg; PDF export requires Poppler; Office, Excel/CSV and HTML-to-PDF requires LibreOffice. HEIC/HEIF and AVIF require libheif; OCR requires Tesseract and language models, plus Poppler for scanned PDFs. These optional engines are not included. The application UI is Italian.
 
 Convert Here brings conversion to the folder where you work. In the Windows 11 context menu, choose Converti in and a compatible format. The job joins a queue with your saved settings, without opening the options window every time.
 
@@ -22,7 +22,7 @@ With optional FFmpeg, convert audio to MP3, WAV, FLAC, AAC, OGG, Opus, AIFF, M4A
 
 With Poppler, export PDF pages to PNG/JPEG, extract embedded text as TXT, or reconstruct it as editable Word DOCX and HTML files. DOCX and HTML exports contain text only: original images, tables and page layout are not reconstructed.
 
-With Tesseract, recognize text in images as TXT, or enable local OCR for PDFs to create TXT, DOCX or HTML from scanned pages. PDF OCR is off by default and also uses Poppler. Select installed language models, such as ita+eng, and the PDF page DPI. Keep models in the engine's tessdata directory. Processing stays on your PC without OpenAI or API charges. Recognized text may contain errors and should be reviewed; OCR does not create a searchable PDF.
+With Tesseract, recognize text in images as TXT, or enable local OCR for PDFs to create TXT, DOCX or HTML from scanned pages. PDF OCR is off by default and also uses Poppler. Select installed language models, such as ita+eng, and the PDF page DPI. Keep models in the engine's tessdata directory. Processing stays on your PC. Recognized text may contain errors and should be reviewed; OCR does not create a searchable PDF.
 
 Compress PDFs losslessly or split them into one file per page. For multiple PDF-compatible files, PDF (Bulk) queues separate results; PDF (Merge) prepares supported images, PDFs, Word/Office, Excel/CSV and HTML to create one PDF. Drag individual pages to interleave sources, or use the arrows or Alt+up/down. PDFs and native images need no external merge engine; documents still require LibreOffice and HEIC/AVIF needs libheif. Audio and video are excluded. Compression does not resample images or produce a file larger than its source. Splitting and merging omit bookmarks, tags and document metadata, and reject interactive forms. These operations reject encrypted or signed PDFs; compression preserves the catalog and forms and does not remove metadata.
 
@@ -30,9 +30,7 @@ With LibreOffice, convert compatible Word documents, other documents, spreadshee
 
 Convert simple HTML files to PDF with LibreOffice. Complex CSS may change the layout, and JavaScript is not executed. Resources linked from the HTML may access local files or the network during conversion.
 
-Format conversion runs on your PC. Audio is uploaded only when you select OpenAI audio-to-text transcription after enabling it with your API key. Windows Credential Manager protects the key, and you can remove it in settings. Local conversions do not require an in-app account. Preferences, file paths, queue status and error details are stored locally without the key.
-
-Speech transcription creates a TXT file with automatic language detection or an optional language selection. It is not directly available for video files. Review the result because recognition errors are possible. Requests already sent may incur costs even if you cancel the job.
+Convert Here is free, with no subscriptions, in-app purchases or usage-based charges. No payment is required to keep using it. Format conversion runs on your PC and does not require an in-app account. Preferences, file paths, queue status and error details are stored locally.
 
 Limitations: free editing of PDF page content is not available. OCR recognizes text without reconstructing graphics or layout. Animated GIFs, multipage TIFFs and HEIC/AVIF containers use their first frame or image. PDF (Bulk) keeps separate results; PDF (Merge) includes every prepared page once, up to 10,000 pages. Office document layout depends on LibreOffice and available fonts. The modern context menu requires Windows 11 x64. The application UI is Italian.
 
@@ -55,8 +53,7 @@ HEIC/HEIF and AVIF input and HEIC/AVIF output with optional libheif
 Local OCR for images and scanned PDFs with optional Tesseract and language models
 Separate PDF Bulk outputs or one PDF Merge with individual page drag and drop
 Preserve original files and use numbered output names for existing files
-Local format conversion; audio is sent to OpenAI only for requested transcription
-Optional audio-to-text transcription with your OpenAI API key and separate API charges
+Format conversion processed on your PC without an in-app account
 ```
 
 ## Search terms
@@ -79,7 +76,6 @@ conversion queue
 Windows 11 x64 for the modern context menu
 FFmpeg for audio/video; Poppler for PDF export; LibreOffice for Office/HTML to PDF and Excel/CSV conversion. Optional engines are not included. The application UI is Italian.
 libheif with heif-dec.exe, heif-enc.exe, DLLs and plugins for HEIC/AVIF; Tesseract and language models for OCR, plus Poppler for PDFs. Not included.
-Optional audio-to-text: internet, an OpenAI API key and separately billed API account; FFmpeg when audio preparation is needed. No ChatGPT subscription usage.
 ```
 
 ## What's new
@@ -93,8 +89,10 @@ Leave blank for the first Microsoft Store submission. Add release-specific notes
 3. Image quality and resizing settings. App UI shown in Italian.
 4. Configure optional executables on the Strumenti page. App UI shown in Italian.
 
-## Fields still required
+## Submission references
 
-Public privacy and support URLs, reserved product name, application license and the publisher's verified legal details. Do not claim an open source license until one has been selected and added to the project.
+Data controller and developer: **Salvatore Corsi**; publisher brand: **Corsivo**. Privacy and support contact: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Public privacy statement](https://github.com/salvatorecorsi/convert-here/blob/master/docs/privacy.md). Reserved name: **Convert Here**. See the [submission procedure](store-submission.md) for licensing, identity and current status.
+
+These texts are prepared for the new candidate and still need to be applied to the submission. They do not attest its upload or an update to the Partner Center listings.
 
 Description: 10,000 characters maximum; short description: 1,000 maximum (this draft is below 270); up to 20 features of 200 characters each; release notes: 1,500 maximum, empty for the first submission. [Official MSIX listing limits](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).

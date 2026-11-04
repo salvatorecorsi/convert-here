@@ -1,14 +1,14 @@
 # Convert Here
 
-Progetto **Corsivo**, sviluppato da **Salvatore Corsi**: versione Rust per Windows di [Final Converter](https://github.com/salvatorecorsi/final-converter). Conversioni di formato locali, selezioni multiple e integrazione con Esplora file. La trascrizione audio in TXT e facoltativa: usa OpenAI online con la chiave API dell'utente e invia l'audio solo quando viene richiesta.
+Progetto **Corsivo**, sviluppato da **Salvatore Corsi**: versione Rust per Windows di [Final Converter](https://github.com/salvatorecorsi/final-converter). Conversioni di formato locali, OCR sul PC, selezioni multiple e integrazione con Esplora file. Convert Here e gratuito, senza abbonamenti, acquisti in-app o costi a consumo. Nessun pagamento richiesto per continuare a usarlo.
 
-Il nome pubblico e **Convert Here**, riservato anche in Microsoft Partner Center; il repository canonico e [salvatorecorsi/convert-here](https://github.com/salvatorecorsi/convert-here). Per compatibilita restano invariati i nomi tecnici degli eseguibili e dei crate, le cartelle dati, la credenziale Windows e gli identificativi COM/MSIX. Le release precedenti possono ancora mostrare il nome The Converter. [Novita della versione 0.3.0](docs/release-notes-0.3.0.md).
+Il nome pubblico e **Convert Here**, riservato anche in Microsoft Partner Center; il repository canonico e [salvatorecorsi/convert-here](https://github.com/salvatorecorsi/convert-here). Per compatibilita restano invariati i nomi tecnici degli eseguibili e dei crate, le cartelle dati e gli identificativi COM/MSIX. Le release precedenti possono ancora mostrare il nome The Converter. [Novita della versione 0.3.1](docs/release-notes-0.3.1.md).
 
 ## Preparazione Microsoft Store
 
 La distribuzione Store usa un **MSIX completo** con il menu di Windows 11 dichiarato nel pacchetto. Editore pubblico: **Corsivo**; autore del codice: Salvatore Corsi. L'account GitHub che ospita il sorgente resta indipendente dall'identita dell'editore Microsoft.
 
-La build di anteprima e separata dalla release GitHub e non contiene certificati privati o motori esterni. Le immagini nei formati nativi e le immagini in PDF funzionano subito, come compressione, divisione e unione dei PDF. Audio/video richiedono FFmpeg; esportazione PDF in immagini o testo incorporato richiede Poppler; Office, Excel/CSV e HTML in PDF richiedono LibreOffice. HEIC/HEIF e AVIF richiedono libheif, mentre OCR richiede Tesseract con i modelli delle lingue e, per i PDF, anche Poppler. I motori si selezionano in **Strumenti**. La trascrizione audio TXT richiede internet, una propria chiave API OpenAI e, quando occorre preparare l'audio, FFmpeg. Questi requisiti sono dichiarati anche all'inizio delle schede Store.
+La build di anteprima e separata dalla release GitHub e non contiene certificati privati o motori esterni. Le immagini nei formati nativi e le immagini in PDF funzionano subito, come compressione, divisione e unione dei PDF. Audio/video richiedono FFmpeg; esportazione PDF in immagini o testo incorporato richiede Poppler; Office, Excel/CSV e HTML in PDF richiedono LibreOffice. HEIC/HEIF e AVIF richiedono libheif, mentre OCR richiede Tesseract con i modelli delle lingue e, per i PDF, anche Poppler. I motori si selezionano in **Strumenti**. Questi requisiti sono dichiarati anche all'inizio delle schede Store.
 
 ```powershell
 .\scripts\build-store-package.ps1
@@ -16,7 +16,7 @@ La build di anteprima e separata dalla release GitHub e non contiene certificati
 
 La preview usa un'identita di sviluppo e **non va caricata nello Store**. Per il pacchetto definitivo occorrono i dati esatti dell'Identita prodotto in Partner Center, la versione Store e l'editore assegnato all'account di Corsivo. Il modello e in `packaging/store/identity.partner-center.example.json`; la procedura e in [docs/store-submission.md](docs/store-submission.md).
 
-Sono preparate le [schede italiana](docs/store-listing-it.md) e [inglese](docs/store-listing-en.md), con interfaccia attualmente in italiano, e una [bozza dell'informativa privacy](docs/privacy.md). I campi del titolare, i contatti e gli URL mancanti vanno completati prima dell'invio. Microsoft firma il MSIX dopo la certificazione: la build Store non importa certificati e non invia automaticamente l'app a Partner Center.
+Sono preparate le [schede italiana](docs/store-listing-it.md) e [inglese](docs/store-listing-en.md), con interfaccia attualmente in italiano, e l'[informativa privacy](docs/privacy.md) con identita e contatto dello sviluppatore. Il pacchetto Store **1.0.1.0**, applicazione **0.3.1**, segue una procedura separata e non e ancora stato caricato; sostituira il precedente 1.0.0.0 validato ma mai inviato per certificazione. IARC non e stato accettato. Microsoft firma il MSIX dopo la certificazione: la build Store non importa certificati e non invia automaticamente l'app a Partner Center.
 
 Gli esiti dei test e i controlli Store ancora da completare sono raccolti in [store-validation.md](docs/store-validation.md).
 
@@ -24,15 +24,15 @@ Su GitHub Actions, **Windows checks** verifica codice e fixture su push e pull r
 
 ## Scarica e installa
 
-Scarica l'[ultima release Windows x64](https://github.com/salvatorecorsi/convert-here/releases/latest) e avvia `ConvertHere-0.3.0-windows-x64-setup.exe`. Richiede Windows 10 build 19041 o successivo, x64. L'installer aggiunge il programma e il disinstaller per il tuo utente; la voce **Converti in** del menu contestuale e facoltativa e selezionata per default. Non richiede privilegi amministrativi.
+Scarica la [release 0.3.1 per Windows x64](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.1) e avvia `ConvertHere-0.3.1-windows-x64-setup.exe`. Il setup richiede Windows 10 build 19041 o successivo, x64. L'installer aggiunge il programma e il disinstaller per il tuo utente; la voce **Converti in** del menu contestuale e facoltativa e selezionata per default. Non richiede privilegi amministrativi.
 
 Il setup è leggero. L'opzione consigliata scarica FFmpeg e Poppler direttamente dai distributori originali (circa 160 MB, con verifica SHA-256). Servono per audio, video e PDF; le conversioni di immagini e immagini in PDF funzionano anche senza questi download. Per riprovare o installare i motori in seguito, nel menu Start trovi **Installa o aggiorna motori di conversione**.
 
-Su Windows 11 il menu incluso nella release GitHub 0.3.0 compare in **Mostra altre opzioni**. Gli artefatti pubblici non sono firmati Authenticode e non includono un'identita MSIX firmata attendibile per il menu moderno. Quel percorso resta separato ed e descritto in [windows-integration.md](docs/windows-integration.md).
+Su Windows 11 il menu della distribuzione GitHub compare in **Mostra altre opzioni**. Gli artefatti pubblici non sono firmati Authenticode e non includono un'identita MSIX firmata attendibile per il menu moderno. Quel percorso resta separato ed e descritto in [windows-integration.md](docs/windows-integration.md).
 
 Per rimuovere il programma usa **Impostazioni Windows → App → App installate → Convert Here → Disinstalla**, oppure il collegamento nel menu Start. Le preferenze e i file convertiti restano conservati. Se Windows mantiene caricata la DLL del menu, la pulizia viene completata al successivo accesso senza riavviare Esplora file durante il lavoro.
 
-È disponibile anche `ConvertHere-0.3.0-windows-x64-portable.zip`: estrailo in una cartella stabile, esegui `scripts/install-runtime-tools.ps1 -InstallDirectory <cartella>` per i motori e, se desideri il menu, `scripts/install-context-menu.ps1 -Mode Classic -InstallDirectory <cartella>`. Verifica i download con il file `SHA256SUMS.txt` della stessa release.
+È disponibile anche `ConvertHere-0.3.1-windows-x64-portable.zip` nella [release 0.3.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.1): estrailo in una cartella stabile, esegui `scripts/install-runtime-tools.ps1 -InstallDirectory <cartella>` per i motori e, se desideri il menu, `scripts/install-context-menu.ps1 -Mode Classic -InstallDirectory <cartella>`. Verifica i download con il file `SHA256SUMS.txt` della stessa release.
 
 ## Uso quotidiano
 
@@ -53,7 +53,6 @@ Sono disponibili **44 formati di destinazione** e **93 estensioni di ingresso ri
 | Sorgente | Destinazioni | Motore |
 | --- | --- | --- |
 | Audio: MP3, MPGA, WAV, FLAC, AAC, M4A/M4B, OGG/OGA, Opus, AIFF/AIFC, WMA, ALAC, APE, MKA, MP2, WebA, AC3, AU, CAF, AMR, DTS, TTA, VOC, WV, TAK, W64, RA | MP3, WAV, FLAC, AAC, OGG, Opus, AIFF, M4A (AAC), WMA, AC3, AU, CAF (ALAC) | FFmpeg |
-| Audio supportati | TXT, trascrizione del parlato | OpenAI GPT-Transcribe facoltativo; FFmpeg per preparare formati non accettati direttamente o file grandi |
 | Video: MP4, MKV, MOV, WebM, AVI, WMV, MPEG, M4V, TS/MTS/M2TS/M2T, 3GP/3G2, FLV, ASF, VOB, OGV, M2V, MXF, F4V, DivX, MPE, MPV | MP4, MKV, MOV, WebM, AVI, GIF animato, MPEG, WMV, FLV, TS, M4V, 3GP; estrazione audio nei dodici formati sopra | FFmpeg |
 | Immagini native: PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld (.ff), OpenEXR, HDR, PNM/PAM/PBM/PGM/PPM | PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, PDF, QOI, TGA, Farbfeld, OpenEXR, HDR, PNM; HEIC, AVIF; TXT con OCR | Rust per i formati nativi e PDF; libheif per creare HEIC/AVIF; Tesseract per TXT |
 | HEIC/HEIF, AVIF | Destinazioni immagine sopra, PDF e TXT con OCR | libheif per la lettura; Tesseract per TXT |
@@ -85,7 +84,7 @@ Gli altri formati immagine sono nativi e non richiedono FFmpeg. HDR non conserva
 
 Per un'immagine scegli **TXT · OCR locale**. Per un PDF scegli TXT, Word DOCX o HTML e abilita **OCR locale**: il riconoscimento e disattivato per default e, quando attivo, elabora tutte le pagine invece di estrarre il testo incorporato. Sono necessari [Tesseract](https://tesseract-ocr.github.io/tessdoc/Installation.html) e i [modelli delle lingue](https://github.com/tesseract-ocr/tessdata_fast); i PDF richiedono anche `pdftoppm.exe` di Poppler. In **Strumenti** indica `tesseract.exe` e conserva accanto la cartella `tessdata` con i modelli richiesti, per esempio `ita.traineddata` e `eng.traineddata`.
 
-La lingua predefinita e `ita+eng`; puoi scegliere altri codici Tesseract installati. I DPI PDF determinano la risoluzione delle pagine da riconoscere: 300 DPI e un punto di partenza utile. Le immagini vengono orientate secondo EXIF e la trasparenza viene composta su bianco. Il testo resta sul PC, senza OpenAI o costi API. Il riconoscimento puo sbagliare e va riletto; non ricostruisce l'impaginazione e non aggiunge uno strato ricercabile al PDF originale. Se non viene riconosciuto testo, l'app segnala l'errore senza creare un risultato vuoto.
+La lingua predefinita e `ita+eng`; puoi scegliere altri codici Tesseract installati. I DPI PDF determinano la risoluzione delle pagine da riconoscere: 300 DPI e un punto di partenza utile. Le immagini vengono orientate secondo EXIF e la trasparenza viene composta su bianco. Il riconoscimento e il testo restano sul PC. Il riconoscimento puo sbagliare e va riletto; non ricostruisce l'impaginazione e non aggiunge uno strato ricercabile al PDF originale. Se non viene riconosciuto testo, l'app segnala l'errore senza creare un risultato vuoto.
 
 ### Comprimi, dividi e unisci PDF
 
@@ -97,25 +96,9 @@ La preparazione usa copie PDF temporanee in una cartella utente nascosta, senza 
 
 Compressione, divisione e unione di PDF esistenti, e l'unione di immagini native, non richiedono motori esterni. Per preparare Office/Excel/CSV/HTML serve LibreOffice; per leggere HEIC/AVIF serve libheif. Poppler non e necessario per questa unione. I PDF cifrati o firmati vengono rifiutati; unione e divisione rifiutano anche moduli interattivi. I contenuti delle pagine vengono mantenuti, mentre segnalibri, struttura accessibile/tag e metadati del documento non vengono trasferiti. La compressione mantiene il catalogo e i moduli; non e una rimozione dei metadati. Non e disponibile la modifica libera del contenuto delle pagine.
 
-### Trascrizione audio TXT con OpenAI, facoltativa
+### Testo da immagini e PDF
 
-In **Strumenti → OpenAI · audio in testo**, inserisci una tua chiave API e scegli **Salva e abilita trascrizione**. Windows la conserva nel Gestore credenziali dell'utente corrente, con voce `Corsivo.TheConverter.OpenAI`: non viene scritta in preferenze, coda, resoconti o log. **Rimuovi chiave** disabilita le nuove trascrizioni. Le altre conversioni funzionano anche senza chiave.
-
-La credenziale Windows e separata dai file dell'app e non viene eliminata automaticamente disinstallando il setup EXE o il pacchetto MSIX. Prima di disinstallare usa **Rimuovi chiave**; se l'app e gia stata rimossa, apri **Gestione credenziali → Credenziali Windows → Credenziali generiche** e rimuovi la voce `Corsivo.TheConverter.OpenAI` del tuo utente. Questo elimina la copia locale, senza revocare la chiave nel tuo account OpenAI.
-
-Dopo l'abilitazione, **TXT con OpenAI** e disponibile per gli audio compatibili con l'app. Sceglierlo avvia una trascrizione online: l'audio viene inviato via HTTPS a `api.openai.com/v1/audio/transcriptions`, usando il modello `gpt-transcribe`. Puoi lasciare il riconoscimento automatico della lingua o indicarne una. I video non hanno questa destinazione: prima estrai l'audio in un formato supportato. Il TXT da un PDF rimane invece estrazione locale con Poppler, senza OpenAI.
-
-Occorre un account OpenAI API con accesso e fatturazione disponibili. Gli eventuali costi sono a carico di quell'account, separati dall'abbonamento ChatGPT; Convert Here non acquista credito e non include chiamate API. Verifica le [tariffe OpenAI](https://developers.openai.com/api/docs/pricing) prima dell'uso.
-
-Gli audio in un formato accettato direttamente e fino alla soglia prudenziale di 24 MB (24.000.000 byte) vengono inviati senza FFmpeg. Negli altri casi FFmpeg prepara localmente MP3 mono a 16 kHz/64 kbit/s, suddivisi in segmenti di circa 20 minuti; l'app li invia in sequenza e unisce i testi. OpenAI documenta un limite di 25 MB per file. Il TXT viene pubblicato soltanto a lavoro completo; non ci sono tentativi automatici dopo un errore. Annullare non ritira l'audio gia inviato e non annulla eventuali costi maturati. [Requisiti dell'API](https://developers.openai.com/api/docs/guides/speech-to-text).
-
-Il contratto di caricamento dell'API accetta FLAC, MP3, MP4, MPEG, MPGA, M4A, OGG, WAV e WebM. Per gli audio compatibili con l'app, FLAC e OGG restano fra i formati inviati direttamente: fino a 24 MB mantengono i byte originali e non richiedono FFmpeg. [Formati del caricamento nell'API](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create).
-
-Per una registrazione suddivisa in segmenti, le richieste successive possono reinviare come `prompt` fino a 200 caratteri di parole intere gia trascritte della stessa registrazione, con spazi e caratteri di controllo normalizzati. La prima richiesta e gli invii singoli non includono questo contesto.
-
-Il backend richiede una risposta JSON da GPT-Transcribe ed estrae il campo `text` per creare il normale file TXT UTF-8: il risultato per l'utente resta un documento di testo. La preferenza salvata `transcription.language` rimane compatibile; quando impostata viene inviata come una sola voce `languages[]`, mentre il riconoscimento automatico non invia un suggerimento di lingua. [Contratto di migrazione OpenAI](https://developers.openai.com/cookbook/examples/migrating_from_whisper_to_gpt_transcribe).
-
-Il testo mantiene la lingua parlata, senza traduzione, timestamp o riconoscimento dei parlanti. La trascrizione puo contenere errori e va riletta. Dettagli sul trattamento dei dati: [privacy](docs/privacy.md).
+La destinazione TXT e disponibile per le immagini tramite OCR locale e per i PDF tramite estrazione del testo incorporato o OCR locale. I motori richiesti si selezionano nella pagina Strumenti; il riconoscimento e il risultato restano sul PC. Dettagli sui dati locali e sui motori: [privacy](docs/privacy.md).
 
 ### Limiti espliciti
 
@@ -182,7 +165,7 @@ Per preparare gli artefatti pubblici, dopo la build:
 .\scripts\prepare-public-release.ps1 -CompilerPath C:\Percorso\InnoSetup\ISCC.exe
 ```
 
-Lo staging pubblico usa una lista esplicita di file e una verifica che rifiuta motori esterni o DLL aggiuntive. Per la versione 0.3.0, `dist/releases/v0.3.0/` contiene `ConvertHere-0.3.0-windows-x64-setup.exe`, `ConvertHere-0.3.0-windows-x64-portable.zip` e `SHA256SUMS.txt`. Gli avvisi delle dipendenze Rust e dei font sono inclusi in entrambi gli artefatti.
+Lo staging pubblico usa una lista esplicita di file e una verifica che rifiuta motori esterni o DLL aggiuntive. Per la versione 0.3.1 la cartella e `dist/releases/v0.3.1/`, con `ConvertHere-0.3.1-windows-x64-setup.exe`, `ConvertHere-0.3.1-windows-x64-portable.zip` e `SHA256SUMS.txt`. Gli avvisi delle dipendenze Rust e dei font sono inclusi in entrambi gli artefatti.
 
 Per una distribuzione con il menu moderno, usa `prepare-public-release.ps1 -RequireModernMenu` dopo una build firmata con un certificato di produzione. Il comando include MSIX e loghi esterni, oppure si interrompe se manca una firma attendibile. Il relativo setup abilita per default la voce diretta su Windows 11 e la rimuove durante la disinstallazione. Non importa certificati di prova: la procedura locale e i requisiti di firma sono descritti in [docs/windows-integration.md](docs/windows-integration.md).
 
@@ -233,6 +216,6 @@ cargo test --locked --manifest-path .\shell-extension\Cargo.toml
 
 I test esterni usano i motori trovati localmente; se FFmpeg, Poppler, LibreOffice, Tesseract o libheif mancano, i relativi fixture vengono saltati esplicitamente. I fixture verificano codec e decodifica dei nuovi contenitori, roundtrip HEIC/AVIF e degli altri formati immagine, precisione HDR, i quattro separatori CSV con Unicode/virgolette/righe multiple e formule trattate come testo, primo foglio Excel, ricostruzione PDF in DOCX/HTML con e senza OCR, ordine delle pagine, compressione/unione/divisione PDF, collisioni dei nomi, annullamento e coda. Le verifiche del menu caricano la DLL e usano le API COM di Windows senza registrarla; una verifica di parita confronta tutte le estensioni e destinazioni della DLL con il modello applicativo. La comparsa effettiva nel menu moderno richiede un'installazione firmata e una verifica su Windows 11.
 
-I test automatici della trascrizione usano un servizio simulato locale, senza inviare audio a OpenAI o sostenere costi API. Non costituiscono una prova di accesso, fatturazione o disponibilita del servizio reale. I report di verifica si riferiscono al pacchetto e al codice effettivamente testati: quelli precedenti all'integrazione OpenAI non coprono questa funzione.
+I report di verifica si riferiscono al pacchetto e al codice effettivamente testati. Esiti correnti e prove storiche sono distinti in [store-validation.md](docs/store-validation.md).
 
 Vedi anche [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) per provenienza e licenze dei motori locali.

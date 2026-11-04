@@ -142,16 +142,6 @@ pub fn convert(
         message: "Preparazione…".into(),
     });
     let outputs = match kind {
-        MediaKind::Audio if settings.format == OutputFormat::Txt => {
-            vec![crate::transcription::transcribe(
-                &input,
-                &out_dir,
-                settings,
-                tools,
-                cancel,
-                &mut on_progress,
-            )?]
-        }
         MediaKind::Audio | MediaKind::Video => vec![convert_media(
             &input,
             &out_dir,
@@ -234,9 +224,6 @@ pub fn merge_pdfs(
 }
 
 pub(crate) fn validate(s: &ConversionSettings) -> Result<()> {
-    if let Some(language) = &s.transcription.language {
-        crate::transcription::validate_language(language)?;
-    }
     if !(8..=512).contains(&s.audio.bitrate_kbps) {
         bail!("Il bitrate deve essere tra 8 e 512 kbps");
     }
@@ -291,8 +278,17 @@ pub(crate) fn validate(s: &ConversionSettings) -> Result<()> {
 }
 
 fn validate_for_input(input: &Path, settings: &ConversionSettings) -> Result<()> {
-    validate(settings)?;
     let kind = MediaKind::from_path(input);
+    // Loaded plans can outlive a removed conversion route. Reject them before
+    // allocating a workspace or starting any optional conversion tool.
+    if !supported_formats(kind).contains(&settings.format) {
+        bail!(
+            "Conversione non supportata: {:?} → {}",
+            kind,
+            settings.format
+        );
+    }
+    validate(settings)?;
     if kind == MediaKind::Image && settings.format == OutputFormat::Txt
         || kind == MediaKind::Pdf
             && settings.ocr.enabled
