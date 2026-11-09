@@ -1,6 +1,6 @@
 # Convert Here — informativa sulla privacy / privacy statement
 
-Informativa aggiornata al 9 novembre 2026, relativa a Convert Here 0.6.0, versione candidata alla pubblicazione.
+Informativa aggiornata al 9 novembre 2026, relativa a Convert Here 0.6.0.
 
 | Dato | Valore |
 | --- | --- |

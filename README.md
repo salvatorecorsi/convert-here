@@ -6,11 +6,11 @@
 
 Sviluppato da **[Salvatore Corsi](https://github.com/salvatorecorsi)**, Convert Here è un programma gratuito e open source scritto in Rust. Puoi usarlo dalla sua finestra, dal menu di Esplora file o dalla riga di comando. Le conversioni e l'OCR avvengono sul computer, senza caricare i tuoi file su un servizio online. Nessun account, abbonamento, acquisto in-app o costo a consumo. Nessun pagamento richiesto per continuare a usarlo.
 
-[Scarica per Windows](https://github.com/salvatorecorsi/convert-here/releases/latest) · [Microsoft Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8) · [Novità della 0.5.0](docs/release-notes-0.5.0.md) · [Segnala un problema](https://github.com/salvatorecorsi/convert-here/issues)
+[Scarica per Windows](https://github.com/salvatorecorsi/convert-here/releases/latest) · [Microsoft Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8) · [Novità della 0.6.0](docs/release-notes-0.6.0.md) · [Segnala un problema](https://github.com/salvatorecorsi/convert-here/issues)
 
-**La release GitHub 0.5.0 è bilingue, in italiano e inglese.** Scarica installer o portable e scegli la lingua in **Impostazioni → Lingua**. Vedi [Lingue](#lingue).
+**La release GitHub 0.6.0 è bilingue, in italiano e inglese.** Scarica installer o portable e scegli la lingua in **Impostazioni → Lingua**. Vedi [Lingue](#lingue).
 
-La **0.6.0 è candidata alla pubblicazione**, con editor immagini, impaginazione A4/A5 e profili personali: [note di rilascio IT](docs/release-notes-0.6.0.md) / [EN](docs/release-notes-0.6.0.en.md). I download qui sotto restano quelli della 0.5.0; questa documentazione non attesta pubblicazione o invio Store della candidata.
+La **0.6.0 è pubblicata su GitHub**, con editor immagini, impaginazione A4/A5 e profili personali: [note di rilascio IT](docs/release-notes-0.6.0.md) / [EN](docs/release-notes-0.6.0.en.md). Il pacchetto Store 1.0.6.0 è pronto ma non ancora caricato o inviato: [stato Store](docs/store-submission.md).
 
 ![Convert Here: due immagini convertite da PNG a JPEG, con formato, qualità e destinazione nella stessa finestra](docs/screenshots/conversione-immagini.png)
 
@@ -27,7 +27,7 @@ La **0.6.0 è candidata alla pubblicazione**, con editor immagini, impaginazione
 - **Convertire documenti Office, Excel, CSV e HTML**, scegliendo anche il separatore dei CSV.
 - **Personalizzare i formati visibili e l'aspetto**, con tema di sistema, chiaro o scuro.
 
-## Editor e profili — candidata 0.6.0
+## Editor e profili
 
 Apri **Modifica…** dalla riga di un'immagine per ritagliare, ridimensionare e creare una tela con sfondo, risoluzione e posizione scelti. Esporta PNG, JPEG, WebP o PDF con anteprima e peso effettivo: il salvataggio scrive gli stessi byte preparati, senza sovrascrivere file esistenti. JPEG/WebP hanno qualità regolabile e un peso massimo; **300 kB = 300000 byte**. La riduzione ulteriore delle dimensioni è facoltativa; un limite impossibile impedisce il salvataggio.
 
@@ -35,18 +35,18 @@ Impagina immagini, testo scritto in **Nuovo foglio…** o TXT UTF-8 su **A4/A5**
 
 ## Installazione
 
-La distribuzione GitHub richiede **Windows 10 build 19041 o successivo, x64**. Dalla [release 0.5.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.5.0) puoi scegliere:
+La distribuzione GitHub richiede **Windows 10 build 19041 o successivo, x64**. Dalla [release 0.6.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.6.0) puoi scegliere:
 
 | Pacchetto | Come si usa |
 | --- | --- |
-| [ConvertHere-0.5.0-windows-x64-setup.exe](https://github.com/salvatorecorsi/convert-here/releases/download/v0.5.0/ConvertHere-0.5.0-windows-x64-setup.exe) | Avvia il setup. Installa per il tuo utente, senza privilegi amministrativi; l'integrazione con il menu contestuale è facoltativa e selezionata per default. |
-| [ConvertHere-0.5.0-windows-x64-portable.zip](https://github.com/salvatorecorsi/convert-here/releases/download/v0.5.0/ConvertHere-0.5.0-windows-x64-portable.zip) | Estrai in una cartella stabile e avvia `the-converter.exe`. Include anche la CLI e gli script per il menu contestuale. |
+| [ConvertHere-0.6.0-windows-x64-setup.exe](https://github.com/salvatorecorsi/convert-here/releases/download/v0.6.0/ConvertHere-0.6.0-windows-x64-setup.exe) | Avvia il setup. Installa per il tuo utente, senza privilegi amministrativi; l'integrazione con il menu contestuale è facoltativa e selezionata per default. |
+| [ConvertHere-0.6.0-windows-x64-portable.zip](https://github.com/salvatorecorsi/convert-here/releases/download/v0.6.0/ConvertHere-0.6.0-windows-x64-portable.zip) | Estrai in una cartella stabile e avvia `the-converter.exe`. Include anche la CLI e gli script per il menu contestuale. |
 
 Puoi verificare i pacchetti con `SHA256SUMS.txt` nella stessa release. I nomi tecnici degli eseguibili restano `the-converter.exe` e `the-converter-cli.exe`; alcune release precedenti mostrano il nome The Converter.
 
 **Immagini native, immagini in PDF e operazioni sui PDF esistenti funzionano subito.** Per le altre conversioni configura i [motori opzionali](#motori-opzionali): il setup non li include e non li scarica. L'app non richiede Python, Node o Rust per essere eseguita.
 
-Nella distribuzione GitHub il menu di Windows 11 si trova in **Mostra altre opzioni**. I pacchetti GitHub 0.5.0 non sono firmati Authenticode. Per i dettagli sul menu classico e moderno consulta la [guida all'integrazione con Windows](docs/windows-integration.md).
+Nella distribuzione GitHub il menu di Windows 11 si trova in **Mostra altre opzioni**. I pacchetti GitHub 0.6.0 non sono firmati Authenticode. Per i dettagli sul menu classico e moderno consulta la [guida all'integrazione con Windows](docs/windows-integration.md).
 
 Per disinstallare usa **Impostazioni Windows → App → App installate → Convert Here → Disinstalla**. Preferenze e file convertiti restano conservati.
 
@@ -126,7 +126,7 @@ Con LibreOffice puoi convertire fogli di calcolo in XLSX, CSV o PDF. Per i CSV s
 
 Per leggere HEIC/HEIF e AVIF configura `heif-dec.exe`; per crearli configura `heif-enc.exe`. Entrambi fanno parte di libheif e vanno mantenuti con DLL e plugin compatibili. Puoi regolare larghezza e qualità.
 
-GIF, TIFF e contenitori immagine con più fotogrammi o pagine vengono letti dalla prima immagine. La conversione video → GIF conserva invece l'animazione. WebP ordinario è codificato senza perdita; l'editor della candidata 0.6.0 aggiunge la qualità WebP regolabile. La qualità JPEG non influisce sui formati senza perdita. [Tutti i limiti e i dettagli dei formati](docs/conversions.md).
+GIF, TIFF e contenitori immagine con più fotogrammi o pagine vengono letti dalla prima immagine. La conversione video → GIF conserva invece l'animazione. WebP ordinario è codificato senza perdita; l'editor della 0.6.0 aggiunge la qualità WebP regolabile. La qualità JPEG non influisce sui formati senza perdita. [Tutti i limiti e i dettagli dei formati](docs/conversions.md).
 
 ## Motori opzionali
 
@@ -140,7 +140,7 @@ Apri **Impostazioni → Motori** per rilevare gli strumenti già installati o sc
 | **Tesseract** | OCR | Percorso di `tesseract.exe` e cartella `tessdata` con i modelli necessari |
 | **libheif** | Lettura e creazione HEIC/HEIF e AVIF | Percorsi di `heif-dec.exe` e `heif-enc.exe`, con DLL e plugin |
 
-**FFmpeg e Poppler si possono scaricare direttamente dall'app**, anche nella versione portable. Prima della conferma vedi origine, versione, dimensioni, licenze e cartella di installazione. Nella 0.5.0 i due archivi richiedono circa **159 MB di download** e circa **615 MB liberi** durante download ed estrazione. Gli archivi vengono verificati con SHA-256; licenze e documentazione restano incluse.
+**FFmpeg e Poppler si possono scaricare direttamente dall'app**, anche nella versione portable. Prima della conferma vedi origine, versione, dimensioni, licenze e cartella di installazione. Nella 0.6.0 i due archivi richiedono circa **159 MB di download** e circa **615 MB liberi** durante download ed estrazione. Gli archivi vengono verificati con SHA-256; licenze e documentazione restano incluse.
 
 ![Conferma del download opzionale di FFmpeg e Poppler con versioni, dimensioni, licenze e cartella personale](docs/screenshots/download-motori.png)
 
@@ -154,7 +154,7 @@ L'**app e il menu di Esplora file supportano italiano e inglese** dalla versione
 
 Anche l'**installer è disponibile in italiano e inglese**. La CLI mantiene i nomi delle opzioni in inglese; `--language system|it|en` sceglie la lingua per la singola esecuzione senza cambiare le preferenze. I messaggi di Windows e dei motori esterni possono seguire le rispettive impostazioni.
 
-Installer e portable della [release GitHub 0.5.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.5.0) includono l'interfaccia bilingue pronta all'uso.
+Installer e portable della [release GitHub 0.6.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.6.0) includono l'interfaccia bilingue pronta all'uso.
 
 L'**OCR supporta le lingue dei modelli Tesseract installati**: italiano e inglese sono la scelta predefinita; nell'app sono proposti anche francese, tedesco, spagnolo e un campo per altri codici. La lingua del riconoscimento non cambia quella dell'interfaccia.
 
@@ -200,4 +200,4 @@ La [guida per sviluppatori](docs/development.md) descrive test, build della dist
 
 Copyright (C) 2026 Salvatore Corsi. Il codice originale è distribuito con licenza **GNU GPL versione 3 soltanto** (`GPL-3.0-only`), senza garanzia nei termini della [licenza completa](LICENSE). Il progetto prosegue il lavoro di [Final Converter](https://github.com/salvatorecorsi/final-converter).
 
-I sorgenti sono pubblici; la release include `ConvertHere-0.5.0-source.zip` con entrambi i lockfile, dipendenze Cargo vendorizzate e istruzioni di build offline. La conversione non cambia i diritti dei tuoi contenuti e non impone la GPL ai risultati per il solo uso del programma. Dipendenze, font e motori conservano le rispettive licenze: [avvisi di terze parti](THIRD-PARTY-NOTICES.md) e [testi delle licenze](docs/release-licenses/README.md).
+I sorgenti sono pubblici; la release include `ConvertHere-0.6.0-source.zip` con entrambi i lockfile, dipendenze Cargo vendorizzate e istruzioni di build offline. La conversione non cambia i diritti dei tuoi contenuti e non impone la GPL ai risultati per il solo uso del programma. Dipendenze, font e motori conservano le rispettive licenze: [avvisi di terze parti](THIRD-PARTY-NOTICES.md) e [testi delle licenze](docs/release-licenses/README.md).

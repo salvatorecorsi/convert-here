@@ -1,6 +1,6 @@
-# Candidata 0.6.0 / Store 1.0.5.0 — istruzioni e prove
+# Release 0.6.0 / candidato Store 1.0.5.0 — istruzioni e prove
 
-Bozza locale pronta per la preparazione della release e della submission. Non attesta build, installazione del candidato MSIX, upload, invio o approvazione Microsoft. I link `v0.6.0` devono essere verificati dopo la pubblicazione del tag e prima di inserirli nel portale.
+La [release GitHub 0.6.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.6.0) è pubblicata dal **9 novembre 2026, 18:28:13 UTC**, commit `9b959405e64e62f1f05f49a821bb9444747b3620`; [CI 42672724894](https://github.com/salvatorecorsi/convert-here/actions/runs/42672724894) **SUCCESS**. Il pacchetto Store 1.0.5.0 è costruito e verificato, **non caricato e non inviato**. La Submission 3 **1152921505702351165** è in bozza: IT salvata e riletta Updated, EN salvata ma non riletta. Queste istruzioni non attestano installazione del MSIX, persistenza EN o approvazione Microsoft.
 
 ## Additional Testing Information — English
 
@@ -41,7 +41,9 @@ Queste prove riguardano sorgenti, CLI e GUI locale: non attestano installazione 
 
 ## Checklist restante per il candidato finale
 
-- [ ] Verificare manifest, identità, versione 1.0.5.0, hash e licenze del MSIX finale; distinguere l'app dal pacchetto GitHub.
+- [x] Audit del MSIX finale 1.0.5.0: **7123294 byte**, SHA-256 `185212fc3118f0d499763e415fcad33ce1eec1999bce5c678de892a8a27d9e5e`, 57 elementi payload, 59 voci ZIP e 243 avvisi; distinto dalla distribuzione GitHub.
+- [x] Commit finale: CI **42672724894 SUCCESS**; sorgenti con 431 crate vendorizzati e veri `cargo check --offline --locked --all-targets` da cache vuota per app e DLL superati, senza attestare una build completa con linking. I quattro digest degli asset GitHub corrispondono ai locali.
+- [ ] Completare caricamento Store, verificare il nuovo pacchetto nel portale e rileggere la scheda EN dopo Save; invio per certificazione non eseguito.
 - [ ] Verificare app ed editor integrati nelle due lingue; completare le varianti PNG/JPEG/PDF e le combinazioni di tela/sfondo sul commit finale.
 - [ ] Verificare esplicitamente riduzione delle dimensioni solo se autorizzata e assenza di risultati oltre il limite nelle ulteriori varianti.
 - [ ] A4/A5 verticale e orizzontale da immagine, testo digitato e TXT UTF-8; verificare pagine, testo estraibile e errore per caratteri non disponibili.

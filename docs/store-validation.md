@@ -2,15 +2,26 @@
 
 Queste verifiche accompagnano la preparazione Store di Convert Here, sviluppato da Salvatore Corsi. Non equivalgono alla certificazione Microsoft e non sostituiscono l'identita reale di Partner Center.
 
-## Preparazione candidata 0.6.0 / Store 1.0.5.0
+## Release 0.6.0 pubblicata / Store 1.0.5.0 non caricato
 
-La nuova candidata comprende editor immagini, anteprima con peso effettivo, fogli A4/A5 per immagini e testo semplice e profili personali. [Note IT](release-notes-0.6.0.md), [note EN](release-notes-0.6.0.en.md), schede [IT](store-listing-it.md) / [EN](store-listing-en.md) e [istruzioni di prova](store-testing-0.6.0.md) sono materiale locale. Pubblicazione GitHub, MSIX finale, upload e certificazione della 0.6.0 **non sono attestati** da questo aggiornamento.
+La [release GitHub 0.6.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.6.0) è pubblicata dal **9 novembre 2026, 18:28:13 UTC**, senza stato draft, dal commit `9b959405e64e62f1f05f49a821bb9444747b3620`. [Windows checks 42672724894](https://github.com/salvatorecorsi/convert-here/actions/runs/42672724894) è **SUCCESS**. Dimensioni e digest dei quattro asset GitHub corrispondono esattamente ai file locali verificati; il report di consegna è `.tools/delivery-060.json`.
 
-Il collector è stato eseguito sul grafo Windows del ramo editor prima del merge: **243 componenti**, nessuno senza avvisi di licenza. Il codec integrato `libwebp-sys 0.14.4` include `COPYING` e `PATENTS` originali della libreria C e il testo MIT dichiarato dal wrapper, con provenienza esplicita; il collector non inventa un titolare di copyright. Questo inventario è distinto dai **236 componenti** registrati per la 0.4.0 e va ricontrollato sul grafo integrato prima del pacchetto finale. Hash e audit del nuovo pacchetto vanno aggiunti soltanto dopo la build e le verifiche corrispondenti.
+| Artefatto | Byte | SHA-256 |
+| --- | ---: | --- |
+| `ConvertHere-0.6.0-windows-x64-setup.exe` | 12248695 | `f0ae3e98f85c0cad3483b9e3fd69107fbe65b24c39648f1087a053abaf86e1b0` |
+| `ConvertHere-0.6.0-windows-x64-portable.zip` | 16238290 | `e76fc9849515d8c40868dfc49f0148224741f6f2590e993ae38d230df3b48fda` |
+| `ConvertHere-0.6.0-source.zip` | 84543591 | `7e0d71a2d9cf5ce8f0df07bd6478243831d651ab7b228ea0119b9e5821336fa0` |
+| `SHA256SUMS.txt` | 313 | `d698c7c4ea840da6a5316b02fa5e88dc8daab73f1324c75a50d6e3f2dfa4a579` |
+
+I sorgenti estratti contengono **431 crate vendorizzati**, **22801 file verificati** e **706 file di licenza**. Veri `cargo check --offline --locked --all-targets` con cache Cargo inizialmente vuota sono passati per app (**70.45 s**) e DLL (**3.90 s**); non sono una build completa con linking: `.tools/source-offline-060-9631ad4ff73941e399d0f4931a24bcdd/offline-check.json`.
+
+L'audit del MSIX **1.0.5.0** è superato: **7123294 byte**, SHA-256 `185212fc3118f0d499763e415fcad33ce1eec1999bce5c678de892a8a27d9e5e`, **57 elementi payload**, **59 voci ZIP**, **243 componenti Windows** con avvisi; report `.tools/store-060-audit.json`. Il codec integrato `libwebp-sys 0.14.4` conserva `COPYING` e `PATENTS` originali della libreria C e il testo MIT dichiarato dal wrapper con provenienza esplicita. Questo inventario è distinto dai 236 componenti storici della 0.4.0.
+
+Il pacchetto Store **non è stato caricato o inviato**: il selettore file automatico non ha completato l'operazione. La **Submission 3**, ID **1152921505702351165**, resta **in bozza**. Scheda IT salvata e riletta **Updated**; Save eseguito per EN, senza rilettura successiva, quindi persistenza EN non attestata. Nessuna certificazione o disponibilità Store della 0.6.0 è dichiarata.
 
 Le prove locali sul ramo editor, **prima dell'integrazione con la 0.5.0 bilingue**, hanno superato formattazione, Clippy, **265 test app** e **12 test DLL**, con un test upstream in cache ignorato. La CLI conserva la ricetta del profilo dopo aggiornamento/eliminazione: risultato **220068 byte, 640 × 498 pixel**, originale invariato. La GUI ha salvato esattamente **297678 byte** per un WebP **900 × 700**, qualità **44**, entro il limite di **300000 byte**, e disabilitato il salvataggio con limite **100 byte**. Sono provati ritaglio, scala e tela bianca. Il profilo **«Quadrato per il sito»**, rinominato e scelto come predefinito, è ricaricato al riavvio con la stessa tela da **1024 pixel** e risultato di **47454 byte**; verificato anche il riavvolgimento del controllo **Trasparente** senza area nera. Un TXT UTF-8 ha prodotto un PDF A5 di **4 pagine**, **176031 byte**, con font **18 pt**, misure **419.528 × 595.276 pt**, accenti e **€** corretti nell'estrazione; rendering Poppler ispezionato. Sostituire il contenuto con testo digitato rigenera **una pagina A5 di 173633 byte**, senza salvare quel testo nei profili.
 
-La [checklist dettagliata](store-testing-0.6.0.md) distingue questi esiti dai controlli del commit 0.6.0 integrato, che restano da eseguire. Non si dichiara eseguito il WACK, né installato o approvato il futuro MSIX 1.0.5.0, né registrato realmente il nuovo menu Explorer. I record successivi conservano data, versioni, checksum e stato del portale osservati per le release precedenti.
+La [checklist dettagliata](store-testing-0.6.0.md) distingue le prove del ramo editor dagli audit e dal CI del commit finale. Non si dichiara eseguito il WACK, né installato o approvato il MSIX 1.0.5.0, né registrato realmente il nuovo menu Explorer. I record successivi conservano data, versioni, checksum e stato del portale osservati per le release precedenti; tag, archivi e report immutabili restano invariati.
 
 ## Stato registrato 0.4.0 / Store 1.0.3.0 — storico al 4 novembre 2026
 

@@ -1,8 +1,8 @@
 # Convert Here 0.6.0 — image editing, page layout and saved profiles
 
-Candidate release documentation for application **0.6.0** and Store package **1.0.5.0**. Publication and Store submission are pending. Publisher and developer: **Salvatore Corsi**.
+Application **0.6.0** is [published on GitHub](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.6.0) since **9 November 2026, 18:28:13 UTC**. Store package **1.0.5.0** is built and audited but **has not been uploaded or submitted**. Publisher and developer: **Salvatore Corsi**.
 
-The candidate retains the bilingual interface and menu introduced in 0.5.0: select Italian or English in **Settings → Language**, independently from OCR language. The [0.5.0 release](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.5.0) and its artifacts remain unchanged.
+The 0.6.0 release retains the bilingual interface and menu introduced in 0.5.0: select Italian or English in **Settings → Language**, independently from OCR language. The [0.5.0 release](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.5.0) and its artifacts remain unchanged.
 
 Open **Edit…** beside an image to crop, resize or place it on a custom pixel canvas. Choose its background, anchor and position, then export PNG, JPEG, WebP or PDF. The editor shows the prepared result and its actual encoded byte size; saving writes those same bytes without overwriting an existing file or the original.
 
@@ -16,11 +16,11 @@ The engine still supports **44 destination formats** and **93 input extensions**
 
 Convert Here is free, with no subscriptions, in-app purchases or usage-based charges. **No payment is required to keep using it.** The original code is licensed under **GPL-3.0-only**; dependencies, fonts and engines retain their own licenses. Conversion does not change rights in your files.
 
-Planned distribution files:
+Published distribution files:
 
 - `ConvertHere-0.6.0-windows-x64-setup.exe`
 - `ConvertHere-0.6.0-windows-x64-portable.zip`
-- `ConvertHere-0.6.0-source.zip`, including source, vendored Cargo dependencies and offline build instructions
+- `ConvertHere-0.6.0-source.zip`, including source, vendored Cargo dependencies and offline instructions; actual `cargo check --offline --locked --all-targets` passed for app and DLL with an initially empty cache, without claiming a full build/link
 - `SHA256SUMS.txt`
 
 Details: [editor and profiles guide](https://github.com/salvatorecorsi/convert-here/blob/v0.6.0/docs/image-editor-profiles.en.md), [README](https://github.com/salvatorecorsi/convert-here/blob/v0.6.0/README.en.md), [privacy](https://github.com/salvatorecorsi/convert-here/blob/v0.6.0/docs/privacy.md), [GPLv3 license](https://github.com/salvatorecorsi/convert-here/blob/v0.6.0/LICENSE), and [validation status](https://github.com/salvatorecorsi/convert-here/blob/v0.6.0/docs/store-validation.md). Earlier release tags and artifacts remain unchanged.

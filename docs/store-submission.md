@@ -1,10 +1,12 @@
 # Microsoft Store: preparazione della submission
 
-## Candidata 0.6.0 / Store 1.0.5.0
+## Release GitHub 0.6.0 / candidato Store 1.0.5.0
 
-È in preparazione **Convert Here 0.6.0**, con versione Store candidata **1.0.5.0**. Il materiale locale comprende [scheda italiana](store-listing-it.md), [scheda inglese](store-listing-en.md), note di rilascio [IT](release-notes-0.6.0.md) / [EN](release-notes-0.6.0.en.md) e [istruzioni di test pronte per il certificatore](store-testing-0.6.0.md). Le schede prevedono 20 funzionalità, con editor immagini, peso esatto, A4/A5 e profili personali. Elaborazione locale, gratuità e motori opzionali restano descritti esplicitamente.
+La [release GitHub **0.6.0**](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.6.0) è pubblicata dal **9 novembre 2026, 18:28:13 UTC**, dal commit `9b959405e64e62f1f05f49a821bb9444747b3620`, senza stato draft. [Windows checks 42672724894](https://github.com/salvatorecorsi/convert-here/actions/runs/42672724894) è **SUCCESS**. I quattro asset pubblici corrispondono a dimensioni e digest locali verificati; l'archivio sorgente ha superato veri cargo check --offline --locked --all-targets di app e DLL con cache inizialmente vuota, senza attestare una build completa con linking.
 
-Questo record **non attesta un pacchetto 1.0.5.0 costruito, caricato, Validated, inviato o approvato**. Prima dell'invio vanno verificati gli artefatti finali, le nuove catture e gli URL privacy/GPL del tag `v0.6.0`, poi salvati e riletti i campi effettivi del portale. L'identità tecnica del prodotto resta invariata. Gli hash, i report e le evidenze della 0.4.0 riportati sotto sono storici e non vengono riutilizzati come prova della nuova candidata.
+Il MSIX **1.0.5.0** è costruito e verificato: **7123294 byte**, SHA-256 `185212fc3118f0d499763e415fcad33ce1eec1999bce5c678de892a8a27d9e5e`, con **57 elementi payload**, **59 voci ZIP** e **243 avvisi di dipendenze**. **Non è caricato, Validated o inviato**: il tentativo tramite selettore file automatico non è stato completato. La **Submission 3**, ID **1152921505702351165**, resta **in bozza**. La scheda italiana è salvata e riletta come **Updated**; per l'inglese è stato eseguito Save, ma la persistenza dopo il salvataggio **non è stata verificata**. Non è attestata approvazione o pubblicazione Store della 0.6.0.
+
+Materiale: [scheda IT](store-listing-it.md), [scheda EN](store-listing-en.md), note [IT](release-notes-0.6.0.md) / [EN](release-notes-0.6.0.en.md) e [istruzioni di test](store-testing-0.6.0.md). Prima dell'invio occorre completare il caricamento e verificare pacchetto e campi effettivi del portale. Gli hash, i report e le evidenze precedenti restano storici; tag e artefatti pubblicati non sono modificati da questo aggiornamento.
 
 ## Ultimo stato registrato 0.4.0 / Store 1.0.3.0 — storico
 
