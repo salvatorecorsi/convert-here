@@ -56,7 +56,13 @@ impl PreparedPdfMerge {
 
 fn validate_settings(settings: &ConversionSettings) -> Result<()> {
     if settings.format != OutputFormat::Pdf || settings.pdf.action != PdfAction::Merge {
-        bail!("L'unione richiede destinazione PDF e operazione Merge");
+        bail!(
+            "{}",
+            crate::trf!(
+                "L'unione richiede destinazione PDF e operazione Merge",
+                "Merging requires PDF output and the Merge operation"
+            )
+        );
     }
     engine::validate(settings)
 }
@@ -72,7 +78,13 @@ pub fn prepare_pdf_merge(
     cancelled(cancel)?;
     validate_settings(settings)?;
     if inputs.is_empty() || inputs.len() > MAX_PAGES {
-        bail!("Per creare un PDF unico seleziona da 1 a {MAX_PAGES} file compatibili");
+        bail!(
+            "{}",
+            crate::trf!(
+                "Per creare un PDF unico seleziona da 1 a {MAX_PAGES} file compatibili",
+                "To create a merged PDF, select 1 to {MAX_PAGES} compatible files"
+            )
+        );
     }
     let mut local_settings = settings.clone();
     local_settings.format = OutputFormat::Pdf;
@@ -80,8 +92,13 @@ pub fn prepare_pdf_merge(
     let mut originals = Vec::with_capacity(inputs.len());
     for input in inputs {
         cancelled(cancel)?;
-        let input = fs::canonicalize(input)
-            .with_context(|| format!("File non accessibile: {}", input.display()))?;
+        let input = fs::canonicalize(input).with_context(|| {
+            crate::trf!(
+                "File non accessibile: {}",
+                "File is inaccessible: {}",
+                input.display()
+            )
+        })?;
         if !input.is_file()
             || !matches!(
                 MediaKind::from_path(&input),
@@ -93,8 +110,12 @@ pub fn prepare_pdf_merge(
             )
         {
             bail!(
-                "Il file non può essere convertito in PDF: {}",
-                input.display()
+                "{}",
+                crate::trf!(
+                    "Il file non può essere convertito in PDF: {}",
+                    "The file cannot be converted to PDF: {}",
+                    input.display()
+                )
             );
         }
         if let Some(reason) = tools.missing_for_input(&input, &local_settings) {
@@ -122,7 +143,7 @@ pub fn prepare_pdf_merge(
         let label = input.file_name().unwrap_or_default().to_string_lossy();
         progress(Progress {
             fraction: index as f32 / inputs.len() as f32,
-            message: format!("Preparazione di {label}…"),
+            message: crate::trf!("Preparazione di {label}…", "Preparing {label}…"),
         });
         cancelled(cancel)?;
         let snapshot = if MediaKind::from_path(&input) == MediaKind::Pdf {
@@ -138,21 +159,39 @@ pub fn prepare_pdf_merge(
                 });
             })?;
             if output.len() != 1 {
-                bail!("La sorgente deve produrre un solo PDF temporaneo");
+                bail!(
+                    "{}",
+                    crate::trf!(
+                        "La sorgente deve produrre un solo PDF temporaneo",
+                        "The source must produce exactly one temporary PDF"
+                    )
+                );
             }
             output.into_iter().next().unwrap()
         };
-        let page_count = pdf_ops::merge_page_count(&snapshot, cancel)
-            .with_context(|| format!("Impossibile preparare {label}"))?;
+        let page_count = pdf_ops::merge_page_count(&snapshot, cancel).with_context(|| {
+            crate::trf!("Impossibile preparare {label}", "Unable to prepare {label}")
+        })?;
         total_pages += page_count as usize;
         if total_pages > MAX_PAGES {
-            bail!("Il PDF unito non può superare {MAX_PAGES} pagine");
+            bail!(
+                "{}",
+                crate::trf!(
+                    "Il PDF unito non può superare {MAX_PAGES} pagine",
+                    "The merged PDF cannot exceed {MAX_PAGES} pages"
+                )
+            );
         }
         prepared.snapshots.push(snapshot);
         prepared.sources.push(MergeSource { input, page_count });
         progress(Progress {
             fraction: (index + 1) as f32 / inputs.len() as f32,
-            message: format!("Preparata sorgente {} di {}", index + 1, inputs.len()),
+            message: crate::trf!(
+                "Preparata sorgente {} di {}",
+                "Prepared source {} of {}",
+                index + 1,
+                inputs.len()
+            ),
         });
     }
     cancelled(cancel)?;
@@ -179,7 +218,13 @@ fn copy_snapshot(input: &Path, output: &Path, cancel: &AtomicBool) -> Result<()>
 pub(crate) fn validate_order(order: &[MergePageRef], counts: &[u32]) -> Result<()> {
     let total: usize = counts.iter().map(|&count| count as usize).sum();
     if total == 0 || total > MAX_PAGES || order.len() != total {
-        bail!("L'ordine deve contenere tutte le pagine, da 1 a {MAX_PAGES}");
+        bail!(
+            "{}",
+            crate::trf!(
+                "L'ordine deve contenere tutte le pagine, da 1 a {MAX_PAGES}",
+                "The order must contain all pages, from 1 to {MAX_PAGES}"
+            )
+        );
     }
     let mut seen = HashSet::with_capacity(total);
     for page in order {
@@ -189,7 +234,13 @@ pub(crate) fn validate_order(order: &[MergePageRef], counts: &[u32]) -> Result<(
                 .is_some_and(|&count| page.page <= count)
             || !seen.insert(*page)
         {
-            bail!("L'ordine contiene pagine duplicate o riferimenti non validi");
+            bail!(
+                "{}",
+                crate::trf!(
+                    "L'ordine contiene pagine duplicate o riferimenti non validi",
+                    "The order contains duplicate pages or invalid references"
+                )
+            );
         }
     }
     Ok(())

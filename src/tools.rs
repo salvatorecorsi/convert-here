@@ -1,3 +1,4 @@
+use crate::i18n::tr;
 use crate::model::{ConversionSettings, MediaKind, OutputFormat};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -100,13 +101,13 @@ impl ToolPaths {
         let kind = MediaKind::from_path(input);
         let modern_input = kind == MediaKind::Image && crate::modern_images::is_modern_input(input);
         if modern_input && !tool_exists(&self.heif_dec) {
-            return Some("Per leggere HEIC/HEIF e AVIF serve libheif. Apri Impostazioni → Motori e seleziona heif-dec.exe con le sue DLL e i plugin.".into());
+            return Some(tr("Per leggere HEIC/HEIF e AVIF serve libheif. Apri Impostazioni → Motori e seleziona heif-dec.exe con le sue DLL e i plugin.", "Reading HEIC/HEIF and AVIF requires libheif. Open Settings → Conversion engines and select heif-dec.exe with its DLLs and plugins.").into());
         }
         if kind == MediaKind::Image
             && matches!(settings.format, OutputFormat::Avif | OutputFormat::Heic)
             && !tool_exists(&self.heif_enc)
         {
-            return Some("Per creare HEIC e AVIF serve libheif con i relativi encoder. Apri Impostazioni → Motori e seleziona heif-enc.exe con le sue DLL e i plugin.".into());
+            return Some(tr("Per creare HEIC e AVIF serve libheif con i relativi encoder. Apri Impostazioni → Motori e seleziona heif-enc.exe con le sue DLL e i plugin.", "Creating HEIC and AVIF requires libheif with the appropriate encoders. Open Settings → Conversion engines and select heif-enc.exe with its DLLs and plugins.").into());
         }
         let pdf_ocr = kind == MediaKind::Pdf
             && settings.ocr.enabled
@@ -116,10 +117,10 @@ impl ToolPaths {
             );
         if kind == MediaKind::Image && settings.format == OutputFormat::Txt || pdf_ocr {
             if !tool_exists(&self.tesseract) {
-                return Some("Per riconoscere il testo serve Tesseract OCR con i dati delle lingue selezionate. Apri Impostazioni → Motori e seleziona tesseract.exe.".into());
+                return Some(tr("Per riconoscere il testo serve Tesseract OCR con i dati delle lingue selezionate. Apri Impostazioni → Motori e seleziona tesseract.exe.", "Recognizing text requires Tesseract OCR with the selected language data. Open Settings → Conversion engines and select tesseract.exe.").into());
             }
             if pdf_ocr && !tool_exists(&self.pdftoppm) {
-                return Some("Per riconoscere le pagine PDF con OCR serve anche Poppler. Apri Impostazioni → Motori per installarlo oppure seleziona pdftoppm.exe già presente.".into());
+                return Some(tr("Per riconoscere le pagine PDF con OCR serve anche Poppler. Apri Impostazioni → Motori per installarlo oppure seleziona pdftoppm.exe già presente.", "Recognizing PDF pages with OCR also requires Poppler. Open Settings → Conversion engines to install it or select an existing pdftoppm.exe.").into());
             }
             return None;
         }
@@ -127,33 +128,37 @@ impl ToolPaths {
     }
     pub fn missing_for(&self, kind: MediaKind, format: OutputFormat) -> Option<String> {
         let missing = match kind {
-            MediaKind::Audio | MediaKind::Video if !tool_exists(&self.ffmpeg) => Some(
+            MediaKind::Audio | MediaKind::Video if !tool_exists(&self.ffmpeg) => Some(tr(
                 "Per convertire audio e video serve FFmpeg. Apri Impostazioni → Motori per installarlo oppure seleziona ffmpeg.exe già presente sul PC.",
-            ),
+                "Converting audio and video requires FFmpeg. Open Settings → Conversion engines to install it or select ffmpeg.exe already on your PC.",
+            )),
             MediaKind::Pdf
                 if matches!(
                     format,
                     OutputFormat::Txt | OutputFormat::Docx | OutputFormat::Html
                 ) && !tool_exists(&self.pdftotext) =>
             {
-                Some(
+                Some(tr(
                     "Per esportare il testo incorporato dei PDF serve Poppler. Apri Impostazioni → Motori per installarlo oppure seleziona pdftotext.exe. Per le scansioni puoi abilitare OCR locale.",
-                )
+                    "Exporting embedded PDF text requires Poppler. Open Settings → Conversion engines to install it or select pdftotext.exe. You can enable local OCR for scanned pages.",
+                ))
             }
             MediaKind::Pdf
                 if matches!(format, OutputFormat::Png | OutputFormat::Jpg)
                     && !tool_exists(&self.pdftoppm) =>
             {
-                Some(
+                Some(tr(
                     "Per esportare le pagine PDF serve Poppler. Apri Impostazioni → Motori per installarlo oppure seleziona pdftoppm.exe già presente sul PC.",
-                )
+                    "Exporting PDF pages requires Poppler. Open Settings → Conversion engines to install it or select pdftoppm.exe already on your PC.",
+                ))
             }
             MediaKind::Document | MediaKind::Spreadsheet | MediaKind::Html
                 if !tool_exists(&self.soffice) =>
             {
-                Some(
+                Some(tr(
                     "Per convertire documenti Office, fogli di calcolo, CSV e HTML serve LibreOffice. Apri Impostazioni → Motori e seleziona soffice.exe nella sua cartella program.",
-                )
+                    "Converting Office documents, spreadsheets, CSV and HTML requires LibreOffice. Open Settings → Conversion engines and select soffice.exe in its program folder.",
+                ))
             }
             _ => None,
         };
@@ -403,6 +408,28 @@ mod tests {
                 .unwrap()
                 .contains("pdftotext.exe")
         );
+    }
+
+    #[test]
+    fn english_engine_guidance_names_the_correct_tool_without_changing_capabilities() {
+        crate::i18n::with_language(crate::i18n::Language::English, || {
+            let tools = ToolPaths::default();
+            let audio = tools
+                .missing_for(MediaKind::Audio, OutputFormat::Mp3)
+                .unwrap();
+            assert!(audio.contains("Settings → Conversion engines"));
+            assert!(audio.contains("ffmpeg.exe"));
+            let pdf_text = tools
+                .missing_for(MediaKind::Pdf, OutputFormat::Txt)
+                .unwrap();
+            assert!(pdf_text.contains("pdftotext.exe"));
+            assert!(pdf_text.contains("local OCR"));
+            assert!(
+                tools
+                    .missing_for(MediaKind::Image, OutputFormat::Pdf)
+                    .is_none()
+            );
+        });
     }
 
     #[test]

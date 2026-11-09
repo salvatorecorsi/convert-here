@@ -2,6 +2,7 @@
 //! but rebuild the catalog: document metadata, outlines and tagging are omitted.
 //! Interactive forms and signatures require a dedicated editor and are rejected.
 use crate::engine::{Progress, cancelled, commit, file_identity, stem, temporary};
+use crate::i18n::tr;
 use crate::pdf_merge::{MergePageRef, validate_order};
 use anyhow::{Context, Result, bail};
 use lopdf::{Dictionary, Document, Object, ObjectId, dictionary};
@@ -28,7 +29,13 @@ pub fn merge(
 ) -> Result<Vec<PathBuf>> {
     cancelled(cancel)?;
     if inputs.len() < 2 || inputs.len() > MAX_PAGES {
-        bail!("Per unire i PDF seleziona da 2 a {MAX_PAGES} file");
+        bail!(
+            "{}",
+            crate::trf!(
+                "Per unire i PDF seleziona da 2 a {MAX_PAGES} file",
+                "To merge PDFs, select 2 to {MAX_PAGES} files"
+            )
+        );
     }
     let first = canonical_pdf(&inputs[0])?;
     merge_ordered(inputs, None, &first, dir, cancel, progress)
@@ -45,7 +52,13 @@ pub(crate) fn merge_ordered(
 ) -> Result<Vec<PathBuf>> {
     cancelled(cancel)?;
     if inputs.is_empty() || inputs.len() > MAX_PAGES {
-        bail!("L'unione richiede da 1 a {MAX_PAGES} sorgenti PDF");
+        bail!(
+            "{}",
+            crate::trf!(
+                "L'unione richiede da 1 a {MAX_PAGES} sorgenti PDF",
+                "Merging requires 1 to {MAX_PAGES} PDF sources"
+            )
+        );
     }
     let mut merged = Document::with_version("1.7");
     let mut source_page_ids = Vec::with_capacity(inputs.len());
@@ -58,24 +71,35 @@ pub(crate) fn merge_ordered(
         let pages = pages(&source)?;
         total_pages += pages.len();
         if total_pages > MAX_PAGES {
-            bail!("Il PDF unito non può superare {MAX_PAGES} pagine");
+            bail!(
+                "{}",
+                crate::trf!(
+                    "Il PDF unito non può superare {MAX_PAGES} pagine",
+                    "The merged PDF cannot exceed {MAX_PAGES} pages"
+                )
+            );
         }
         let mut document = rebuild(&source, &pages)?;
         let object_count = u32::try_from(document.objects.len())?;
         next_id
             .checked_add(object_count + 2)
-            .context("Troppi oggetti nei PDF")?;
+            .context(tr("Troppi oggetti nei PDF", "Too many objects in the PDFs"))?;
         document.renumber_objects_with(next_id);
         next_id = document
             .max_id
             .checked_add(1)
-            .context("Troppi oggetti nei PDF")?;
+            .context(tr("Troppi oggetti nei PDF", "Too many objects in the PDFs"))?;
         source_page_ids.push(document.get_pages().into_values().collect::<Vec<_>>());
         merged.max_id = document.max_id;
         merged.objects.extend(document.objects);
         progress(Progress {
             fraction: 0.8 * (index + 1) as f32 / inputs.len() as f32,
-            message: format!("Preparato PDF {} di {}", index + 1, inputs.len()),
+            message: crate::trf!(
+                "Preparato PDF {} di {}",
+                "Prepared PDF {} of {}",
+                index + 1,
+                inputs.len()
+            ),
         });
     }
     cancelled(cancel)?;
@@ -108,7 +132,7 @@ pub(crate) fn merge_ordered(
     )?;
     progress(Progress {
         fraction: 1.0,
-        message: "PDF uniti".into(),
+        message: tr("PDF uniti", "PDFs merged").into(),
     });
     Ok(vec![output])
 }
@@ -129,7 +153,11 @@ pub(crate) fn merge_page_count(input: &Path, cancel: &AtomicBool) -> Result<u32>
                     .is_ok_and(|subtype| subtype == b"Widget")
                 {
                     bail!(
-                        "Il PDF contiene campi modulo: esportalo come PDF statico prima di unirlo"
+                        "{}",
+                        crate::trf!(
+                            "Il PDF contiene campi modulo: esportalo come PDF statico prima di unirlo",
+                            "The PDF contains form fields: export it as a static PDF before merging"
+                        )
                     );
                 }
             }
@@ -172,7 +200,12 @@ pub fn split(
             published.push((output, retained));
             progress(Progress {
                 fraction: (index + 1) as f32 / pages.len() as f32,
-                message: format!("Separata pagina {} di {}", index + 1, pages.len()),
+                message: crate::trf!(
+                    "Separata pagina {} di {}",
+                    "Split page {} of {}",
+                    index + 1,
+                    pages.len()
+                ),
             });
         }
         cancelled(cancel)
@@ -204,7 +237,11 @@ pub fn compress(
     pages(&document)?;
     progress(Progress {
         fraction: 0.15,
-        message: "Compressione PDF senza perdita…".into(),
+        message: tr(
+            "Compressione PDF senza perdita…",
+            "Compressing PDF without loss…",
+        )
+        .into(),
     });
     cancelled(cancel)?;
     document.prune_objects();
@@ -223,30 +260,51 @@ pub fn compress(
     let output = commit(output, &dir, &format!("{}-compresso", stem(&input)), "pdf")?;
     progress(Progress {
         fraction: 1.0,
-        message: "PDF salvato senza perdita".into(),
+        message: tr("PDF salvato senza perdita", "PDF saved without loss").into(),
     });
     Ok(vec![output])
 }
 
 fn canonical_pdf(input: &Path) -> Result<PathBuf> {
-    let input = fs::canonicalize(input)
-        .with_context(|| format!("PDF non accessibile: {}", input.display()))?;
+    let input = fs::canonicalize(input).with_context(|| {
+        crate::trf!(
+            "PDF non accessibile: {}",
+            "PDF is inaccessible: {}",
+            input.display()
+        )
+    })?;
     if !input.is_file()
         || !input
             .extension()
             .is_some_and(|value| value.eq_ignore_ascii_case("pdf"))
     {
-        bail!("Seleziona un file PDF esistente");
+        bail!(
+            "{}",
+            crate::trf!(
+                "Seleziona un file PDF esistente",
+                "Select an existing PDF file"
+            )
+        );
     }
     Ok(input)
 }
 
 fn load(input: &Path) -> Result<(PathBuf, Document, Vec<u8>)> {
     let input = canonical_pdf(input)?;
-    let original = fs::read(&input).context("Impossibile leggere il PDF")?;
-    let document = Document::load_mem(&original).context("PDF non valido o non leggibile")?;
+    let original =
+        fs::read(&input).context(tr("Impossibile leggere il PDF", "Unable to read the PDF"))?;
+    let document = Document::load_mem(&original).context(tr(
+        "PDF non valido o non leggibile",
+        "Invalid or unreadable PDF",
+    ))?;
     if document.is_encrypted() {
-        bail!("Il PDF è protetto: sbloccalo prima di questa operazione");
+        bail!(
+            "{}",
+            crate::trf!(
+                "Il PDF è protetto: sbloccalo prima di questa operazione",
+                "The PDF is protected: unlock it before this operation"
+            )
+        );
     }
     if document
         .objects
@@ -254,7 +312,11 @@ fn load(input: &Path) -> Result<(PathBuf, Document, Vec<u8>)> {
         .any(|object| contains_signature(object, 0))
     {
         bail!(
-            "Il PDF contiene firme digitali: questa operazione le invaliderebbe. Usa una copia senza firme"
+            "{}",
+            crate::trf!(
+                "Il PDF contiene firme digitali: questa operazione le invaliderebbe. Usa una copia senza firme",
+                "The PDF contains digital signatures: this operation would invalidate them. Use an unsigned copy"
+            )
         );
     }
     Ok((input, document, original))
@@ -295,7 +357,11 @@ fn reject_forms(document: &Document) -> Result<()> {
                 .is_ok_and(|fields| !fields.is_empty())
         {
             bail!(
-                "Il PDF contiene moduli interattivi: esportalo come PDF statico prima di unire o separare le pagine"
+                "{}",
+                crate::trf!(
+                    "Il PDF contiene moduli interattivi: esportalo come PDF statico prima di unire o separare le pagine",
+                    "The PDF contains interactive forms: export it as a static PDF before merging or splitting pages"
+                )
             );
         }
     }
@@ -304,8 +370,14 @@ fn reject_forms(document: &Document) -> Result<()> {
 
 fn destination(input: &Path, dir: Option<&Path>) -> Result<PathBuf> {
     let dir = dir.unwrap_or_else(|| input.parent().unwrap());
-    fs::create_dir_all(dir).context("Impossibile creare la cartella di destinazione")?;
-    fs::canonicalize(dir).context("Cartella di destinazione non accessibile")
+    fs::create_dir_all(dir).context(tr(
+        "Impossibile creare la cartella di destinazione",
+        "Unable to create the output folder",
+    ))?;
+    fs::canonicalize(dir).context(tr(
+        "Cartella di destinazione non accessibile",
+        "Output folder is inaccessible",
+    ))
 }
 
 /// Traverse Kids in declared order rather than sorting object IDs. Materialize
@@ -317,11 +389,17 @@ fn pages(document: &Document) -> Result<Vec<Page>> {
     let mut output = Vec::new();
     while let Some((id, mut inherited, depth)) = stack.pop() {
         if depth > MAX_TREE_DEPTH || !seen.insert(id) {
-            bail!("Albero delle pagine PDF non valido o ciclico");
+            bail!(
+                "{}",
+                crate::trf!(
+                    "Albero delle pagine PDF non valido o ciclico",
+                    "Invalid or cyclic PDF page tree"
+                )
+            );
         }
         let dict = document
             .get_dictionary(id)
-            .context("Pagina PDF non valida")?;
+            .context(tr("Pagina PDF non valida", "Invalid PDF page"))?;
         for key in INHERITED {
             if let Ok(value) = dict.get(key) {
                 inherited.set(key, value.clone());
@@ -336,14 +414,26 @@ fn pages(document: &Document) -> Result<Vec<Page>> {
                     }
                 }
                 if !page.has(b"MediaBox") {
-                    bail!("Pagina PDF senza dimensioni MediaBox");
+                    bail!(
+                        "{}",
+                        crate::trf!(
+                            "Pagina PDF senza dimensioni MediaBox",
+                            "PDF page has no MediaBox dimensions"
+                        )
+                    );
                 }
                 if !page.has(b"Resources") {
                     page.set("Resources", Dictionary::new());
                 }
                 output.push((id, page));
                 if output.len() > MAX_PAGES {
-                    bail!("Il PDF non può superare {MAX_PAGES} pagine");
+                    bail!(
+                        "{}",
+                        crate::trf!(
+                            "Il PDF non può superare {MAX_PAGES} pagine",
+                            "The PDF cannot exceed {MAX_PAGES} pages"
+                        )
+                    );
                 }
             }
             b"Pages" => {
@@ -352,11 +442,20 @@ fn pages(document: &Document) -> Result<Vec<Page>> {
                     stack.push((child.as_reference()?, inherited.clone(), depth + 1));
                 }
             }
-            _ => bail!("Albero delle pagine PDF non valido"),
+            _ => bail!(
+                "{}",
+                crate::trf!(
+                    "Albero delle pagine PDF non valido",
+                    "Invalid PDF page tree"
+                )
+            ),
         }
     }
     if output.is_empty() {
-        bail!("Il PDF non contiene pagine");
+        bail!(
+            "{}",
+            crate::trf!("Il PDF non contiene pagine", "The PDF contains no pages")
+        );
     }
     Ok(output)
 }
@@ -381,7 +480,11 @@ fn rebuild(source: &Document, pages: &[Page]) -> Result<Document> {
                     .is_ok_and(|value| value == b"Widget")
                 {
                     bail!(
-                        "Il PDF contiene campi modulo: esportalo come PDF statico prima di separarlo o unirlo"
+                        "{}",
+                        crate::trf!(
+                            "Il PDF contiene campi modulo: esportalo come PDF statico prima di separarlo o unirlo",
+                            "The PDF contains form fields: export it as a static PDF before splitting or merging"
+                        )
                     );
                 }
                 dict.remove(b"StructParent");
@@ -462,7 +565,10 @@ fn explicit_destination(
     depth: usize,
 ) -> Result<Option<Object>> {
     if depth > MAX_TREE_DEPTH {
-        bail!("Destinazione PDF ciclica");
+        bail!(
+            "{}",
+            crate::trf!("Destinazione PDF ciclica", "Cyclic PDF destination")
+        );
     }
     let value = document.dereference(value)?.1;
     match value {
@@ -504,12 +610,24 @@ fn named_destination(document: &Document, root: &Object, name: &[u8]) -> Result<
     let mut seen = BTreeSet::new();
     while let Some((node, depth)) = stack.pop() {
         if depth > MAX_TREE_DEPTH {
-            bail!("Albero dei collegamenti PDF non valido");
+            bail!(
+                "{}",
+                crate::trf!(
+                    "Albero dei collegamenti PDF non valido",
+                    "Invalid PDF link tree"
+                )
+            );
         }
         if let Object::Reference(id) = node
             && !seen.insert(*id)
         {
-            bail!("Albero dei collegamenti PDF ciclico");
+            bail!(
+                "{}",
+                crate::trf!(
+                    "Albero dei collegamenti PDF ciclico",
+                    "Cyclic PDF link tree"
+                )
+            );
         }
         let dict = document.dereference(node)?.1.as_dict()?;
         if let Ok(names) = dict

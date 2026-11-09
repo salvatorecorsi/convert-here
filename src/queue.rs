@@ -59,6 +59,8 @@ struct StoredJob {
     view: QueueJob,
     plan: PreparedConversion,
     #[serde(default)]
+    ui_language: Option<crate::i18n::Language>,
+    #[serde(default)]
     tools: ToolPaths,
     #[serde(default)]
     previews: Vec<PendingLink>,
@@ -86,11 +88,17 @@ fn queue_root() -> Result<PathBuf> {
         PathBuf::from(value)
     } else {
         directories::ProjectDirs::from("com", "SalvatoreCorsi", "TheConverter")
-            .context("Cartella della coda utente non disponibile")?
+            .context(crate::i18n::tr(
+                "Cartella della coda utente non disponibile",
+                "User queue folder unavailable",
+            ))?
             .data_local_dir()
             .join("queue")
     };
-    fs::create_dir_all(&path).context("Impossibile creare la coda di conversione")?;
+    fs::create_dir_all(&path).context(crate::i18n::tr(
+        "Impossibile creare la coda di conversione",
+        "Unable to create the conversion queue",
+    ))?;
     Ok(path)
 }
 pub fn last_report_path() -> Option<PathBuf> {
@@ -109,7 +117,10 @@ fn valid_id(id: &str) -> bool {
 }
 fn job_dir(root: &Path, id: &str) -> Result<PathBuf> {
     if !valid_id(id) {
-        bail!("Identificatore della conversione non valido")
+        bail!(crate::trf!(
+            "Identificatore della conversione non valido",
+            "Invalid conversion identifier"
+        ))
     }
     Ok(root.join(id))
 }
@@ -123,16 +134,22 @@ fn open_lock(root: &Path, name: &str) -> Result<File> {
 }
 fn dispatch_lock(root: &Path) -> Result<File> {
     let file = open_lock(root, "dispatch.lock")?;
-    fs2::FileExt::lock_exclusive(&file).context("Impossibile accedere alla coda")?;
+    fs2::FileExt::lock_exclusive(&file).context(crate::i18n::tr(
+        "Impossibile accedere alla coda",
+        "Unable to access the queue",
+    ))?;
     Ok(file)
 }
 // Assigned under dispatch.lock, so submissions in the same millisecond keep FIFO order.
 fn next_order(root: &Path) -> Result<u64> {
     let path = root.join("order.counter");
     let previous = if path.is_file() {
-        let bytes: [u8; 8] = fs::read(&path)?
-            .try_into()
-            .map_err(|_| anyhow::anyhow!("Contatore della coda non valido"))?;
+        let bytes: [u8; 8] = fs::read(&path)?.try_into().map_err(|_| {
+            anyhow::anyhow!(crate::trf!(
+                "Contatore della coda non valido",
+                "Invalid queue counter"
+            ))
+        })?;
         u64::from_le_bytes(bytes)
     } else {
         records(root)?
@@ -188,16 +205,27 @@ fn store_once(root: &Path, record: &StoredJob) -> Result<()> {
     temporary
         .persist(dir.join("job.json"))
         .map_err(|error| error.error)
-        .context("Impossibile salvare lo stato della conversione")?;
+        .context(crate::i18n::tr(
+            "Impossibile salvare lo stato della conversione",
+            "Unable to save conversion status",
+        ))?;
     Ok(())
 }
 fn load(root: &Path, id: &str) -> Result<StoredJob> {
     let path = job_dir(root, id)?.join("job.json");
-    let record: StoredJob =
-        serde_json::from_slice(&fs::read(&path).context("Conversione non trovata nella coda")?)
-            .context("Stato della conversione non leggibile")?;
+    let record: StoredJob = serde_json::from_slice(&fs::read(&path).context(crate::i18n::tr(
+        "Conversione non trovata nella coda",
+        "Conversion not found in the queue",
+    ))?)
+    .context(crate::i18n::tr(
+        "Stato della conversione non leggibile",
+        "Unreadable conversion status",
+    ))?;
     if record.view.id != id {
-        bail!("Identificatore della conversione incoerente")
+        bail!(crate::trf!(
+            "Identificatore della conversione incoerente",
+            "Inconsistent conversion identifier"
+        ))
     }
     Ok(record)
 }
@@ -222,7 +250,10 @@ fn quarantine_record(path: &Path) -> Result<PathBuf> {
             }
         }
     }
-    bail!("Troppi record illeggibili conservati per lo stesso lavoro")
+    bail!(crate::trf!(
+        "Troppi record illeggibili conservati per lo stesso lavoro",
+        "Too many unreadable records retained for the same job"
+    ))
 }
 
 fn has_quarantined_record(directory: &Path) -> std::io::Result<bool> {
@@ -246,8 +277,9 @@ fn records(root: &Path) -> Result<(Vec<StoredJob>, Vec<String>)> {
         let entry = match entry {
             Ok(entry) => entry,
             Err(error) => {
-                warnings.push(format!(
-                    "Una voce della coda non è leggibile ed è stata ignorata: {error}"
+                warnings.push(crate::trf!(
+                    "Una voce della coda non è leggibile ed è stata ignorata: {error}",
+                    "An unreadable queue entry was skipped: {error}"
                 ));
                 continue;
             }
@@ -262,7 +294,10 @@ fn records(root: &Path) -> Result<(Vec<StoredJob>, Vec<String>)> {
             Ok(kind) if kind.is_dir() => {}
             Ok(_) => continue,
             Err(error) => {
-                warnings.push(format!("{id}: cartella del lavoro non leggibile: {error}"));
+                warnings.push(crate::trf!(
+                    "{id}: cartella del lavoro non leggibile: {error}",
+                    "{id}: unreadable job folder: {error}"
+                ));
                 continue;
             }
         }
@@ -279,12 +314,14 @@ fn records(root: &Path) -> Result<(Vec<StoredJob>, Vec<String>)> {
                     }) => {}
                 Err(error) => {
                     warning = Some(match quarantine_record(&path) {
-                        Ok(target) => format!(
+                        Ok(target) => crate::trf!(
                             "{id}: record ignorato e conservato in {}: {error:#}",
+                            "{id}: record skipped and retained in {}: {error:#}",
                             target.display()
                         ),
-                        Err(quarantine_error) => format!(
-                            "{id}: record ignorato, impossibile rinominarlo come illeggibile: {error:#}; {quarantine_error:#}"
+                        Err(quarantine_error) => crate::trf!(
+                            "{id}: record ignorato, impossibile rinominarlo come illeggibile: {error:#}; {quarantine_error:#}",
+                            "{id}: record skipped, unable to mark it as unreadable: {error:#}; {quarantine_error:#}"
                         ),
                     });
                 }
@@ -293,15 +330,17 @@ fn records(root: &Path) -> Result<(Vec<StoredJob>, Vec<String>)> {
         if warning.is_none() {
             match has_quarantined_record(&entry.path()) {
                 Ok(true) => {
-                    warning = Some(format!(
-                        "{id}: record illeggibile ignorato e conservato come job.json.unreadable"
+                    warning = Some(crate::trf!(
+                        "{id}: record illeggibile ignorato e conservato come job.json.unreadable",
+                        "{id}: unreadable record skipped and retained as job.json.unreadable"
                     ))
                 }
                 Ok(false) => {}
                 Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
                 Err(error) => {
-                    warning = Some(format!(
-                        "{id}: impossibile controllare i record della coda: {error}"
+                    warning = Some(crate::trf!(
+                        "{id}: impossibile controllare i record della coda: {error}",
+                        "{id}: unable to inspect queue records: {error}"
                     ))
                 }
             }
@@ -346,7 +385,14 @@ fn cleanup_terminal_jobs(root: &Path, at: u64) -> Result<usize> {
         match remove_terminal_job(&root, job) {
             Ok(true) => removed += 1,
             Ok(false) => {}
-            Err(error) => eprintln!("Impossibile pulire il lavoro {}: {error:#}", job.view.id),
+            Err(error) => eprintln!(
+                "{}",
+                crate::trf!(
+                    "Impossibile pulire il lavoro {}: {error:#}",
+                    "Unable to clean up job {}: {error:#}",
+                    job.view.id
+                )
+            ),
         }
     }
     Ok(removed)
@@ -369,7 +415,10 @@ fn reparse_or_symlink(metadata: &fs::Metadata) -> bool {
 
 fn inside_job_directory(path: &Path, directory: &Path) -> Result<bool> {
     if !path.is_absolute() {
-        bail!("Percorso salvato nel lavoro non assoluto");
+        bail!(crate::trf!(
+            "Percorso salvato nel lavoro non assoluto",
+            "The stored job path is not absolute"
+        ));
     }
     if path.starts_with(directory) {
         return Ok(true);
@@ -388,12 +437,18 @@ fn remove_terminal_job(root: &Path, candidate: &StoredJob) -> Result<bool> {
         || reparse_or_symlink(&metadata)
         || fs::canonicalize(&directory)?.parent() != Some(root)
     {
-        bail!("La cartella del lavoro non è una sottocartella locale della coda");
+        bail!(crate::trf!(
+            "La cartella del lavoro non è una sottocartella locale della coda",
+            "The job folder is not a local subfolder of the queue"
+        ));
     }
     let record_path = directory.join("job.json");
     let record_metadata = fs::symlink_metadata(&record_path)?;
     if !record_metadata.is_file() || reparse_or_symlink(&record_metadata) {
-        bail!("Il record del lavoro non è un file locale della coda");
+        bail!(crate::trf!(
+            "Il record del lavoro non è un file locale della coda",
+            "The job record is not a local queue file"
+        ));
     }
     let job = load(root, &candidate.view.id)?;
     if !job.view.state.is_terminal() || job.updated_at != candidate.updated_at {
@@ -405,14 +460,18 @@ fn remove_terminal_job(root: &Path, candidate: &StoredJob) -> Result<bool> {
         .chain(job.plan.outputs.iter().map(|output| &output.path))
     {
         if inside_job_directory(path, &directory)? {
-            bail!("La cartella contiene un originale o una destinazione: conservata");
+            bail!(crate::trf!(
+                "La cartella contiene un originale o una destinazione: conservata",
+                "The folder contains a source or output file: retained"
+            ));
         }
     }
     if job.view.state == JobState::Failed {
         for preview in &job.previews {
-            preview
-                .remove()
-                .context("Impossibile rimuovere il segnaposto del lavoro fallito")?;
+            preview.remove().context(crate::i18n::tr(
+                "Impossibile rimuovere il segnaposto del lavoro fallito",
+                "Unable to remove the failed job's placeholder",
+            ))?;
         }
     }
     let cancel = directory.join("cancel");
@@ -420,7 +479,10 @@ fn remove_terminal_job(root: &Path, candidate: &StoredJob) -> Result<bool> {
         Ok(metadata) if metadata.is_file() && !reparse_or_symlink(&metadata) => {
             fs::remove_file(cancel)?
         }
-        Ok(_) => bail!("Il segnale di annullamento è stato sostituito: lavoro conservato"),
+        Ok(_) => bail!(crate::trf!(
+            "Il segnale di annullamento è stato sostituito: lavoro conservato",
+            "The cancellation signal was replaced: job retained"
+        )),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
         Err(error) => return Err(error.into()),
     }
@@ -462,7 +524,10 @@ fn remove_failed_placeholders_at(root: &Path, id: &str) -> Result<()> {
     let _dispatch = dispatch_lock(root)?;
     let job = load(root, id)?;
     if job.view.state != JobState::Failed {
-        bail!("Puoi rimuovere i segnaposto soltanto per i lavori falliti");
+        bail!(crate::trf!(
+            "Puoi rimuovere i segnaposto soltanto per i lavori falliti",
+            "You can only remove placeholders for failed jobs"
+        ));
     }
     if job.previews.iter().any(|preview| {
         !job.plan
@@ -470,7 +535,10 @@ fn remove_failed_placeholders_at(root: &Path, id: &str) -> Result<()> {
             .iter()
             .any(|output| preview.matches_job_output(id, &output.path))
     }) {
-        bail!("I segnaposto non corrispondono ai risultati prenotati del lavoro");
+        bail!(crate::trf!(
+            "I segnaposto non corrispondono ai risultati prenotati del lavoro",
+            "The placeholders do not match the job's reserved outputs"
+        ));
     }
     let mut errors = Vec::new();
     for preview in &job.previews {
@@ -479,10 +547,11 @@ fn remove_failed_placeholders_at(root: &Path, id: &str) -> Result<()> {
         }
     }
     if !errors.is_empty() {
-        bail!(
+        bail!(crate::trf!(
             "Alcuni segnaposto non sono stati rimossi:\n{}",
+            "Some placeholders were not removed:\n{}",
             errors.join("\n")
-        );
+        ));
     }
     Ok(())
 }
@@ -505,7 +574,10 @@ fn submit_at(
     launch_worker: bool,
 ) -> Result<Submission> {
     if files.is_empty() {
-        bail!("Nessun file da convertire")
+        bail!(crate::trf!(
+            "Nessun file da convertire",
+            "No files to convert"
+        ))
     }
     fs::create_dir_all(root)?;
     let batch_id = format!("{}-{}", now(), std::process::id());
@@ -529,7 +601,10 @@ fn submit_at(
                     &output.path,
                     executable,
                     &id,
-                    "In coda — in attesa di conversione",
+                    crate::i18n::tr(
+                        "In coda — in attesa di conversione",
+                        "Queued — waiting for conversion",
+                    ),
                 ) {
                     Ok(preview) => previews.push(preview),
                     Err(error) => {
@@ -553,10 +628,12 @@ fn submit_at(
                         .collect(),
                     state: JobState::Queued,
                     progress: 0.0,
-                    message: "In coda".into(),
+                    message: crate::i18n::tr("In coda", "Queued").into(),
                     error: None,
                 },
                 plan,
+                ui_language: crate::i18n::has_language_override()
+                    .then(crate::i18n::current_language),
                 tools: tools.clone(),
                 previews,
                 batch_id: batch_id.clone(),
@@ -587,7 +664,7 @@ fn submit_at(
     }
     if launch_worker && !submission.jobs.is_empty() {
         let _dispatch = dispatch_lock(root)?;
-        start_worker_locked(root, executable).context("I lavori sono salvati in coda, ma non è stato possibile avviare il convertitore. Apri Convert Here per riprendere la coda")?;
+        start_worker_locked(root, executable).context(crate::i18n::tr("I lavori sono salvati in coda, ma non è stato possibile avviare il convertitore. Apri Convert Here per riprendere la coda", "The jobs are saved in the queue, but the converter could not start. Open Convert Here to resume the queue"))?;
     }
     Ok(submission)
 }
@@ -626,7 +703,10 @@ fn start_worker_locked(root: &Path, executable: &Path) -> Result<()> {
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .spawn()
-        .context("Avvio del processo della coda")?;
+        .context(crate::i18n::tr(
+            "Avvio del processo della coda",
+            "Starting the queue worker",
+        ))?;
     Ok(())
 }
 
@@ -647,7 +727,7 @@ fn cancel_at(root: &Path, id: &str) -> Result<()> {
     cancel.write_all(b"cancel")?;
     if job.view.state == JobState::Queued {
         job.view.state = JobState::Cancelled;
-        job.view.message = "Annullato".into();
+        job.view.message = crate::i18n::tr("Annullato", "Cancelled").into();
         job.updated_at = now();
         clean_previews(&job);
         engine::release_prepared(&job.plan)?;
@@ -657,17 +737,36 @@ fn cancel_at(root: &Path, id: &str) -> Result<()> {
 }
 
 pub fn run_worker() -> Result<()> {
-    run_worker_at(&queue_root()?, last_report_path().as_deref())
+    run_worker_with_store_and_language(
+        &queue_root()?,
+        last_report_path().as_deref(),
+        store,
+        |language| {
+            let saved = crate::i18n::initialize_from_preferences();
+            crate::i18n::set_language(language.unwrap_or(saved));
+        },
+    )
 }
 
+#[cfg(test)]
 fn run_worker_at(root: &Path, report: Option<&Path>) -> Result<()> {
     run_worker_with_store(root, report, store)
 }
 
+#[cfg(test)]
 fn run_worker_with_store(
     root: &Path,
     report: Option<&Path>,
+    persist: impl FnMut(&Path, &StoredJob) -> Result<()>,
+) -> Result<()> {
+    run_worker_with_store_and_language(root, report, persist, |_| {})
+}
+
+fn run_worker_with_store_and_language(
+    root: &Path,
+    report: Option<&Path>,
     mut persist: impl FnMut(&Path, &StoredJob) -> Result<()>,
+    mut refresh_language: impl FnMut(Option<crate::i18n::Language>),
 ) -> Result<()> {
     let worker = open_lock(root, "worker.lock")?;
     match fs2::FileExt::try_lock_exclusive(&worker) {
@@ -682,17 +781,25 @@ fn run_worker_with_store(
         for mut job in records(root)?.0 {
             if job.view.state == JobState::Running {
                 job.view.state = JobState::Failed;
-                job.view.message = "Conversione interrotta".into();
-                job.view.error = Some("Il processo precedente si è interrotto senza salvare lo stato finale. Verifica gli eventuali file di risultato prima di avviare una nuova conversione dall'originale.".into());
+                job.view.message =
+                    crate::i18n::tr("Conversione interrotta", "Conversion interrupted").into();
+                job.view.error = Some(crate::i18n::tr("Il processo precedente si è interrotto senza salvare lo stato finale. Verifica gli eventuali file di risultato prima di avviare una nuova conversione dall'originale.", "The previous process stopped without saving its final status. Check any output files before starting a new conversion from the source.").into());
                 job.updated_at = now();
                 for preview in &job.previews {
-                    let _ = preview.fail("Conversione interrotta — apri per i dettagli");
+                    let _ = preview.fail(crate::i18n::tr(
+                        "Conversione interrotta — apri per i dettagli",
+                        "Conversion interrupted — open for details",
+                    ));
                 }
                 let _ = engine::release_prepared(&job.plan);
                 if let Err(error) = persist(root, &job) {
                     eprintln!(
-                        "Impossibile salvare il recupero del lavoro {}: {error:#}",
-                        job.view.id
+                        "{}",
+                        crate::trf!(
+                            "Impossibile salvare il recupero del lavoro {}: {error:#}",
+                            "Unable to save recovery for job {}: {error:#}",
+                            job.view.id
+                        )
                     );
                 }
                 if let Some(path) = report {
@@ -701,7 +808,13 @@ fn run_worker_with_store(
             }
         }
         if let Err(error) = cleanup_terminal_jobs(root, now()) {
-            eprintln!("Impossibile pulire la cronologia della coda: {error:#}");
+            eprintln!(
+                "{}",
+                crate::trf!(
+                    "Impossibile pulire la cronologia della coda: {error:#}",
+                    "Unable to clean up queue history: {error:#}"
+                )
+            );
         }
     }
     let mut skipped = BTreeSet::new();
@@ -713,7 +826,13 @@ fn run_worker_with_store(
             .find(|job| job.view.state == JobState::Queued && !skipped.contains(&job.view.id));
         let Some(mut job) = next else {
             if let Err(error) = cleanup_terminal_jobs(root, now()) {
-                eprintln!("Impossibile pulire la cronologia della coda: {error:#}");
+                eprintln!(
+                    "{}",
+                    crate::trf!(
+                        "Impossibile pulire la cronologia della coda: {error:#}",
+                        "Unable to clean up queue history: {error:#}"
+                    )
+                );
             }
             // Release worker ownership while enqueue is excluded. This closes the empty-queue
             // handoff race: a submitter will either be seen here or start the next worker.
@@ -721,16 +840,23 @@ fn run_worker_with_store(
             drop(dispatch);
             return Ok(());
         };
+        // An explicit CLI language belongs to this job, even if the worker was
+        // already running. Other jobs re-read the saved preference each time.
+        refresh_language(job.ui_language);
         let cancellation = job_dir(root, &job.view.id)?.join("cancel");
         if cancellation.exists() {
             job.view.state = JobState::Cancelled;
-            job.view.message = "Annullato".into();
+            job.view.message = crate::i18n::tr("Annullato", "Cancelled").into();
             clean_previews(&job);
             let _ = engine::release_prepared(&job.plan);
             if let Err(error) = persist(root, &job) {
                 eprintln!(
-                    "Impossibile salvare l'annullamento del lavoro {}: {error:#}",
-                    job.view.id
+                    "{}",
+                    crate::trf!(
+                        "Impossibile salvare l'annullamento del lavoro {}: {error:#}",
+                        "Unable to save cancellation for job {}: {error:#}",
+                        job.view.id
+                    )
                 );
                 skipped.insert(job.view.id.clone());
             }
@@ -738,14 +864,18 @@ fn run_worker_with_store(
             continue;
         }
         job.view.state = JobState::Running;
-        job.view.message = "Conversione in corso…".into();
+        job.view.message = crate::i18n::tr("Conversione in corso…", "Converting…").into();
         job.updated_at = now();
         if let Err(error) = persist(root, &job) {
             // Without a durable Running state, a restart would see Queued and
             // could invoke the converter again after an already published output.
             eprintln!(
-                "Impossibile avviare il lavoro {} senza salvarne lo stato: {error:#}",
-                job.view.id
+                "{}",
+                crate::trf!(
+                    "Impossibile avviare il lavoro {} senza salvarne lo stato: {error:#}",
+                    "Unable to start job {} without saving its status: {error:#}",
+                    job.view.id
+                )
             );
             skipped.insert(job.view.id.clone());
             drop(dispatch);
@@ -753,13 +883,14 @@ fn run_worker_with_store(
         }
         drop(dispatch);
         for preview in &job.previews {
-            let _ = preview.update("Conversione in corso…");
+            let _ = preview.update(crate::i18n::tr("Conversione in corso…", "Converting…"));
         }
         let cancel = AtomicBool::new(false);
         let finished = AtomicBool::new(false);
         let mut last_snapshot = Instant::now();
         let mut last_preview = Instant::now();
-        let mut last_preview_text = "Conversione in corso…".to_owned();
+        let mut last_preview_text =
+            crate::i18n::tr("Conversione in corso…", "Converting…").to_owned();
         let plan = job.plan.clone();
         let tools = job.tools.clone();
         let conversion = thread::scope(|scope| {
@@ -799,7 +930,7 @@ fn run_worker_with_store(
                 job.view.outputs = outputs;
                 job.view.state = JobState::Completed;
                 job.view.progress = 1.0;
-                job.view.message = "Completato".into();
+                job.view.message = crate::i18n::tr("Completato", "Completed").into();
                 clean_previews(&job);
                 for output in &job.view.outputs {
                     crate::pending::notify_ready(output);
@@ -807,31 +938,37 @@ fn run_worker_with_store(
             }
             Err(error) if cancel.load(Ordering::Relaxed) => {
                 job.view.state = JobState::Cancelled;
-                job.view.message = "Annullato".into();
+                job.view.message = crate::i18n::tr("Annullato", "Cancelled").into();
                 clean_previews(&job);
                 let _ = error;
             }
             Err(error) => {
                 job.view.state = JobState::Failed;
-                job.view.message = "Conversione non riuscita".into();
+                job.view.message =
+                    crate::i18n::tr("Conversione non riuscita", "Conversion failed").into();
                 job.view.error = Some(format!("{error:#}"));
                 for preview in &job.previews {
-                    let _ = preview.fail(&format!("Errore — {error:#}"));
+                    let _ = preview.fail(&crate::trf!("Errore — {error:#}", "Error — {error:#}"));
                 }
             }
         }
         if let Err(error) = engine::release_prepared(&job.plan) {
-            job.view
-                .message
-                .push_str(&format!(" · Pulizia temporanei: {error:#}"));
+            job.view.message.push_str(&crate::trf!(
+                " · Pulizia temporanei: {error:#}",
+                " · Temporary file cleanup: {error:#}"
+            ));
         }
         job.updated_at = now();
         if let Err(error) = persist(root, &job) {
             // Keep the durable Running record: recovery marks it interrupted
             // rather than retrying a conversion whose output may already exist.
             eprintln!(
-                "Impossibile salvare l'esito del lavoro {}: {error:#}",
-                job.view.id
+                "{}",
+                crate::trf!(
+                    "Impossibile salvare l'esito del lavoro {}: {error:#}",
+                    "Unable to save the result of job {}: {error:#}",
+                    job.view.id
+                )
             );
             skipped.insert(job.view.id.clone());
         }
@@ -854,7 +991,11 @@ fn update_progress_preview(
         return Ok(false);
     };
     let status = if job.view.progress > 0.0 {
-        format!("Conversione in corso — {:.0}%", job.view.progress * 100.0)
+        crate::trf!(
+            "Conversione in corso — {:.0}%",
+            "Converting — {:.0}%",
+            job.view.progress * 100.0
+        )
     } else {
         job.view.message.clone()
     };
@@ -897,9 +1038,10 @@ fn update_report(root: &Path, batch_id: &str, report: &Path) -> Result<()> {
     let timestamp =
         time::OffsetDateTime::now_utc().format(&time::format_description::well_known::Rfc3339)?;
     let value = serde_json::json!({"timestamp":timestamp,"format":jobs.first().map(|job|job.view.format.as_str()).unwrap_or(""),"successes":successes,"errors":errors});
-    let parent = report
-        .parent()
-        .context("Percorso del resoconto non valido")?;
+    let parent = report.parent().context(crate::i18n::tr(
+        "Percorso del resoconto non valido",
+        "Invalid report path",
+    ))?;
     fs::create_dir_all(parent)?;
     let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
     serde_json::to_writer_pretty(&mut temporary, &value)?;
@@ -910,7 +1052,54 @@ fn update_report(root: &Path, batch_id: &str, report: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::i18n::Language;
     use crate::model::OutputFormat;
+
+    #[test]
+    fn worker_reads_each_job_language_and_old_jobs_keep_following_preferences() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("queue");
+        let expected = [Some(Language::English), Some(Language::Italian), None];
+        let mut ids = Vec::new();
+        for (index, language) in expected.into_iter().enumerate() {
+            let queued = queued_image(&root, &directory.path().join(format!("source-{index}.png")));
+            let mut job = load(&root, &queued.id).unwrap();
+            job.ui_language = language;
+            store(&root, &job).unwrap();
+            let mut value = serde_json::to_value(&job).unwrap();
+            if language.is_none() {
+                value.as_object_mut().unwrap().remove("ui_language");
+            }
+            let restored: StoredJob = serde_json::from_value(value).unwrap();
+            assert_eq!(restored.ui_language, language);
+            store(&root, &restored).unwrap();
+            ids.push(queued.id);
+        }
+        let mut observed = Vec::new();
+        run_worker_with_store_and_language(&root, None, store, |language| observed.push(language))
+            .unwrap();
+        assert_eq!(observed, expected);
+        for id in ids {
+            let job = load(&root, &id).unwrap();
+            assert_eq!(job.view.state, JobState::Completed);
+            assert!(job.view.outputs.iter().all(|path| path.is_file()));
+        }
+    }
+
+    #[test]
+    fn english_cancellation_uses_job_state_without_matching_translated_text() {
+        crate::i18n::with_language(Language::English, || {
+            let directory = tempfile::tempdir().unwrap();
+            let root = directory.path().join("queue");
+            let queued = queued_image(&root, &directory.path().join("cancelled.png"));
+            cancel_at(&root, &queued.id).unwrap();
+            run_worker_at(&root, None).unwrap();
+            let cancelled = load(&root, &queued.id).unwrap();
+            assert_eq!(cancelled.view.state, JobState::Cancelled);
+            assert_eq!(cancelled.view.message, "Cancelled");
+            assert!(cancelled.view.outputs.iter().all(|path| !path.exists()));
+        });
+    }
 
     #[test]
     fn busy_worker_accepts_new_dispatch_without_starting_another_encoder() {

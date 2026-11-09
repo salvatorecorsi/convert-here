@@ -9,6 +9,7 @@ use std::{
 };
 use the_converter::{
     engine,
+    i18n::{self, Language},
     model::{
         ConversionSettings, CsvDelimiter, MediaKind, OutputFormat, PdfAction, supported_formats,
     },
@@ -20,60 +21,62 @@ use the_converter::{
 #[derive(Parser, Debug)]
 #[command(
     version,
-    about = "Convert Here — audio, video, immagini e PDF sul tuo PC"
+    about = the_converter::i18n::tr("Convert Here — audio, video, immagini e PDF sul tuo PC", "Convert Here — audio, video, images and PDFs on your PC")
 )]
 struct Args {
+    #[arg(long, value_parser = ["system", "it", "en"], help = the_converter::i18n::tr("Lingua per questa esecuzione; non modifica la preferenza salvata.", "Language for this invocation; does not change the saved preference."))]
+    language: Option<String>,
     /// File da aprire nella finestra. Usa -- prima di nomi che iniziano con un trattino.
-    #[arg(long, num_args = 1..)]
+    #[arg(long, num_args = 1.., help = the_converter::i18n::tr("File da aprire nella finestra. Usa -- prima di nomi che iniziano con un trattino.", "Files to open in the window. Use -- before names beginning with a hyphen."))]
     files: Vec<PathBuf>,
     /// Selezione di Esplora file: array JSON UTF-8 di percorsi.
-    #[arg(long)]
+    #[arg(long, help = the_converter::i18n::tr("Selezione di Esplora file: array JSON UTF-8 di percorsi.", "File Explorer selection: a UTF-8 JSON array of paths."))]
     selection_file: Option<PathBuf>,
     /// Formato di destinazione (mp3, wav, mp4, png, pdf…).
-    #[arg(long, value_parser = parse_format)]
+    #[arg(long, value_parser = parse_format, help = the_converter::i18n::tr("Formato di destinazione (mp3, wav, mp4, png, pdf…).", "Output format (mp3, wav, mp4, png, pdf…)."))]
     target: Option<OutputFormat>,
     /// Esegui senza finestra; richiede --target o --settings.
-    #[arg(long)]
+    #[arg(long, help = the_converter::i18n::tr("Esegui senza finestra; richiede --target o --settings.", "Run without a window; requires --target or --settings."))]
     convert: bool,
     /// Conversione rapida da Esplora file, con preferenze salvate e resoconto locale.
-    #[arg(long, requires = "target", conflicts_with_all = ["convert", "diagnose"])]
+    #[arg(long, requires = "target", conflicts_with_all = ["convert", "diagnose"], help = the_converter::i18n::tr("Conversione rapida da Esplora file, con preferenze salvate e resoconto locale.", "Quick conversion from File Explorer, using saved preferences and a local report."))]
     quick: bool,
     /// Selezioni PDF multiple: conversione individuale oppure ordine pagine e PDF unico.
-    #[arg(long, value_enum, requires = "target", conflicts_with_all = ["convert", "diagnose", "queue_job", "queue_worker"])]
+    #[arg(long, value_enum, requires = "target", conflicts_with_all = ["convert", "diagnose", "queue_job", "queue_worker"], help = the_converter::i18n::tr("Selezioni PDF multiple: conversione individuale oppure ordine pagine e PDF unico.", "Multiple PDF inputs: separate outputs, or page ordering and one merged PDF."))]
     pdf_batch: Option<PdfBatch>,
     /// Stato di una conversione, aperto dal segnaposto in Esplora file.
-    #[arg(long, conflicts_with_all = ["quick", "convert", "diagnose", "queue_worker"])]
+    #[arg(long, conflicts_with_all = ["quick", "convert", "diagnose", "queue_worker"], help = the_converter::i18n::tr("Stato di una conversione, aperto dal segnaposto in Esplora file.", "Conversion status opened from a File Explorer placeholder."))]
     queue_job: Option<String>,
     #[arg(long, hide = true, conflicts_with_all = ["quick", "convert", "diagnose", "queue_job"])]
     queue_worker: bool,
     /// Cartella di destinazione. Per default accanto all'originale.
-    #[arg(long, requires = "convert")]
+    #[arg(long, requires = "convert", help = the_converter::i18n::tr("Cartella di destinazione. Per default accanto all'originale.", "Output folder. Defaults to the folder containing the source."))]
     output_dir: Option<PathBuf>,
     /// File JSON con le impostazioni di conversione.
-    #[arg(long, requires = "convert")]
+    #[arg(long, requires = "convert", help = the_converter::i18n::tr("File JSON con le impostazioni di conversione.", "JSON file containing conversion settings."))]
     settings: Option<PathBuf>,
     #[arg(long, value_enum, requires = "convert")]
     preset: Option<Preset>,
     /// Operazione sui PDF: compress, split (una pagina per file), merge (ordine dei file).
-    #[arg(long, value_enum, requires = "convert")]
+    #[arg(long, value_enum, requires = "convert", help = the_converter::i18n::tr("Operazione sui PDF: compress, split (una pagina per file), merge (ordine dei file).", "PDF action: compress, split (one page per file), merge (file order)."))]
     pdf_action: Option<PdfCommand>,
     /// Riconosci testo da scansioni PDF con Tesseract locale.
-    #[arg(long, requires = "convert")]
+    #[arg(long, requires = "convert", help = the_converter::i18n::tr("Riconosci testo da scansioni PDF con Tesseract locale.", "Recognize text in scanned PDFs with local Tesseract."))]
     ocr: bool,
     /// Lingue Tesseract installate, per esempio ita+eng.
-    #[arg(long, requires = "convert")]
+    #[arg(long, requires = "convert", help = the_converter::i18n::tr("Lingue Tesseract installate, per esempio ita+eng.", "Installed Tesseract languages, for example ita+eng."))]
     ocr_language: Option<String>,
     /// Separatore CSV in ingresso e uscita: comma, semicolon, tab, pipe.
-    #[arg(long, value_enum, requires = "convert")]
+    #[arg(long, value_enum, requires = "convert", help = the_converter::i18n::tr("Separatore CSV in ingresso e uscita: comma, semicolon, tab, pipe.", "CSV import and export delimiter: comma, semicolon, tab, pipe."))]
     csv_separator: Option<CsvSeparator>,
     /// Mostra i percorsi dei motori disponibili in JSON.
-    #[arg(long)]
+    #[arg(long, help = the_converter::i18n::tr("Mostra i percorsi dei motori disponibili in JSON.", "Show available engine paths as JSON."))]
     diagnose: bool,
     /// Scarica e verifica un motore portabile nella cartella personale ConvertHere/tools.
-    #[arg(long, value_enum, conflicts_with_all = ["files", "selection_file", "target", "convert", "quick", "pdf_batch", "queue_job", "queue_worker", "output_dir", "settings", "preset", "pdf_action", "ocr", "ocr_language", "csv_separator", "diagnose", "input"])]
+    #[arg(long, value_enum, conflicts_with_all = ["files", "selection_file", "target", "convert", "quick", "pdf_batch", "queue_job", "queue_worker", "output_dir", "settings", "preset", "pdf_action", "ocr", "ocr_language", "csv_separator", "diagnose", "input"], help = the_converter::i18n::tr("Scarica e verifica un motore portabile nella cartella personale ConvertHere/tools.", "Download and verify a portable engine in the user ConvertHere/tools folder."))]
     install_runtime: Option<RuntimeCommand>,
     /// Percorsi diretti, usabili anche da Apri con.
-    #[arg(value_name = "FILE")]
+    #[arg(value_name = "FILE", help = the_converter::i18n::tr("Percorsi diretti, usabili anche da Apri con.", "Direct file paths, also usable with Open with."))]
     input: Vec<PathBuf>,
 }
 
@@ -119,21 +122,36 @@ fn validate_pdf_batch(
     files: &[PathBuf],
 ) -> Result<()> {
     if target != Some(OutputFormat::Pdf) {
-        bail!("--pdf-batch richiede --target pdf");
+        bail!(the_converter::trf!(
+            "--pdf-batch richiede --target pdf",
+            "--pdf-batch requires --target pdf"
+        ));
     }
     if files.len() < 2 {
-        bail!("PDF (Bulk) e PDF (Merge) richiedono almeno due file");
+        bail!(the_converter::trf!(
+            "PDF (Bulk) e PDF (Merge) richiedono almeno due file",
+            "PDF (Bulk) and PDF (Merge) require at least two files"
+        ));
     }
     if files
         .iter()
         .any(|path| !supported_formats(MediaKind::from_path(path)).contains(&OutputFormat::Pdf))
     {
-        bail!("La selezione contiene file che non possono essere convertiti in PDF");
+        bail!(the_converter::trf!(
+            "La selezione contiene file che non possono essere convertiti in PDF",
+            "The selection contains files that cannot be converted to PDF"
+        ));
     }
     match mode {
-        PdfBatch::Bulk if !quick => bail!("PDF (Bulk) richiede --quick"),
+        PdfBatch::Bulk if !quick => bail!(the_converter::trf!(
+            "PDF (Bulk) richiede --quick",
+            "PDF (Bulk) requires --quick"
+        )),
         PdfBatch::Merge if quick => {
-            bail!("PDF (Merge) apre l'ordine delle pagine e non usa --quick")
+            bail!(the_converter::trf!(
+                "PDF (Merge) apre l'ordine delle pagine e non usa --quick",
+                "PDF (Merge) opens the page-order editor and does not use --quick"
+            ))
         }
         _ => Ok(()),
     }
@@ -162,21 +180,35 @@ fn parse_format(value: &str) -> std::result::Result<OutputFormat, String> {
         .iter()
         .copied()
         .find(|format| format.extension().eq_ignore_ascii_case(extension))
-        .ok_or_else(|| format!("Formato non supportato: {value}"))
+        .ok_or_else(|| {
+            the_converter::trf!(
+                "Formato non supportato: {value}",
+                "Unsupported format: {value}"
+            )
+        })
 }
 
 fn read_selection(path: &Path) -> Result<Vec<PathBuf>> {
-    let metadata = path
-        .metadata()
-        .context("Impossibile leggere la selezione")?;
+    let metadata = path.metadata().context(the_converter::i18n::tr(
+        "Impossibile leggere la selezione",
+        "Unable to read the selection",
+    ))?;
     if metadata.len() > 16 * 1024 * 1024 {
-        bail!("Selezione troppo grande")
+        bail!(the_converter::trf!(
+            "Selezione troppo grande",
+            "Selection too large"
+        ))
     }
     let bytes = std::fs::read(path)?;
-    let files: Vec<PathBuf> =
-        serde_json::from_slice(&bytes).context("Selezione JSON non valida")?;
+    let files: Vec<PathBuf> = serde_json::from_slice(&bytes).context(the_converter::i18n::tr(
+        "Selezione JSON non valida",
+        "Invalid selection JSON",
+    ))?;
     if files.len() > 10_000 {
-        bail!("Troppi file nella selezione (massimo 10000)")
+        bail!(the_converter::trf!(
+            "Troppi file nella selezione (massimo 10000)",
+            "Too many files in the selection (maximum 10000)"
+        ))
     }
     // Only consume disposable files produced by our Explorer extension.
     let is_our_file = path
@@ -194,18 +226,32 @@ fn read_selection(path: &Path) -> Result<Vec<PathBuf>> {
 }
 
 fn run(args: Args) -> Result<()> {
+    if let Some(language) = &args.language {
+        i18n::set_language_override(Language::from_code(language));
+    }
     if let Some(engine) = args.install_runtime {
         let engine = RuntimeEngine::from(engine);
         let manifest = engine.manifest();
         eprintln!(
-            "Installazione esplicita di {} {} ({} byte): {}",
-            manifest.name, manifest.version, manifest.download_bytes, manifest.source_url
+            "{}",
+            the_converter::trf!(
+                "Installazione esplicita di {} {} ({} byte): {}",
+                "Explicit installation of {} {} ({} bytes): {}",
+                manifest.name,
+                manifest.version,
+                manifest.download_bytes,
+                manifest.source_url
+            )
         );
         eprintln!(
-            "Destinazione: {}",
-            the_converter::tools::user_tools_dir()
-                .context("Cartella personale dei motori non disponibile")?
-                .display()
+            "{}",
+            the_converter::trf!(
+                "Destinazione: {}",
+                "Destination: {}",
+                the_converter::tools::user_tools_dir()
+                    .context("Cartella personale dei motori non disponibile")?
+                    .display()
+            )
         );
         let cancel = Arc::new(AtomicBool::new(false));
         let signal = cancel.clone();
@@ -226,9 +272,12 @@ fn run(args: Args) -> Result<()> {
         return queue::run_worker();
     }
     if let Some(id) = args.queue_job {
-        let warning = queue::ensure_worker()
-            .err()
-            .map(|error| format!("La coda non è stata avviata: {error:#}"));
+        let warning = queue::ensure_worker().err().map(|error| {
+            the_converter::trf!(
+                "La coda non è stata avviata: {error:#}",
+                "The queue could not start: {error:#}"
+            )
+        });
         return crate::app::launch_queue_status(id, warning)
             .map_err(|error| anyhow::anyhow!("{error}"));
     }
@@ -246,9 +295,12 @@ fn run(args: Args) -> Result<()> {
     if let Some(mode) = args.pdf_batch {
         validate_pdf_batch(mode, args.target, args.quick, &files)?;
         if mode == PdfBatch::Merge {
-            let warning = queue::ensure_worker()
-                .err()
-                .map(|error| format!("La coda non è stata avviata: {error:#}"));
+            let warning = queue::ensure_worker().err().map(|error| {
+                the_converter::trf!(
+                    "La coda non è stata avviata: {error:#}",
+                    "The queue could not start: {error:#}"
+                )
+            });
             return crate::pdf_merge_app::launch(files, warning)
                 .map_err(|error| anyhow::anyhow!("{error}"));
         }
@@ -257,20 +309,32 @@ fn run(args: Args) -> Result<()> {
         return quick_convert(files, args.target.expect("clap requires target"));
     }
     if !args.convert {
-        let warning = queue::ensure_worker()
-            .err()
-            .map(|error| format!("La coda non è stata avviata: {error:#}"));
+        let warning = queue::ensure_worker().err().map(|error| {
+            the_converter::trf!(
+                "La coda non è stata avviata: {error:#}",
+                "The queue could not start: {error:#}"
+            )
+        });
         return crate::app::launch(files, args.target, warning)
             .map_err(|err| anyhow::anyhow!("{err}"));
     }
     if files.is_empty() {
-        bail!("Indica almeno un file con --files")
+        bail!(the_converter::trf!(
+            "Indica almeno un file con --files",
+            "Specify at least one file with --files"
+        ))
     }
     if args.target.is_none() && args.settings.is_none() {
-        bail!("Specifica --target oppure --settings")
+        bail!(the_converter::trf!(
+            "Specifica --target oppure --settings",
+            "Specify --target or --settings"
+        ))
     }
     let mut settings: ConversionSettings = if let Some(path) = args.settings {
-        serde_json::from_slice(&std::fs::read(path)?).context("Impostazioni JSON non valide")?
+        serde_json::from_slice(&std::fs::read(path)?).context(the_converter::i18n::tr(
+            "Impostazioni JSON non valide",
+            "Invalid settings JSON",
+        ))?
     } else {
         ConversionSettings::default()
     };
@@ -294,9 +358,10 @@ fn run(args: Args) -> Result<()> {
             }
         });
         if settings.format != OutputFormat::Pdf || !compatible {
-            bail!(
-                "--pdf-action richiede --target pdf: Merge accetta i file convertibili in PDF, Compress e Split soltanto PDF"
-            );
+            bail!(the_converter::trf!(
+                "--pdf-action richiede --target pdf: Merge accetta i file convertibili in PDF, Compress e Split soltanto PDF",
+                "--pdf-action requires --target pdf: Merge accepts files convertible to PDF; Compress and Split accept PDF files only"
+            ));
         }
     }
     if args.ocr {
@@ -309,9 +374,10 @@ fn run(args: Args) -> Result<()> {
                 MediaKind::Image | MediaKind::Pdf
             )
         }) {
-            bail!(
-                "--ocr richiede immagini o PDF e una destinazione testuale TXT, DOCX o HTML compatibile"
-            );
+            bail!(the_converter::trf!(
+                "--ocr richiede immagini o PDF e una destinazione testuale TXT, DOCX o HTML compatibile",
+                "--ocr requires images or PDFs and a compatible TXT, DOCX or HTML text output"
+            ));
         }
         settings.ocr.enabled = true;
     }
@@ -344,7 +410,10 @@ fn run(args: Args) -> Result<()> {
     })?;
     if settings.format == OutputFormat::Pdf && settings.pdf.action == PdfAction::Merge {
         if files.len() < 2 {
-            bail!("Per unire i PDF indica almeno due file compatibili");
+            bail!(the_converter::trf!(
+                "Per unire i PDF indica almeno due file compatibili",
+                "To merge PDFs, specify at least two compatible files"
+            ));
         }
         let prepared = the_converter::pdf_merge::prepare_pdf_merge(
             &files,
@@ -376,9 +445,15 @@ fn run(args: Args) -> Result<()> {
     let mut failures = 0;
     for file in files {
         if cancel.load(Ordering::Relaxed) {
-            bail!("Conversione annullata")
+            bail!(the_converter::trf!(
+                "Conversione annullata",
+                "Conversion cancelled"
+            ))
         }
-        eprintln!("Conversione: {}", file.display());
+        eprintln!(
+            "{}",
+            the_converter::trf!("Conversione: {}", "Converting: {}", file.display())
+        );
         match engine::convert(&file, &settings, &tools, &cancel, |progress| {
             eprintln!("{:3.0}% {}", progress.fraction * 100.0, progress.message);
         }) {
@@ -388,20 +463,29 @@ fn run(args: Args) -> Result<()> {
                 }
             }
             Err(err) => {
-                eprintln!("Errore: {err:#}");
+                eprintln!(
+                    "{}",
+                    the_converter::trf!("Errore: {err:#}", "Error: {err:#}")
+                );
                 failures += 1;
             }
         }
     }
     if failures > 0 {
-        bail!("{failures} conversioni non riuscite")
+        bail!(the_converter::trf!(
+            "{failures} conversioni non riuscite",
+            "{failures} conversions failed"
+        ))
     }
     Ok(())
 }
 
 fn quick_convert(files: Vec<PathBuf>, format: OutputFormat) -> Result<()> {
     if files.is_empty() {
-        bail!("Nessun file da convertire")
+        bail!(the_converter::trf!(
+            "Nessun file da convertire",
+            "No files to convert"
+        ))
     }
     let (mut settings, tools) = crate::app::quick_configuration();
     settings.format = format;
@@ -417,15 +501,41 @@ fn quick_convert(files: Vec<PathBuf>, format: OutputFormat) -> Result<()> {
             .cloned()
             .collect::<Vec<_>>()
             .join("\n\n");
-        bail!(
+        bail!(the_converter::trf!(
             "{} file non aggiunti alla coda.\n\n{details}\n\nGli altri lavori proseguono in background.",
+            "{} files were not added to the queue.\n\n{details}\n\nOther jobs continue in the background.",
             submission.errors.len()
-        );
+        ));
     }
     Ok(())
 }
 
+fn language_from_arguments(arguments: &[std::ffi::OsString]) -> Option<Language> {
+    let mut selected = None;
+    let mut args = arguments.iter().skip(1);
+    while let Some(argument) = args.next() {
+        if argument == "--" {
+            break;
+        }
+        let value = if argument == "--language" {
+            args.next().and_then(|value| value.to_str())
+        } else {
+            argument
+                .to_str()
+                .and_then(|value| value.strip_prefix("--language="))
+        };
+        if let Some(code @ ("system" | "it" | "en")) = value {
+            selected = Some(Language::from_code(code));
+        }
+    }
+    selected
+}
+
 pub fn main() {
+    i18n::initialize_from_preferences();
+    if let Some(language) = language_from_arguments(&std::env::args_os().collect::<Vec<_>>()) {
+        i18n::set_language_override(language);
+    }
     let args = Args::parse();
     let headless =
         args.convert || args.diagnose || args.queue_worker || args.install_runtime.is_some();
@@ -445,6 +555,51 @@ pub fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn command_language_is_selected_before_help_but_not_after_file_boundary() {
+        let selection = |arguments: &[&str]| {
+            language_from_arguments(
+                &arguments
+                    .iter()
+                    .map(std::ffi::OsString::from)
+                    .collect::<Vec<_>>(),
+            )
+        };
+        assert_eq!(
+            selection(&["converter", "--language", "en", "--help"]),
+            Some(Language::English)
+        );
+        assert_eq!(
+            selection(&["converter", "--help", "--language=it"]),
+            Some(Language::Italian)
+        );
+        assert_eq!(selection(&["converter", "--", "--language=en"]), None);
+        assert_eq!(
+            selection(&["converter", "--language", "en", "--", "--language=it"]),
+            Some(Language::English)
+        );
+        for invalid in [
+            vec!["converter", "--language", "fr"],
+            vec!["converter", "--language"],
+        ] {
+            assert!(Args::try_parse_from(invalid).is_err());
+        }
+        use clap::CommandFactory;
+        i18n::with_language(Language::English, || {
+            let help = Args::command().render_long_help().to_string();
+            assert!(help.contains("Files to open in the window"));
+            assert!(!help.contains("File da aprire"));
+        });
+        i18n::with_language(Language::Italian, || {
+            assert!(
+                Args::command()
+                    .render_long_help()
+                    .to_string()
+                    .contains("File da aprire")
+            );
+        });
+    }
 
     #[test]
     fn runtime_install_requires_an_explicit_engine_and_excludes_other_operations() {

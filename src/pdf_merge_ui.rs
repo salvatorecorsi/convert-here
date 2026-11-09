@@ -3,6 +3,7 @@ use crate::theme::{self, FluentIcon};
 use eframe::egui::{self, Rect, Sense};
 use std::sync::atomic::{AtomicU64, Ordering};
 use the_converter::pdf_merge::{MergePageRef, MergeSource};
+use the_converter::{i18n::tr, trf};
 
 const ROW_HEIGHT: f32 = 64.0;
 
@@ -96,13 +97,17 @@ impl PageOrderEditor {
         let mut changed = false;
         ui.horizontal_wrapped(|ui| {
             ui.label(theme::heading(
-                format!("Ordine delle pagine · {}", self.pages.len()),
+                trf!(
+                    "Ordine delle pagine · {}",
+                    "Page order · {}",
+                    self.pages.len()
+                ),
                 theme::SUBTITLE,
             ));
             if ui
                 .add_enabled(
                     enabled && self.pages != self.original,
-                    egui::Button::new("Ripristina ordine"),
+                    egui::Button::new(tr("Ripristina ordine", "Reset order")),
                 )
                 .clicked()
             {
@@ -112,7 +117,7 @@ impl PageOrderEditor {
         });
         ui.label(
             egui::RichText::new(
-                "Trascina la maniglia per spostare una pagina. Puoi usare anche le frecce o Alt+↑ / Alt+↓ sulla pagina selezionata.",
+                tr("Trascina la maniglia per spostare una pagina. Puoi usare anche le frecce o Alt+↑ / Alt+↓ sulla pagina selezionata.", "Drag the handle to move a page. You can also use the arrows or Alt+↑ / Alt+↓ on the selected page."),
             )
             .size(theme::CAPTION)
             .color(colors.secondary),
@@ -214,7 +219,10 @@ impl PageOrderEditor {
                                 );
                             }
                         }
-                        let drag = drag.on_hover_text("Trascina per spostare questa pagina");
+                        let drag = drag.on_hover_text(tr(
+                            "Trascina per spostare questa pagina",
+                            "Drag to move this page",
+                        ));
                         if origin_matches {
                             let payload = DraggedPage {
                                 editor: editor_id,
@@ -240,13 +248,13 @@ impl PageOrderEditor {
                                         FluentIcon::ChevronUp,
                                         index > 0,
                                         index.saturating_sub(1),
-                                        "Sposta prima",
+                                        tr("Sposta prima", "Move earlier"),
                                     ),
                                     (
                                         FluentIcon::ChevronDown,
                                         index + 1 < total_pages,
                                         index + 2,
-                                        "Sposta dopo",
+                                        tr("Sposta dopo", "Move later"),
                                     ),
                                 ] {
                                     if ui
@@ -277,9 +285,11 @@ impl PageOrderEditor {
                                     )
                                     .on_hover_text(&source.full_path);
                                     ui.label(
-                                        egui::RichText::new(format!(
+                                        egui::RichText::new(trf!(
                                             "Pagina {} di {} nell’originale",
-                                            page.page, source.page_count
+                                            "Page {} of {} in the original",
+                                            page.page,
+                                            source.page_count
                                         ))
                                         .size(theme::CAPTION)
                                         .color(colors.secondary),

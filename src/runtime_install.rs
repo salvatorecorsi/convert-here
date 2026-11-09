@@ -35,6 +35,19 @@ pub struct RuntimeManifest {
     pub license: &'static str,
 }
 
+impl RuntimeManifest {
+    pub fn license_label(&self) -> &'static str {
+        match self.name {
+            "FFmpeg" => crate::i18n::tr(self.license, "GPLv3; license and documentation included"),
+            "Poppler" => crate::i18n::tr(
+                self.license,
+                "GPL and dependency licenses included in the archive",
+            ),
+            _ => self.license,
+        }
+    }
+}
+
 static FFMPEG: RuntimeManifest = RuntimeManifest {
     name: "FFmpeg",
     version: "9.0.2",
@@ -163,8 +176,10 @@ pub fn install(
     cancel: &AtomicBool,
     mut progress: impl FnMut(InstallProgress),
 ) -> Result<PathBuf> {
-    let root =
-        crate::tools::user_tools_dir().context("Cartella personale dei motori non disponibile")?;
+    let root = crate::tools::user_tools_dir().context(crate::i18n::tr(
+        "Cartella personale dei motori non disponibile",
+        "User engine folder unavailable",
+    ))?;
     install_with(
         &engine.spec(),
         &root,
@@ -175,7 +190,10 @@ pub fn install(
 }
 
 fn cancelled(cancel: &AtomicBool) -> Result<()> {
-    ensure!(!cancel.load(Ordering::Relaxed), "Installazione annullata");
+    ensure!(
+        !cancel.load(Ordering::Relaxed),
+        crate::trf!("Installazione annullata", "Installation cancelled")
+    );
     Ok(())
 }
 
@@ -200,14 +218,20 @@ fn is_link(metadata: &fs::Metadata) -> bool {
 fn ensure_directory(path: &Path) -> Result<()> {
     ensure!(
         path.is_absolute(),
-        "La cartella dei motori deve essere assoluta"
+        crate::trf!(
+            "La cartella dei motori deve essere assoluta",
+            "The engine folder path must be absolute"
+        )
     );
     for component in path.ancestors().collect::<Vec<_>>().into_iter().rev() {
         match fs::symlink_metadata(component) {
             Ok(metadata) => ensure!(
                 metadata.is_dir() && !is_link(&metadata),
-                "Cartella non sicura o collegamento: {}",
-                component.display()
+                crate::trf!(
+                    "Cartella non sicura o collegamento: {}",
+                    "Unsafe folder or link: {}",
+                    component.display()
+                )
             ),
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
                 fs::create_dir(component)?
@@ -232,7 +256,10 @@ fn pin_directory(root: &Path) -> Result<File> {
     let file = options.open(root)?;
     ensure!(
         !is_link(&file.metadata()?),
-        "La cartella dei motori è un collegamento"
+        crate::trf!(
+            "La cartella dei motori è un collegamento",
+            "The engine folder is a link"
+        )
     );
     Ok(file)
 }
@@ -362,7 +389,10 @@ fn install_with(
     if let Ok(metadata) = fs::symlink_metadata(&lock_path) {
         ensure!(
             metadata.is_file() && !is_link(&metadata),
-            "Blocco di installazione non sicuro"
+            crate::trf!(
+                "Blocco di installazione non sicuro",
+                "Unsafe installation lock"
+            )
         );
     }
     let mut options = OpenOptions::new();
@@ -375,23 +405,34 @@ fn install_with(
     let lock = options.open(lock_path)?;
     ensure!(
         !is_link(&lock.metadata()?),
-        "Blocco di installazione non sicuro"
+        crate::trf!(
+            "Blocco di installazione non sicuro",
+            "Unsafe installation lock"
+        )
     );
-    fs2::FileExt::try_lock_exclusive(&lock)
-        .context("Un’altra installazione di questo motore è già in corso")?;
+    fs2::FileExt::try_lock_exclusive(&lock).context(crate::i18n::tr(
+        "Un’altra installazione di questo motore è già in corso",
+        "Another installation of this engine is already running",
+    ))?;
     let destination = root.join(spec.engine.key());
     match fs::symlink_metadata(&destination) {
         Ok(metadata) => {
             ensure!(
                 metadata.is_dir() && !is_link(&metadata),
-                "La destinazione esistente non è una cartella sicura"
+                crate::trf!(
+                    "La destinazione esistente non è una cartella sicura",
+                    "The existing destination is not a safe folder"
+                )
             );
             progress(update(
                 spec,
                 InstallPhase::Verifying,
                 0.0,
                 0,
-                "Verifica del motore già presente…",
+                crate::i18n::tr(
+                    "Verifica del motore già presente…",
+                    "Verifying the existing engine…",
+                ),
             ));
             if installed_matches(&destination, spec, cancel)? {
                 progress(update(
@@ -399,14 +440,18 @@ fn install_with(
                     InstallPhase::Complete,
                     1.0,
                     spec.bytes,
-                    "Motore già installato e verificato",
+                    crate::i18n::tr(
+                        "Motore già installato e verificato",
+                        "Engine already installed and verified",
+                    ),
                 ));
                 return Ok(destination);
             }
-            bail!(
+            bail!(crate::trf!(
                 "La cartella {} esiste già e non corrisponde a questa installazione verificata. Non è stata modificata. Puoi selezionare il programma in Impostazioni → Motori.",
+                "The folder {} already exists and does not match this verified installation. It was not modified. You can select the program in Settings → Engines.",
                 destination.display()
-            );
+            ));
         }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
         Err(error) => return Err(error.into()),
@@ -424,15 +469,24 @@ fn install_with(
         InstallPhase::Verifying,
         0.72,
         spec.bytes,
-        "Verifica SHA-256 dell’archivio…",
+        crate::i18n::tr(
+            "Verifica SHA-256 dell’archivio…",
+            "Verifying the archive's SHA-256…",
+        ),
     ));
     ensure!(
         fs::metadata(&archive)?.len() == spec.bytes,
-        "Dimensione dell’archivio diversa da quella prevista"
+        crate::trf!(
+            "Dimensione dell’archivio diversa da quella prevista",
+            "The archive size does not match the expected size"
+        )
     );
     ensure!(
         hash_file(&archive, cancel)? == spec.sha256,
-        "Verifica SHA-256 non riuscita: nessun motore è stato installato"
+        crate::trf!(
+            "Verifica SHA-256 non riuscita: nessun motore è stato installato",
+            "SHA-256 verification failed: no engine was installed"
+        )
     );
     let prepared = workspace.path().join("prepared");
     fs::create_dir(&prepared)?;
@@ -445,7 +499,10 @@ fn install_with(
     {
         ensure!(
             files.get(required).is_some_and(|file| file.bytes > 0),
-            "Archivio incompleto: {required}"
+            crate::trf!(
+                "Archivio incompleto: {required}",
+                "Incomplete archive: {required}"
+            )
         );
     }
     let marker = InstallMarker {
@@ -469,7 +526,10 @@ fn install_with(
         InstallPhase::Installing,
         0.99,
         spec.bytes,
-        "Installazione nella cartella personale…",
+        crate::i18n::tr(
+            "Installazione nella cartella personale…",
+            "Installing in the user folder…",
+        ),
     ));
     publish_new_directory(&prepared, &destination)?;
     progress(update(
@@ -477,7 +537,10 @@ fn install_with(
         InstallPhase::Complete,
         1.0,
         spec.bytes,
-        "Motore installato e verificato",
+        crate::i18n::tr(
+            "Motore installato e verificato",
+            "Engine installed and verified",
+        ),
     ));
     Ok(destination)
 }
@@ -494,7 +557,7 @@ fn pin_archive(path: &Path) -> Result<File> {
     let metadata = file.metadata()?;
     ensure!(
         metadata.is_file() && !is_link(&metadata),
-        "Archivio non sicuro"
+        crate::trf!("Archivio non sicuro", "Unsafe archive")
     );
     Ok(file)
 }
@@ -502,11 +565,14 @@ fn pin_archive(path: &Path) -> Result<File> {
 fn safe_relative(name: &str, expected_root: &str) -> Result<PathBuf> {
     ensure!(
         name.is_ascii() && !name.starts_with(['/', '\\']),
-        "Nome ZIP non sicuro"
+        crate::trf!("Nome ZIP non sicuro", "Unsafe ZIP entry name")
     );
     let normalized = name.replace('\\', "/");
     let parts: Vec<_> = normalized.trim_end_matches('/').split('/').collect();
-    ensure!(parts.first() == Some(&expected_root), "Radice ZIP inattesa");
+    ensure!(
+        parts.first() == Some(&expected_root),
+        crate::trf!("Radice ZIP inattesa", "Unexpected ZIP root")
+    );
     for component in &parts {
         ensure!(
             !component.is_empty()
@@ -516,7 +582,7 @@ fn safe_relative(name: &str, expected_root: &str) -> Result<PathBuf> {
                 && !component
                     .chars()
                     .any(|value| value.is_control() || "<>:\"|?*".contains(value)),
-            "Percorso ZIP non sicuro"
+            crate::trf!("Percorso ZIP non sicuro", "Unsafe ZIP path")
         );
         let stem = component
             .split('.')
@@ -528,7 +594,10 @@ fn safe_relative(name: &str, expected_root: &str) -> Result<PathBuf> {
                 && !(stem.len() == 4
                     && (stem.starts_with("COM") || stem.starts_with("LPT"))
                     && matches!(stem.as_bytes()[3], b'1'..=b'9')),
-            "Nome dispositivo Windows nel ZIP"
+            crate::trf!(
+                "Nome dispositivo Windows nel ZIP",
+                "Windows device name in ZIP"
+            )
         );
     }
     Ok(parts
@@ -546,7 +615,13 @@ fn extract_archive(
 ) -> Result<BTreeMap<String, InstalledFile>> {
     let mut zip = zip::ZipArchive::new(File::open(archive)?)?;
     let mut raw = File::open(archive)?;
-    ensure!(zip.len() <= MAX_FILES, "Archivio con troppi file");
+    ensure!(
+        zip.len() <= MAX_FILES,
+        crate::trf!(
+            "Archivio con troppi file",
+            "The archive contains too many files"
+        )
+    );
     let mut seen = HashSet::new();
     let mut planned = Vec::with_capacity(zip.len());
     let mut total = 0u64;
@@ -556,38 +631,57 @@ fn extract_archive(
         let relative = safe_relative(entry.name(), spec.archive_root)?;
         ensure!(
             !entry.encrypted() && !entry.is_symlink(),
-            "Collegamento o file cifrato nel ZIP"
+            crate::trf!(
+                "Collegamento o file cifrato nel ZIP",
+                "Link or encrypted file in ZIP"
+            )
         );
         if let Some(mode) = entry.unix_mode() {
             ensure!(
                 matches!(mode & 0o170000, 0 | 0o040000 | 0o100000),
-                "Tipo di file ZIP non consentito"
+                crate::trf!(
+                    "Tipo di file ZIP non consentito",
+                    "Disallowed ZIP entry type"
+                )
             );
         }
         raw.seek(SeekFrom::Start(
             entry
                 .central_header_start()
                 .checked_add(38)
-                .context("Header ZIP non valido")?,
+                .context(crate::i18n::tr(
+                    "Header ZIP non valido",
+                    "Invalid ZIP header",
+                ))?,
         ))?;
         let mut attributes = [0u8; 4];
         raw.read_exact(&mut attributes)?;
         ensure!(
             u32::from_le_bytes(attributes) & 0x400 == 0,
-            "Reparse point nel ZIP"
+            crate::trf!("Reparse point nel ZIP", "Reparse point in ZIP")
         );
         if relative.as_os_str().is_empty() {
-            ensure!(entry.is_dir(), "Radice ZIP non valida");
+            ensure!(
+                entry.is_dir(),
+                crate::trf!("Radice ZIP non valida", "Invalid ZIP root")
+            );
             continue;
         }
         ensure!(
             seen.insert(relative.to_string_lossy().to_ascii_lowercase()),
-            "Percorso ZIP duplicato"
+            crate::trf!("Percorso ZIP duplicato", "Duplicate ZIP path")
         );
-        total = total
-            .checked_add(entry.size())
-            .context("Dimensione ZIP eccessiva")?;
-        ensure!(total <= MAX_EXPANDED, "Archivio espanso troppo grande");
+        total = total.checked_add(entry.size()).context(crate::i18n::tr(
+            "Dimensione ZIP eccessiva",
+            "ZIP size limit exceeded",
+        ))?;
+        ensure!(
+            total <= MAX_EXPANDED,
+            crate::trf!(
+                "Archivio espanso troppo grande",
+                "The expanded archive is too large"
+            )
+        );
         planned.push((index, relative, entry.is_dir(), entry.size()));
     }
     let mut files = BTreeMap::new();
@@ -619,7 +713,10 @@ fn extract_archive(
             bytes += count as u64;
             ensure!(
                 bytes <= expected_size,
-                "File ZIP più grande di quanto dichiarato"
+                crate::trf!(
+                    "File ZIP più grande di quanto dichiarato",
+                    "ZIP entry exceeds its declared size"
+                )
             );
             output.write_all(&buffer[..count])?;
             hash.update(&buffer[..count]);
@@ -629,10 +726,16 @@ fn extract_archive(
                 InstallPhase::Extracting,
                 0.76 + 0.22 * completed as f32 / total.max(1) as f32,
                 spec.bytes,
-                "Estrazione dei programmi e delle licenze…",
+                crate::i18n::tr(
+                    "Estrazione dei programmi e delle licenze…",
+                    "Extracting programs and licenses…",
+                ),
             ));
         }
-        ensure!(bytes == expected_size, "File ZIP incompleto");
+        ensure!(
+            bytes == expected_size,
+            crate::trf!("File ZIP incompleto", "Incomplete ZIP entry")
+        );
         files.insert(
             relative.to_string_lossy().replace('\\', "/"),
             InstalledFile {
@@ -648,7 +751,10 @@ fn publish_new_directory(source: &Path, destination: &Path) -> Result<()> {
     ensure!(
         fs::symlink_metadata(destination)
             .is_err_and(|error| error.kind() == std::io::ErrorKind::NotFound),
-        "La destinazione è stata creata da un’altra operazione; nessun file sovrascritto"
+        crate::trf!(
+            "La destinazione è stata creata da un’altra operazione; nessun file sovrascritto",
+            "Another operation created the destination; no files were overwritten"
+        )
     );
     #[cfg(windows)]
     {
@@ -665,8 +771,11 @@ fn publish_new_directory(source: &Path, destination: &Path) -> Result<()> {
             .collect();
         ensure!(
             unsafe { MoveFileW(source.as_ptr(), destination.as_ptr()) } != 0,
-            "Impossibile pubblicare il motore senza sovrascrivere file: {}",
-            std::io::Error::last_os_error()
+            crate::trf!(
+                "Impossibile pubblicare il motore senza sovrascrivere file: {}",
+                "Unable to publish the engine without overwriting files: {}",
+                std::io::Error::last_os_error()
+            )
         );
     }
     #[cfg(not(windows))]
@@ -705,7 +814,10 @@ fn retry_download(
             InstallPhase::Connecting,
             0.0,
             0,
-            format!("Connessione al distributore · tentativo {attempt}/3…"),
+            crate::trf!(
+                "Connessione al distributore · tentativo {attempt}/3…",
+                "Connecting to the distributor · attempt {attempt}/3…"
+            ),
         ));
         let result = attempt_download(path, spec, cancel, &mut |bytes| {
             progress(update(
@@ -713,7 +825,10 @@ fn retry_download(
                 InstallPhase::Downloading,
                 0.70 * bytes as f32 / spec.bytes.max(1) as f32,
                 bytes,
-                "Download dell’archivio verificato…",
+                crate::i18n::tr(
+                    "Download dell’archivio verificato…",
+                    "Downloading the verified archive…",
+                ),
             ));
         });
         match result {
@@ -730,8 +845,14 @@ fn retry_download(
             }
         }
     }
-    Err(failure.context("Download non disponibile")?)
-        .context("Download non riuscito dopo tre tentativi")
+    Err(failure.context(crate::i18n::tr(
+        "Download non disponibile",
+        "Download unavailable",
+    ))?)
+    .context(crate::i18n::tr(
+        "Download non riuscito dopo tre tentativi",
+        "Download failed after three attempts",
+    ))
 }
 
 #[cfg(test)]

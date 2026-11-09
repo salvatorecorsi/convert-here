@@ -1,6 +1,8 @@
 # Sviluppo e distribuzione
 
-Questa guida descrive come compilare Convert Here, verificare il codice e preparare le release pubbliche con i rispettivi sorgenti. Esegui i comandi PowerShell dalla radice della repository.
+**Italiano** · [English](development.en.md)
+
+Questa guida descrive come compilare Convert Here, verificare il codice e preparare le release pubbliche con i rispettivi sorgenti. Esegui i comandi PowerShell dalla radice della repository. I sorgenti aggiornati includono l'interfaccia italiano/inglese; i pacchetti v0.4.0 precedentemente pubblicati mantengono la GUI italiana.
 
 ## Compilazione
 

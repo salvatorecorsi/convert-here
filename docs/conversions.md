@@ -1,5 +1,7 @@
 # Conversioni e formati
 
+**Italiano** · [English](conversions.en.md)
+
 Guida alle destinazioni, alle opzioni e ai limiti di Convert Here. Per iniziare, consulta il [README](../README.md); per impostare gli strumenti esterni, consulta [Motori e preferenze](configuration.md).
 
 Sono disponibili **44 formati di destinazione** e **93 estensioni di ingresso riconosciute**. Nella 0.4.0, in **Impostazioni** scegli quali uscite mostrare nel selettore della GUI e nel menu Explorer, raggruppate per audio, video, immagini e documenti. Il default è **MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4**; puoi abilitare le altre destinazioni, comprese TXT, DOCX, XLSX, HEIC e AVIF. Le scelte restano salvate e il menu le rilegge senza riavviare Explorer. Se non abiliti alcuna uscita, resta accessibile **Impostazioni personalizzate…**. Le 93 estensioni di ingresso e i 44 formati gestiti dal motore non cambiano: CLI, richieste `--quick` esplicite e lavori già accodati non vengono bloccati dal filtro di visualizzazione. Le destinazioni effettive dipendono dalla categoria del file e dai codec dei motori selezionati.

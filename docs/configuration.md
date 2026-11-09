@@ -1,6 +1,16 @@
 # Configurazione, motori e dati locali
 
-Questa guida descrive le impostazioni di Convert Here 0.4.0. Per iniziare, vedi il [README](../README.md); per le conversioni disponibili, la [guida ai formati](conversions.md).
+**Italiano** · [English](configuration.en.md)
+
+Questa guida descrive le impostazioni di Convert Here, incluse le lingue aggiunte nei sorgenti successivi alla 0.4.0. Per iniziare, vedi il [README](../README.md); per le conversioni disponibili, la [guida ai formati](conversions.md).
+
+## Lingua dell'interfaccia
+
+In **Impostazioni → Lingua** scegli **Sistema**, **Italiano** o **English**. Sistema segue la lingua di visualizzazione di Windows: italiano per Windows in italiano, inglese per le altre lingue. La scelta è salvata nel campo `ui_language` di `preferences.json`, con valore `system`, `it` o `en`. Le impostazioni precedenti senza questo campo usano Sistema. La scelta non modifica lingua OCR, formati, nomi dei risultati o altre preferenze.
+
+L'interfaccia bilingue è disponibile compilando i sorgenti aggiornati; i pacchetti v0.4.0 già pubblicati mantengono la GUI italiana. L'installer supporta già italiano e inglese.
+
+Per una sola esecuzione della CLI usa `--language system|it|en`: prevale sulla scelta salvata senza riscriverla. I messaggi di Windows e dei motori esterni possono seguire le rispettive impostazioni. [Guida alla CLI](command-line.md).
 
 ## Motori di conversione
 

@@ -1,14 +1,18 @@
 # Convert Here
 
+[**Italiano**](README.md) · [English](README.en.md)
+
 **Converti audio, video, immagini e documenti direttamente dal tuo PC Windows.**
 
 Sviluppato da **[Salvatore Corsi](https://github.com/salvatorecorsi)**, Convert Here è un programma gratuito e open source scritto in Rust. Puoi usarlo dalla sua finestra, dal menu di Esplora file o dalla riga di comando. Le conversioni e l'OCR avvengono sul computer, senza caricare i tuoi file su un servizio online. Nessun account, abbonamento o acquisto in-app.
 
 [Scarica per Windows](https://github.com/salvatorecorsi/convert-here/releases/latest) · [Microsoft Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8) · [Novità della 0.4.0](docs/release-notes-0.4.0.md) · [Segnala un problema](https://github.com/salvatorecorsi/convert-here/issues)
 
+**Italiano e inglese sono disponibili nei sorgenti aggiornati.** Per usare il selettore della lingua compila questi sorgenti; i pacchetti v0.4.0 già pubblicati mantengono l'interfaccia italiana. Vedi [Lingue](#lingue).
+
 ![Convert Here: due immagini convertite da PNG a JPEG, con formato, qualità e destinazione nella stessa finestra](docs/screenshots/conversione-immagini.png)
 
-*Conversione di due immagini in JPEG completata. Gli originali restano conservati e ogni file mostra il proprio risultato.*
+*Conversione di due immagini in JPEG completata. Gli originali restano conservati e ogni file mostra il proprio risultato. Le catture mostrano l'interfaccia italiana; le stesse funzioni sono disponibili in inglese.*
 
 ## Cosa puoi fare
 
@@ -138,7 +142,11 @@ LibreOffice, libheif, Tesseract e i modelli OCR si configurano da installazioni 
 
 ## Lingue
 
-L'**interfaccia dell'app e il menu di Esplora file sono in italiano**, senza selettore della lingua. L'**installer è disponibile in italiano e inglese**. La CLI usa nomi delle opzioni in inglese e messaggi applicativi in italiano.
+L'**app e il menu di Esplora file supportano italiano e inglese** nei sorgenti aggiornati. In **Impostazioni → Lingua** scegli **Sistema**, **Italiano** o **English**. Sistema segue la lingua di visualizzazione di Windows: italiano per Windows in italiano, inglese per le altre lingue. La scelta resta salvata ed è indipendente dalla lingua OCR.
+
+L'**installer è già disponibile in italiano e inglese**. La CLI mantiene i nomi delle opzioni in inglese; `--language system|it|en` sceglie la lingua per la singola esecuzione senza cambiare le preferenze. I messaggi di Windows e dei motori esterni possono seguire le rispettive impostazioni.
+
+**La nuova interfaccia bilingue è disponibile compilando i sorgenti aggiornati.** I pacchetti **v0.4.0 precedentemente pubblicati mantengono la GUI italiana**: questa modifica ai sorgenti non sostituisce quei download.
 
 L'**OCR supporta le lingue dei modelli Tesseract installati**: italiano e inglese sono la scelta predefinita; nell'app sono proposti anche francese, tedesco, spagnolo e un campo per altri codici. La lingua del riconoscimento non cambia quella dell'interfaccia.
 
@@ -153,7 +161,7 @@ Il download facoltativo dei motori richiede Internet e contatta i distributori; 
 La distribuzione GitHub include `the-converter-cli.exe`. Dalla sua cartella, per esempio:
 
 ```powershell
-.\the-converter-cli.exe --diagnose
+.\the-converter-cli.exe --language it --diagnose
 .\the-converter-cli.exe --convert --target mp3 --preset quality --files "C:\Video\clip.mp4"
 .\the-converter-cli.exe --convert --target docx --ocr --ocr-language ita+eng --files "C:\Documenti\scansione.pdf"
 .\the-converter-cli.exe --convert --target pdf --pdf-action merge --files "C:\Documenti\prima.pdf" "C:\Documenti\seconda.pdf"

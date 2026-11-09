@@ -16,7 +16,7 @@
   <Description>Local audio, video, image and document conversion</Description>
   <Logo>Assets\StoreLogo.png</Logo>
  </Properties>
- <Resources><Resource Language="it-it"/></Resources>
+ <Resources><Resource Language="it-it"/><Resource Language="en-us"/></Resources>
  <Dependencies><TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.22000.0" MaxVersionTested="10.0.26100.0"/></Dependencies>
  <Applications>
   <Application Id="TheConverter" Executable="the-converter.exe" uap10:TrustLevel="mediumIL" uap10:RuntimeBehavior="packagedClassicApp" uap10:SupportsMultipleInstances="true">

@@ -228,8 +228,8 @@ impl OutputFormat {
             Self::Pnm => "PNM",
             Self::Csv => "CSV",
             Self::Xlsx => "Excel (XLSX)",
-            Self::Docx => "Word (DOCX) · testo",
-            Self::Html => "HTML · testo",
+            Self::Docx => crate::i18n::tr("Word (DOCX) · testo", "Word (DOCX) · text"),
+            Self::Html => crate::i18n::tr("HTML · testo", "HTML · text"),
             Self::Avif => "AVIF",
             Self::Heic => "HEIC",
         }

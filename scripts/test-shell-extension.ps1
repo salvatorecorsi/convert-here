@@ -112,6 +112,11 @@ public static class ConverterShellSmokeV2 {
         Check(((GetTitle)Slot(command, 3, typeof(GetTitle)))(command, IntPtr.Zero, out text));
         try { return Marshal.PtrToStringUni(text); } finally { Marshal.FreeCoTaskMem(text); }
     }
+    static string Tooltip(IntPtr command) {
+        IntPtr text;
+        Check(((GetTitle)Slot(command, 5, typeof(GetTitle)))(command, IntPtr.Zero, out text));
+        try { return Marshal.PtrToStringUni(text); } finally { Marshal.FreeCoTaskMem(text); }
+    }
     static string[] Visible(IntPtr parent, params string[] files) {
         IntPtr[] pidls = new IntPtr[files.Length];
         IntPtr array = IntPtr.Zero, enumerator = IntPtr.Zero;
@@ -208,7 +213,7 @@ public static class ConverterShellSmokeV2 {
                 });
                 string previous = System.IO.File.ReadAllText(preferences);
                 try {
-                    System.IO.File.WriteAllText(preferences, "{\"enabled_output_formats\":[]}");
+                    System.IO.File.WriteAllText(preferences, "{\"ui_language\":\"it\",\"enabled_output_formats\":[]}");
                     foreach (IntPtr child in new IntPtr[]{bulk, merge}) {
                         Check(((GetState)Slot(child, 7, typeof(GetState)))(child, valid, 1, out state));
                         if (state != 2) throw new Exception("Azione PDF disabilitata ancora visibile");
@@ -250,7 +255,7 @@ public static class ConverterShellSmokeV2 {
                 if (fetched != 1) throw new Exception("Sottocomando mancante");
                 string title = Title(child);
                 if ((requested == "mp3" && title == "MP3") ||
-                    (requested == "custom" && title == "Impostazioni personalizzate…") ||
+                    (requested == "custom" && (title == "Impostazioni personalizzate…" || title == "Custom settings…")) ||
                     (requested == "pdf-bulk" && title == "PDF (Bulk)") ||
                     (requested == "pdf-merge" && title == "PDF (Merge)")) break;
                 if (index >= 127) throw new Exception("Troppi sottocomandi");
@@ -282,8 +287,10 @@ public static class ConverterShellSmokeV2 {
             Guid commandId = new Guid("a08ce4d0-fa25-44ab-b57c-c7b1c323e0b9");
             Check(activate(ref clsid, ref factoryId, out factory));
             Check(((CreateInstance)Slot(factory, 3, typeof(CreateInstance)))(factory, IntPtr.Zero, ref commandId, out command));
+            System.IO.File.WriteAllText(preferences, "{\"ui_language\":\"it\"}");
             string label = Title(command);
             if (label != "Converti in") throw new Exception("Titolo del menu padre errato: " + label);
+            if (Tooltip(command) != "Scegli formato, qualità e destinazione") throw new Exception("Tooltip italiano errato");
             uint flags;
             Check(((GetFlags)Slot(command, 9, typeof(GetFlags)))(command, out flags));
             if (flags != 1) throw new Exception("ECF_HASSUBCOMMANDS mancante");
@@ -292,20 +299,20 @@ public static class ConverterShellSmokeV2 {
             const string custom = "Impostazioni personalizzate…";
             Expect("Default FLAC", Visible(command, audio), new string[]{"MP3", "WAV", custom});
             Expect("Default PNG + PDF", Visible(command, supported, pdf), new string[]{"PNG", "JPEG", "PDF (Bulk)", "PDF (Merge)", custom});
-            System.IO.File.WriteAllText(preferences, "{\"enabled_output_formats\":[\"flac\",\"txt\",\"avif\",\"unknown\"]}");
+            System.IO.File.WriteAllText(preferences, "{\"ui_language\":\"it\",\"enabled_output_formats\":[\"flac\",\"txt\",\"avif\",\"unknown\"]}");
             Expect("FLAC attivato senza riavvio", Visible(command, audio), new string[]{"FLAC", custom});
             Expect("OCR attivato senza PDF", Visible(command, supported, pdf), new string[]{"TXT · OCR / testo PDF", custom});
             Expect("AVIF attivato", Visible(command, heif), new string[]{"TXT · OCR", "AVIF", custom});
-            System.IO.File.WriteAllText(preferences, "{\"enabled_output_formats\":[]}");
+            System.IO.File.WriteAllText(preferences, "{\"ui_language\":\"it\",\"enabled_output_formats\":[]}");
             if (State(command, supported) != 0) throw new Exception("Input valido nascosto con tutte le destinazioni disabilitate");
             Expect("Destinazioni vuote FLAC", Visible(command, audio), new string[]{custom});
             Expect("Destinazioni vuote PDF batch", Visible(command, supported, pdf), new string[]{custom});
             Expect("Destinazioni vuote sconosciuto", Visible(command, unsupported), new string[]{});
             foreach (string invalid in new string[]{"{broken", "{\"enabled_output_formats\":{}}", "{\"enabled_output_formats\":[\"unknown\"]}", "{\"settings\":{\"format\":\"Flac\"}}"}) {
                 System.IO.File.WriteAllText(preferences, invalid);
-                Expect("Preferenze non valide", Visible(command, audio), new string[]{"MP3", "WAV", custom});
+                Expect("Preferenze non valide", Visible(command, audio), new string[]{"MP3", "WAV", Title(command) == "Convert to" ? "Custom settings…" : custom});
             }
-            System.IO.File.WriteAllText(preferences, "{\"enabled_output_formats\":[\"mp3\",\"wav\",\"flac\",\"aac\",\"ogg\",\"opus\",\"aiff\",\"mp4\",\"mkv\",\"mov\",\"webm\",\"avi\",\"gif\",\"png\",\"jpg\",\"webp\",\"bmp\",\"tiff\",\"ico\",\"pdf\",\"txt\",\"m4a\",\"wma\",\"ac3\",\"au\",\"caf\",\"mpeg\",\"wmv\",\"flv\",\"ts\",\"m4v\",\"3gp\",\"qoi\",\"tga\",\"ff\",\"exr\",\"hdr\",\"pnm\",\"csv\",\"xlsx\",\"docx\",\"html\",\"avif\",\"heic\"]}");
+            System.IO.File.WriteAllText(preferences, "{\"ui_language\":\"it\",\"enabled_output_formats\":[\"mp3\",\"wav\",\"flac\",\"aac\",\"ogg\",\"opus\",\"aiff\",\"mp4\",\"mkv\",\"mov\",\"webm\",\"avi\",\"gif\",\"png\",\"jpg\",\"webp\",\"bmp\",\"tiff\",\"ico\",\"pdf\",\"txt\",\"m4a\",\"wma\",\"ac3\",\"au\",\"caf\",\"mpeg\",\"wmv\",\"flv\",\"ts\",\"m4v\",\"3gp\",\"qoi\",\"tga\",\"ff\",\"exr\",\"hdr\",\"pnm\",\"csv\",\"xlsx\",\"docx\",\"html\",\"avif\",\"heic\"]}");
             Expect("Audio + video", Visible(command, audio, video), new string[]{"MP3", "WAV", "FLAC", "AAC", "OGG", "Opus", "AIFF", "M4A", "WMA", "AC3", "AU", "CAF", custom});
             Expect("PNG + PDF", Visible(command, supported, pdf), new string[]{"PNG", "JPEG", "PDF (Bulk)", "PDF (Merge)", "TXT · OCR / testo PDF", custom});
             Expect("DOCX + PNG", Visible(command, document, supported), new string[]{"PDF (Bulk)", "PDF (Merge)", custom});
@@ -328,11 +335,19 @@ public static class ConverterShellSmokeV2 {
             Expect("AVIF", Visible(command, avif), Visible(command, supported));
             Expect("HEIF", Visible(command, heif), Visible(command, supported));
             Expect("Sconosciuto", Visible(command, unsupported), new string[]{});
+            string italianPreferences = System.IO.File.ReadAllText(preferences);
+            System.IO.File.WriteAllText(preferences, italianPreferences.Replace("\"ui_language\":\"it\"", "\"ui_language\":\"en\""));
+            if (Title(command) != "Convert to") throw new Exception("English menu title did not refresh");
+            if (Tooltip(command) != "Choose format, quality and destination") throw new Exception("English tooltip did not refresh");
+            Expect("English PDF", Visible(command, pdf), new string[]{"PNG", "JPEG", "PDF · compress", "TXT", "Word (DOCX) · text", "HTML · text", "Custom settings…"});
+            Expect("English mixed OCR", Visible(command, supported, pdf), new string[]{"PNG", "JPEG", "PDF (Bulk)", "PDF (Merge)", "TXT · OCR / PDF text", "Custom settings…"});
+            System.IO.File.WriteAllText(preferences, italianPreferences);
+            if (Title(command) != "Converti in") throw new Exception("Italian menu title did not refresh");
             ValidatePdfActions(command, supported, pdf, audio, preferences);
             Marshal.Release(command); command = IntPtr.Zero;
             Marshal.Release(factory); factory = IntPtr.Zero;
             if (unload() != 0) throw new Exception("Oggetti COM non rilasciati");
-            return "COM smoke test OK: " + label + "; preferenze default/personalizzate/vuote/non valide e aggiornamento live, filtri batch, PDF disabilitato blocca Invoke, selezioni reali IShellItemArray e unload OK.";
+            return "COM smoke test OK: " + label + "; preferenze default/personalizzate/vuote/non valide, titoli e tooltip IT/EN con aggiornamento live, filtri batch, PDF disabilitato blocca Invoke, selezioni reali IShellItemArray e unload OK.";
         } finally {
             if (command != IntPtr.Zero) Marshal.Release(command);
             if (factory != IntPtr.Zero) Marshal.Release(factory);
