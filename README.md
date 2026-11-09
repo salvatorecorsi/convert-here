@@ -1,239 +1,187 @@
 # Convert Here
 
-Sviluppato da **Salvatore Corsi**: versione Rust per Windows di [Final Converter](https://github.com/salvatorecorsi/final-converter). Conversioni di formato locali, OCR sul PC, selezioni multiple e integrazione con Esplora file. Convert Here e gratuito, senza abbonamenti, acquisti in-app o costi a consumo. Nessun pagamento richiesto per continuare a usarlo.
+**Converti audio, video, immagini e documenti direttamente dal tuo PC Windows.**
 
-Il nome pubblico e **Convert Here**, riservato anche in Microsoft Partner Center; il repository canonico e [salvatorecorsi/convert-here](https://github.com/salvatorecorsi/convert-here). Per compatibilita restano invariati i nomi tecnici degli eseguibili e dei crate, le cartelle dati e gli identificativi COM/MSIX. Le release precedenti possono ancora mostrare il nome The Converter. [Novita della versione 0.4.0](docs/release-notes-0.4.0.md).
+Sviluppato da **[Salvatore Corsi](https://github.com/salvatorecorsi)**, Convert Here è un programma gratuito e open source scritto in Rust. Puoi usarlo dalla sua finestra, dal menu di Esplora file o dalla riga di comando. Le conversioni e l'OCR avvengono sul computer, senza caricare i tuoi file su un servizio online. Nessun account, abbonamento o acquisto in-app.
 
-## Preparazione Microsoft Store
+[Scarica per Windows](https://github.com/salvatorecorsi/convert-here/releases/latest) · [Microsoft Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8) · [Novità della 0.4.0](docs/release-notes-0.4.0.md) · [Segnala un problema](https://github.com/salvatorecorsi/convert-here/issues)
 
-La distribuzione Store usa un **MSIX completo** con il menu di Windows 11 dichiarato nel pacchetto. Editore pubblico e autore del codice: **Salvatore Corsi**. Il nome editore e approvato da Microsoft; il profilo risulta **Authorized** e l'account **Active**. L'account GitHub che ospita il sorgente resta indipendente dall'identita dell'editore Microsoft.
+![Convert Here: due immagini convertite da PNG a JPEG, con formato, qualità e destinazione nella stessa finestra](docs/screenshots/conversione-immagini.png)
 
-La build di anteprima e separata dalla release GitHub e non contiene certificati privati o motori esterni. Le immagini nei formati nativi e le immagini in PDF funzionano subito, come compressione, divisione e unione dei PDF. Audio/video richiedono FFmpeg; esportazione PDF in immagini o testo incorporato richiede Poppler; Office, Excel/CSV e HTML in PDF richiedono LibreOffice. HEIC/HEIF e AVIF richiedono libheif, mentre OCR richiede Tesseract con i modelli delle lingue e, per i PDF, anche Poppler. I motori si selezionano in **Impostazioni → Motori**. Nella 0.4.0 puoi anche richiedere il download di FFmpeg, Poppler oppure entrambi: prima di confermare vedi origine, versione, dimensioni, licenze e destinazione. Il download facoltativo richiede Internet; i file da convertire restano sul PC. Questi requisiti sono dichiarati anche all'inizio delle schede Store.
+*Conversione di due immagini in JPEG completata. Gli originali restano conservati e ogni file mostra il proprio risultato.*
 
-```powershell
-.\scripts\build-store-package.ps1
-```
+## Cosa puoi fare
 
-La preview usa un'identita di sviluppo e **non va caricata nello Store**. Per il pacchetto definitivo occorrono i dati esatti dell'Identita prodotto in Partner Center, la versione Store e il nome editore effettivamente confermato nel portale. Il modello e in `packaging/store/identity.partner-center.example.json`; la procedura e in [docs/store-submission.md](docs/store-submission.md).
+- **Convertire più file insieme**, con 44 formati di destinazione e 93 estensioni di ingresso riconosciute.
+- **Usare il tasto destro** per accodare conversioni rapide con le preferenze salvate, oppure aprire le impostazioni personalizzate.
+- **Convertire audio e video**, estrarre l'audio da un video, creare GIF animate, regolare qualità, dimensioni e intervallo temporale.
+- **Convertire e ridimensionare immagini**, creare PDF da immagini e lavorare anche con HEIC/HEIF, AVIF, OpenEXR e HDR.
+- **Comprimere, dividere e unire PDF**, ordinando anche le singole pagine di immagini e documenti diversi.
+- **Estrarre testo dalle immagini in TXT e dai PDF in TXT, Word DOCX o HTML**, con OCR locale per le scansioni.
+- **Convertire documenti Office, Excel, CSV e HTML**, scegliendo anche il separatore dei CSV.
+- **Personalizzare i formati visibili e l'aspetto**, con tema di sistema, chiaro o scuro.
 
-Convert Here e disponibile nel [Microsoft Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8). Per la versione presente nel catalogo e lo stato dei nuovi aggiornamenti consulta la [procedura Store](docs/store-submission.md) e lo [stato delle verifiche](docs/store-validation.md).
+## Installazione
 
-Gli esiti dei test e i controlli Store ancora da completare sono raccolti in [store-validation.md](docs/store-validation.md).
+La distribuzione GitHub richiede **Windows 10 build 19041 o successivo, x64**. Dalla [release 0.4.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.4.0) puoi scegliere:
 
-Su GitHub Actions, **Windows checks** verifica codice e fixture su push e pull request. **Microsoft Store package** si avvia manualmente: senza dati Partner Center produce una preview; con `for_submission` e l'identita reale produce il candidato unsigned da caricare. Il pacchetto e il materiale per la scheda si scaricano dagli artefatti del workflow. Le credenziali Microsoft e il certificato locale non sono richiesti dalla pipeline.
+| Pacchetto | Come si usa |
+| --- | --- |
+| `ConvertHere-0.4.0-windows-x64-setup.exe` | Avvia il setup. Installa per il tuo utente, senza privilegi amministrativi; l'integrazione con il menu contestuale è facoltativa e selezionata per default. |
+| `ConvertHere-0.4.0-windows-x64-portable.zip` | Estrai in una cartella stabile e avvia `the-converter.exe`. Include anche la CLI e gli script per il menu contestuale. |
 
-## Scarica e installa
+Puoi verificare i pacchetti con `SHA256SUMS.txt` nella stessa release. I nomi tecnici degli eseguibili restano `the-converter.exe` e `the-converter-cli.exe`; alcune release precedenti mostrano il nome The Converter.
 
-Scarica la [release 0.4.0 per Windows x64](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.4.0) e avvia `ConvertHere-0.4.0-windows-x64-setup.exe`. Il setup richiede Windows 10 build 19041 o successivo, x64. L'installer aggiunge il programma e il disinstaller per il tuo utente; la voce **Converti in** del menu contestuale e facoltativa e selezionata per default. Non richiede privilegi amministrativi.
+**Immagini native, immagini in PDF e operazioni sui PDF esistenti funzionano subito.** Per le altre conversioni configura i [motori opzionali](#motori-opzionali): il setup non li include e non li scarica. L'app non richiede Python, Node o Rust per essere eseguita.
 
-Nella 0.4.0 il setup e leggero e non scarica motori. Apri **Impostazioni → Motori** per richiedere FFmpeg, Poppler o entrambi, poi conferma i dettagli del download. I due archivi richiedono circa 159 MB di rete e, durante download ed estrazione, circa 615 MB liberi. Le conversioni di immagini native e immagini in PDF funzionano anche senza questi motori.
+Nella distribuzione GitHub il menu di Windows 11 si trova in **Mostra altre opzioni**. I pacchetti GitHub 0.4.0 non sono firmati Authenticode. Per i dettagli sul menu classico e moderno consulta la [guida all'integrazione con Windows](docs/windows-integration.md).
 
-Su Windows 11 il menu della distribuzione GitHub compare in **Mostra altre opzioni**. Gli artefatti pubblici non sono firmati Authenticode e non includono un'identita MSIX firmata attendibile per il menu moderno. Quel percorso resta separato ed e descritto in [windows-integration.md](docs/windows-integration.md).
+Per disinstallare usa **Impostazioni Windows → App → App installate → Convert Here → Disinstalla**. Preferenze e file convertiti restano conservati.
 
-Per rimuovere il programma usa **Impostazioni Windows → App → App installate → Convert Here → Disinstalla**, oppure il collegamento nel menu Start. Le preferenze e i file convertiti restano conservati. Se Windows mantiene caricata la DLL del menu, la pulizia viene completata al successivo accesso senza riavviare Esplora file durante il lavoro.
+## Come si usa
 
-È disponibile anche `ConvertHere-0.4.0-windows-x64-portable.zip` nella [release 0.4.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.4.0): estrailo in una cartella stabile e, se desideri il menu, usa `scripts/install-context-menu.ps1 -Mode Classic -InstallDirectory <cartella>`. Nella 0.4.0 anche la versione portable offre il download dei motori da **Impostazioni → Motori**. Lo script `scripts/install-runtime-tools.ps1 -InstallDirectory <cartella>` resta un'alternativa manuale per chi usa la CLI e contatta i distributori soltanto quando lo avvii. Verifica gli artefatti con `SHA256SUMS.txt` della stessa release.
+### Dalla finestra dell'app
 
-## Uso quotidiano
+1. Apri Convert Here e trascina i file nella finestra, oppure scegli **Aggiungi file**.
+2. Seleziona il **formato** di destinazione e un preset: **Leggero**, **Bilanciato** o **Alta qualità**.
+3. Scegli se salvare **accanto all'originale** o in una cartella a tua scelta. Apri **Impostazioni personalizzate** per i controlli del formato.
+4. Avvia la conversione e segui l'avanzamento dei singoli file. Puoi annullare il lavoro.
 
-Dal tasto destro scegli **Converti in → MP3**, **WAV**, **PDF**, ecc. La conversione rapida entra in una coda condivisa, con le preferenze salvate, e **non apre la finestra delle opzioni**. Nella cartella di destinazione compare subito un segnaposto con il nome previsto e una clessidra blu. Il menu propone i formati compatibili con la selezione e abilitati nelle impostazioni.
+Le preferenze restano salvate tra gli avvii. Gli originali e i risultati già presenti vengono conservati: se un nome è occupato, l'app aggiunge un numero. La coda interattiva usa un formato comune alla selezione; se le categorie non hanno una destinazione comune, convertile in gruppi separati.
 
-Con piu file convertibili in PDF, **PDF (Bulk)** accoda una conversione per ogni file e mantiene risultati separati. **PDF (Merge)** apre invece l'editor delle singole pagine per creare un PDF unico. Sono compatibili immagini, PDF, documenti Word e altri documenti Office supportati, Excel/CSV e HTML; audio e video non hanno queste azioni.
+### Dal tasto destro in Esplora file
 
-Il segnaposto è un collegamento Windows temporaneo: Esplora file normalmente ne nasconde l'estensione `.lnk`. Un doppio clic apre solo lo stato del lavoro, con avanzamento e annullamento. A conversione conclusa lascia il posto al file effettivo; in caso di errore mostra una X rossa e permette di aprire i dettagli. La clessidra in Esplora file è un'icona statica. [Dettagli della coda](docs/queued-conversions.md).
+Seleziona uno o più file e scegli **Converti in → MP3**, **WAV**, **PDF** o un altro formato compatibile. La conversione entra nella coda rapida in background con le impostazioni salvate. **Impostazioni personalizzate…** apre invece la finestra dell'app.
 
-**Converti in → Impostazioni personalizzate…** apre la finestra con coda, opzioni, avanzamento, annullamento e ultimo resoconto rapido. Puoi anche avviare `the-converter.exe` e trascinare i file nella finestra.
+Nella destinazione compare un segnaposto con una **clessidra blu** e il nome previsto del risultato. È un collegamento temporaneo: fai doppio clic per vedere avanzamento, dettagli e annullamento. Al termine viene sostituito dal file convertito; in caso di errore mostra una **X rossa**. Chiudere la finestra di stato lascia proseguire il lavoro. La finestra principale mostra la **Coda rapida** e la **Cronologia**. [Come funziona la coda](docs/queued-conversions.md).
 
-Per default i risultati sono accanto agli originali. Se il nome esiste già, viene aggiunto un numero: gli originali e i risultati precedenti non vengono sovrascritti. Le preferenze, inclusa la cartella di destinazione, restano salvate tra gli avvii.
+Con più file convertibili in PDF:
 
-## Conversioni
+- **PDF (Bulk)** crea risultati separati, uno per sorgente. Su PDF già esistenti applica la compressione senza perdita.
+- **PDF (Merge)** apre l'editor delle pagine per creare un unico documento nell'ordine scelto.
 
-Sono disponibili **44 formati di destinazione** e **93 estensioni di ingresso riconosciute**. Nella 0.4.0, in **Impostazioni** scegli quali uscite mostrare nel selettore della GUI e nel menu Explorer, raggruppate per audio, video, immagini e documenti. Il default e **MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4**; puoi abilitare le altre destinazioni, comprese TXT, DOCX, XLSX, HEIC e AVIF. Le scelte restano salvate e il menu le rilegge senza riavviare Explorer. Se non abiliti alcuna uscita, resta accessibile **Impostazioni personalizzate…**. Le 93 estensioni di ingresso e i 44 formati gestiti dal motore non cambiano: CLI, richieste `--quick` esplicite e lavori gia accodati non vengono bloccati dal filtro di visualizzazione. Le destinazioni effettive dipendono dalla categoria del file e dai codec dei motori selezionati.
+### Scegliere i formati da mostrare
 
-| Sorgente | Destinazioni | Motore |
+Apri **Impostazioni → Formati di uscita** e abilita le destinazioni che usi. Le scelte valgono sia nel selettore dell'app sia nel menu di Esplora file, senza riavviare Explorer. All'inizio sono attivi **MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4**. Ogni selezione mostra soltanto le destinazioni compatibili.
+
+![Impostazioni di Convert Here: formati di uscita raggruppati per categoria e scelta del tema](docs/screenshots/impostazioni-formati.png)
+
+*Puoi attivare tutti i formati, ripristinare i più comuni o scegliere le singole uscite. Il filtro riguarda la visualizzazione: tutti gli ingressi restano riconosciuti e la CLI mantiene tutte le destinazioni.*
+
+## Formati e conversioni
+
+| Tipo di file | Conversioni disponibili | Motore richiesto |
 | --- | --- | --- |
-| Audio: MP3, MPGA, WAV, FLAC, AAC, M4A/M4B, OGG/OGA, Opus, AIFF/AIFC, WMA, ALAC, APE, MKA, MP2, WebA, AC3, AU, CAF, AMR, DTS, TTA, VOC, WV, TAK, W64, RA | MP3, WAV, FLAC, AAC, OGG, Opus, AIFF, M4A (AAC), WMA, AC3, AU, CAF (ALAC) | FFmpeg |
-| Video: MP4, MKV, MOV, WebM, AVI, WMV, MPEG, M4V, TS/MTS/M2TS/M2T, 3GP/3G2, FLV, ASF, VOB, OGV, M2V, MXF, F4V, DivX, MPE, MPV | MP4, MKV, MOV, WebM, AVI, GIF animato, MPEG, WMV, FLV, TS, M4V, 3GP; estrazione audio nei dodici formati sopra | FFmpeg |
-| Immagini native: PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld (.ff), OpenEXR, HDR, PNM/PAM/PBM/PGM/PPM | PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, PDF, QOI, TGA, Farbfeld, OpenEXR, HDR, PNM; HEIC, AVIF; TXT con OCR | Rust per i formati nativi e PDF; libheif per creare HEIC/AVIF; Tesseract per TXT |
-| HEIC/HEIF, AVIF | Destinazioni immagine sopra, PDF e TXT con OCR | libheif per la lettura; Tesseract per TXT |
-| PDF | PNG/JPEG, una immagine per pagina; TXT, Word DOCX e HTML dal testo incorporato o con OCR | Poppler per immagini e testo incorporato; Tesseract + Poppler per OCR; DOCX e HTML ricostruiti dall'app |
-| PDF | PDF compresso senza perdita, un PDF per pagina, unione di piu PDF | Rust, senza motori esterni |
-| DOC/DOCX, ODT, RTF, TXT, PPT/PPTX, ODP | PDF | LibreOffice opzionale |
-| XLS/XLSX/XLSM, ODS, CSV | CSV, Excel XLSX, PDF | LibreOffice opzionale |
-| HTML/HTM | PDF | LibreOffice opzionale |
+| Audio | MP3, WAV, FLAC, AAC, OGG, Opus, AIFF, M4A, WMA, AC3, AU, CAF | FFmpeg |
+| Video | MP4, MKV, MOV, WebM, AVI, GIF animato, MPEG, WMV, FLV, TS, M4V, 3GP; estrazione audio nei formati sopra | FFmpeg |
+| Immagini | PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR, PNM; PDF; HEIC e AVIF; TXT con OCR | Nessuno per immagini native e PDF; libheif per HEIC/AVIF; Tesseract per TXT |
+| PDF | PNG/JPEG per pagina; TXT, DOCX e HTML dal testo; compressione, divisione e unione | Poppler per immagini e testo; Tesseract + Poppler per OCR; nessuno per compressione, divisione e unione di PDF esistenti |
+| DOC/DOCX, ODT, RTF, TXT, PPT/PPTX, ODP | PDF | LibreOffice |
+| XLS/XLSX/XLSM, ODS, CSV | CSV, Excel XLSX, PDF | LibreOffice |
+| HTML/HTM | PDF | LibreOffice |
 
-L'estensione determina la categoria proposta; il motore verifica il contenuto durante la conversione. File protetti, corrotti o con codec non disponibili producono un errore leggibile.
+Puoi regolare bitrate, frequenza, canali e normalizzazione audio; codec H.264/H.265, qualità, larghezza, FPS e taglio dei video; ridimensionamento, qualità JPEG e DPI dei PDF. L'app mostra i controlli pertinenti al formato. La disponibilità dei codec audio/video dipende dalla build di FFmpeg configurata.
 
-Impostazioni disponibili: preset leggero/bilanciato/alta qualità, bitrate, frequenza e canali audio, normalizzazione, H.264/H.265, qualità video, larghezza, FPS, taglio temporale, qualità JPEG, ridimensionamento immagini e DPI dei PDF. L'interfaccia mostra solo i controlli pertinenti. Per WebM si usa VP9/Opus, per AVI MPEG-4/MP3, per MPEG MPEG-2/MP2, per WMV WMV2/WMA2, per FLV FLV1/MP3, per 3GP MPEG-4/AAC, per TS H.264/AAC. M4V e un contenitore MP4 con audio; WAV, AIFF e AU sono PCM 16 bit, CAF usa ALAC senza perdita. I PDF creati da immagini sono A4 con proporzioni mantenute e sfondo bianco.
+La [guida completa alle conversioni](docs/conversions.md) elenca estensioni di ingresso, codec, opzioni e limiti di ogni famiglia.
 
-### Excel, CSV, Word e HTML
+### Comprimere, dividere e unire PDF
 
-Excel e CSV vengono convertiti con un profilo LibreOffice temporaneo separato, che disabilita macro e aggiornamento dei collegamenti Office. L'esportazione CSV produce **il primo foglio**, in UTF-8 con delimitatore virgolette; conserva i valori visualizzati, senza formule, formattazione o altri fogli. Puoi scegliere **virgola, punto e virgola, tab o pipe**, con la stessa impostazione per importazione ed esportazione. La virgola e il default. L'importazione conserva come testo i campi quotati, incluse le cifre iniziali degli identificativi, e non valuta le formule. Le altre codifiche vanno prima convertite in UTF-8; il separatore non viene indovinato automaticamente.
+Per un PDF scegli **PDF** e l'operazione desiderata nelle opzioni:
 
-PDF → Word/HTML ricostruisce **solo il testo**, conservando la separazione delle pagine in un singolo file modificabile. Di default usa il testo incorporato; puoi attivare OCR locale per riconoscerlo dalle scansioni. Immagini, tabelle, font e impaginazione originali non vengono ricostruiti. L'HTML esportato contiene il testo escapato e gli stili nel file, senza risorse esterne.
+- **Compressione senza perdita**: crea `nome-compresso.pdf` senza ricampionare le immagini. Se la riscrittura sarebbe più grande, conserva una copia dei byte originali: il risultato può avere le stesse dimensioni della sorgente.
+- **Dividi: una pagina per file**: crea `nome-pagina-001.pdf`, `nome-pagina-002.pdf` e così via.
+- **PDF (Merge) · ordina pagine**: prepara le sorgenti e apre l'editor. Sposta le pagine con la maniglia, le frecce o **Alt+↑ / Alt+↓**, poi scegli **Crea PDF unico**.
 
-HTML → PDF usa il motore di LibreOffice per documenti HTML: supporta HTML/CSS di base e non esegue JavaScript. Non sostituisce la stampa di una pagina dinamica da browser; l'impaginazione puo cambiare. Durante l'apertura di HTML, il motore puo leggere risorse collegate locali o remote, ad esempio immagini e CSS.
+![Editor PDF Merge: cinque pagine provenienti da due immagini e un PDF, riordinate prima dell'unione](docs/screenshots/unione-pdf.png)
 
-### Immagini HEIC e AVIF
+*Puoi intercalare le pagine di PDF multipagina, immagini e documenti Office. Ogni riga indica il file e il numero di pagina originale.*
 
-Puoi leggere HEIC/HEIF e AVIF, convertirli nei formati immagine nativi o in PDF, e creare HEIC o AVIF dalle immagini supportate. In **Impostazioni → Motori** seleziona `heif-dec.exe` per leggere e `heif-enc.exe` per creare questi formati. Sono strumenti di [libheif](https://github.com/strukturag/libheif), facoltativi e non inclusi: mantieni insieme eseguibili, DLL e plugin. La build deve includere i decoder e gli encoder HEVC/AV1 richiesti; se mancano, l'app mostra l'errore del motore. Per HEIC/AVIF puoi regolare larghezza e qualita. Dei contenitori con piu immagini viene usata la prima; sequenze e animazioni non vengono conservate.
+Il risultato dell'unione si chiama `primo-unito.pdf`, con un numero aggiunto se il nome esiste già. Sono incluse tutte le pagine una volta, fino a 10.000; controlla l'ordine nell'editor. Gli originali restano invariati e i PDF intermedi vengono preparati in una cartella temporanea dell'utente.
 
-Gli altri formati immagine sono nativi e non richiedono FFmpeg. HDR non conserva la trasparenza, che viene composta su bianco. OpenEXR e HDR possono conservare valori a virgola mobile; convertirli in formati ordinari puo ridurne precisione e gamma dinamica. JPEG XL, RAW fotografici e DDS non sono attualmente inclusi. I codec audio/video disponibili dipendono dalla build FFmpeg selezionata.
+Queste operazioni su PDF esistenti e l'unione di immagini native funzionano senza motori esterni. Le sorgenti Office/CSV/HTML richiedono LibreOffice, HEIC/AVIF richiedono libheif. I PDF cifrati o firmati sono rifiutati; unione e divisione rifiutano anche i moduli interattivi e non trasferiscono segnalibri, tag e metadati del documento.
 
-### OCR locale di immagini e scansioni PDF
+### Estrarre testo e usare l'OCR
 
-Per un'immagine scegli **TXT · OCR locale**. Per un PDF scegli TXT, Word DOCX o HTML e abilita **OCR locale**: il riconoscimento e disattivato per default e, quando attivo, elabora tutte le pagine invece di estrarre il testo incorporato. Sono necessari [Tesseract](https://tesseract-ocr.github.io/tessdoc/Installation.html) e i [modelli delle lingue](https://github.com/tesseract-ocr/tessdata_fast); i PDF richiedono anche `pdftoppm.exe` di Poppler. In **Impostazioni → Motori** indica `tesseract.exe` e conserva accanto la cartella `tessdata` con i modelli richiesti, per esempio `ita.traineddata` e `eng.traineddata`.
+Per un'immagine scegli **TXT · OCR locale**. Per un PDF scegli **TXT**, **Word DOCX** o **HTML**: normalmente viene estratto il testo incorporato; se il documento è una scansione, abilita **OCR locale**.
 
-La lingua predefinita e `ita+eng`; puoi scegliere altri codici Tesseract installati. I DPI PDF determinano la risoluzione delle pagine da riconoscere: 300 DPI e un punto di partenza utile. Le immagini vengono orientate secondo EXIF e la trasparenza viene composta su bianco. Il riconoscimento e il testo restano sul PC. Il riconoscimento puo sbagliare e va riletto; non ricostruisce l'impaginazione e non aggiunge uno strato ricercabile al PDF originale. Se non viene riconosciuto testo, l'app segnala l'errore senza creare un risultato vuoto.
+L'OCR usa **Tesseract** con i modelli installati; sui PDF richiede anche **Poppler**. La lingua predefinita è **italiano + inglese** (`ita+eng`), ma puoi selezionare altre lingue o inserire i codici dei tuoi modelli. Per le scansioni PDF, 300 DPI è un punto di partenza utile.
 
-### Comprimi, dividi e unisci PDF
+Il testo riconosciuto resta sul PC. Rileggilo per correggere eventuali errori: l'OCR non ricrea l'impaginazione e non aggiunge uno strato ricercabile al PDF originale. Le esportazioni PDF in DOCX/HTML ricostruiscono il testo e la separazione delle pagine, senza immagini, tabelle o formattazione originale.
 
-Per PDF gia esistenti, **PDF (Bulk)** comprime senza perdita i flussi senza ricampionare le immagini e crea `nome-compresso.pdf`; se la riscrittura sarebbe piu grande, salva una copia dei byte originali. Il risultato non supera le dimensioni del file letto e puo restare della stessa dimensione. **Dividi: una pagina per file** produce `nome-pagina-001.pdf`, `nome-pagina-002.pdf` e cosi via.
+### Excel, CSV, HEIC e AVIF
 
-Per unire piu file compatibili, scegli **PDF (Merge)** dal menu contestuale oppure **PDF (Merge) · ordina pagine** nell'app e avvia **Ordina e unisci PDF**. L'app prepara le sorgenti e mostra tutte le pagine, identificate dal file e dal numero originale. Trascina la maniglia di una pagina, usa le frecce o **Alt+↑ / Alt+↓** per spostarla: puoi intercalare pagine di PDF multipagina, immagini e documenti diversi. L'ordine iniziale segue i file ricevuti da Esplora file; controllalo nell'editor. **Crea PDF unico** salva `primo-unito.pdf`, aggiungendo un numero se esiste gia. Tutte le pagine vengono incluse una volta, fino a 10.000.
+Con LibreOffice puoi convertire fogli di calcolo in XLSX, CSV o PDF. Per i CSV scegli **virgola, punto e virgola, tab o pipe**: lo stesso separatore viene usato in ingresso e in uscita. Il CSV è UTF-8; l'esportazione conserva i valori del **primo foglio**, senza formule, formattazione o altri fogli. L'importazione conserva come testo i campi quotati e non valuta le formule.
 
-La preparazione usa copie PDF temporanee in una cartella utente nascosta, senza PDF intermedi nella destinazione. Gli originali restano invariati; il salvataggio usa la versione preparata delle pagine. L'ordine e una sessione locale separata dalla coda rapida. Annullamento e chiusura eliminano gli intermedi; un arresto improvviso puo lasciare residui.
+Per leggere HEIC/HEIF e AVIF configura `heif-dec.exe`; per crearli configura `heif-enc.exe`. Entrambi fanno parte di libheif e vanno mantenuti con DLL e plugin compatibili. Puoi regolare larghezza e qualità.
 
-Compressione, divisione e unione di PDF esistenti, e l'unione di immagini native, non richiedono motori esterni. Per preparare Office/Excel/CSV/HTML serve LibreOffice; per leggere HEIC/AVIF serve libheif. Poppler non e necessario per questa unione. I PDF cifrati o firmati vengono rifiutati; unione e divisione rifiutano anche moduli interattivi. I contenuti delle pagine vengono mantenuti, mentre segnalibri, struttura accessibile/tag e metadati del documento non vengono trasferiti. La compressione mantiene il catalogo e i moduli; non e una rimozione dei metadati. Non e disponibile la modifica libera del contenuto delle pagine.
+GIF, TIFF e contenitori immagine con più fotogrammi o pagine vengono letti dalla prima immagine. La conversione video → GIF conserva invece l'animazione. WebP è codificato senza perdita; la qualità JPEG non influisce sui formati senza perdita. [Tutti i limiti e i dettagli dei formati](docs/conversions.md).
 
-### Testo da immagini e PDF
+## Motori opzionali
 
-La destinazione TXT e disponibile per le immagini tramite OCR locale e per i PDF tramite estrazione del testo incorporato o OCR locale. I motori richiesti si selezionano nella sezione Motori delle Impostazioni; il riconoscimento e il risultato restano sul PC. Dettagli sui dati locali e sui motori: [privacy](docs/privacy.md).
+Apri **Impostazioni → Motori** per rilevare gli strumenti già installati o sceglierne il percorso.
 
-### Limiti espliciti
+| Motore | A cosa serve | Come si configura |
+| --- | --- | --- |
+| **FFmpeg** | Audio, video, estrazione audio e GIF da video | Download dall'app oppure percorso di `ffmpeg.exe` |
+| **Poppler** | PDF in immagini, testo incorporato e preparazione pagine per OCR | Download dall'app oppure percorsi di `pdftoppm.exe`, `pdftotext.exe` e `pdfinfo.exe` |
+| **LibreOffice** | Documenti Office, Excel/CSV e HTML | Installazione locale e percorso di `soffice.exe` |
+| **Tesseract** | OCR | Percorso di `tesseract.exe` e cartella `tessdata` con i modelli necessari |
+| **libheif** | Lettura e creazione HEIC/HEIF e AVIF | Percorsi di `heif-dec.exe` e `heif-enc.exe`, con DLL e plugin |
 
-- OCR richiede Tesseract e i modelli delle lingue; per i PDF serve anche Poppler. E riconoscimento del testo, senza ricostruzione della grafica o del layout.
-- Le immagini GIF animate e i TIFF multipagina sono letti dal primo fotogramma/pagina. La conversione da video a GIF conserva l'animazione.
-- WebP è codificato senza perdita. La qualità JPEG non influisce sui formati senza perdita.
-- PDF (Bulk) crea un PDF separato per ogni immagine; PDF (Merge) puo unire direttamente immagini e altri file PDF-compatibili, ordinando le singole pagine. Unione e divisione non trasferiscono segnalibri, tag o metadati e rifiutano moduli interattivi. Compressione, divisione e unione rifiutano PDF cifrati o firmati. L'esportazione PDF in PNG/JPEG accetta la sola password proprietario; una password di apertura richiede di sbloccare prima il documento.
-- I documenti Office, i fogli di calcolo, i CSV e HTML in PDF richiedono LibreOffice installato o configurato; l'impaginazione dipende anche dai font disponibili.
-- PDF in DOCX/HTML e una ricostruzione del testo, senza immagini o impaginazione originale. Excel in CSV esporta soltanto il primo foglio e perde formule e formattazione.
-- La coda interattiva usa un formato comune ai file selezionati. Se le categorie non hanno una destinazione comune, vanno convertite in gruppi separati.
-- Le conversioni rapide lavorano in coda in background. La finestra di stato si apre su richiesta dal segnaposto, mentre la finestra principale mostra la coda completa. Il resoconto conserva l'ultima esecuzione rapida; chiudere la finestra di stato non interrompe il lavoro.
+**FFmpeg e Poppler si possono scaricare direttamente dall'app**, anche nella versione portable. Prima della conferma vedi origine, versione, dimensioni, licenze e cartella di installazione. Nella 0.4.0 i due archivi richiedono circa **159 MB di download** e circa **615 MB liberi** durante download ed estrazione. Gli archivi vengono verificati con SHA-256; licenze e documentazione restano incluse.
 
-## Eseguibile e menu contestuale
+![Conferma del download opzionale di FFmpeg e Poppler con versioni, dimensioni, licenze e cartella personale](docs/screenshots/download-motori.png)
 
-La distribuzione locale pronta è in `dist\ConvertHere\`. Mantieni questa cartella in una posizione stabile: contiene applicazione, CLI, DLL Explorer e gli eventuali motori locali di sviluppo. Gli artefatti pubblici escludono i motori.
+*Il download parte soltanto dopo la conferma. I motori vengono installati nella cartella dell'utente; i file da convertire restano sul PC.*
 
-Per installare il menu classico per il solo utente corrente, da PowerShell:
+LibreOffice, libheif, Tesseract e i modelli OCR si configurano da installazioni locali. Per percorsi, preferenze, script manuali e recupero della coda consulta la [guida alla configurazione](docs/configuration.md).
 
-```powershell
-.\dist\ConvertHere\scripts\install-context-menu.ps1 -Mode Classic
-```
+## Lingue
 
-Per rimuoverlo:
+L'**interfaccia dell'app e il menu di Esplora file sono in italiano**, senza selettore della lingua. L'**installer è disponibile in italiano e inglese**. La CLI usa nomi delle opzioni in inglese e messaggi applicativi in italiano.
 
-```powershell
-.\dist\ConvertHere\scripts\uninstall-context-menu.ps1 -Mode Classic
-```
+L'**OCR supporta le lingue dei modelli Tesseract installati**: italiano e inglese sono la scelta predefinita; nell'app sono proposti anche francese, tedesco, spagnolo e un campo per altri codici. La lingua del riconoscimento non cambia quella dell'interfaccia.
 
-Su Windows 11 il menu classico compare in **Mostra altre opzioni**. Il progetto include anche la DLL `IExplorerCommand` e un pacchetto MSIX sparse per il **menu moderno di Windows 11**. Per registrarlo serve prima una firma attendibile del pacchetto. La build non registra DLL, non installa pacchetti e non modifica l'archivio dei certificati. La procedura completa e lo stato di verifica sono in [docs/windows-integration.md](docs/windows-integration.md).
+## Dati e privacy
 
-Per le prove con un certificato di sviluppo, su Windows 11 build 26200 il trust nel solo archivio utente non e risultato sufficiente. La procedura Microsoft MSIX richiede `LocalMachine\TrustedPeople`: e un'importazione manuale del certificato pubblico, separata dal setup, con privilegi amministrativi, UAC e consenso esplicito perche estende la fiducia a tutti gli utenti del PC. Su questa configurazione sono stati verificati il comando nel menu moderno e la conversione WAV → MP3 nella stessa cartella, senza finestra delle opzioni. La prova usa un certificato di sviluppo; non e una nuova release pubblica. [Dettagli e stato della prova](docs/windows-integration.md#stato-di-verifica).
+Conversioni e OCR vengono eseguiti localmente. Preferenze, coda e resoconti sono file sul dispositivo e possono contenere percorsi ed errori. Non ci sono telemetria, pubblicità o registrazione di un account dell'app.
 
-## Motori e preferenze
-
-L'app cerca gli strumenti nella cartella `tools` accanto all'eseguibile, nella nuova cartella utente `%LOCALAPPDATA%\ConvertHere\tools`, nel `PATH`, nelle impostazioni salvate e nella cartella indicata dalla variabile `THE_CONVERTER_TOOLS`. Resta riconosciuta in lettura la precedente `%LOCALAPPDATA%\Corsivo\TheConverter\tools`. I percorsi si scelgono in **Impostazioni → Motori**. LibreOffice e Tesseract vengono cercati anche nelle rispettive posizioni standard di installazione.
-
-Per Poppler, `pdftoppm.exe` esporta le pagine in immagini e prepara i PDF per OCR, `pdftotext.exe` estrae il testo incorporato e `pdfinfo.exe` conta le pagine. Selezionandone uno, l'app cerca gli altri nella stessa installazione, rispettando eventuali scelte esplicite separate. Se `pdfinfo.exe` non e disponibile, il conteggio usa il lettore PDF interno.
-
-La distribuzione locale di sviluppo puo includere FFmpeg e Poppler. I pacchetti pubblici non contengono i motori; nella 0.4.0 il download facoltativo si avvia in **Impostazioni → Motori**, anche nell'edizione Store, e installa soltanto nella cartella dell'utente. Sono scaricati [FFmpeg 9.0.2 dalla distribuzione Gyan](https://github.com/GyanD/codexffmpeg/releases/tag/9.0.2) e [Poppler 26.09.0 per Windows](https://github.com/oschwartz10612/poppler-windows/releases/tag/v26.09.0-0), 158478032 byte complessivi (circa 159 MB). Le richieste HTTPS ai distributori e ai loro CDN espongono IP e normali dati HTTP, incluso User-Agent con versione dell'app; non caricano file personali. Lo SHA-256 e verificato prima dell'estrazione e il layout upstream conserva licenze e documentazione. Annullamento o errore tentano di rimuovere lo staging temporaneo; un arresto improvviso puo lasciare residui. LibreOffice, libheif, Tesseract e i modelli OCR si configurano da installazioni locali. Lo script PowerShell facoltativo resta un'alternativa manuale; il setup non avvia download e non aggiunge un collegamento Start per installare i motori. Le copie sotto `.tools/` per i test non fanno parte dei pacchetti pubblici; l'app non richiede Python, Node, WebView o Rust per essere eseguita.
-
-Le preferenze si trovano nella cartella di configurazione utente `SalvatoreCorsi\TheConverter\config` sotto `%APPDATA%`: `preferences.json` e `report-last.json`. Il resoconto include percorsi locali ed errori e non viene trasmesso. La conversione interattiva mantiene i propri risultati nella coda corrente.
-
-La coda rapida è salvata nei dati locali dell'app sotto `%LOCALAPPDATA%`. Un solo processo elabora i lavori, anche quando provengono da più comandi del menu contestuale. Dopo un'interruzione forzata, i lavori già in corso vengono segnalati come interrotti e i lavori ancora in attesa ripartono al successivo avvio dell'app o invio. I nomi sono prenotati prima di iniziare e rimangono quelli mostrati nei segnaposto. Per i PDF esportati in immagini viene prenotato un nome per pagina. Le cartelle temporanee nella destinazione sono nascoste.
-
-La pulizia della cronologia, eseguita quando il processo di lavoro riprende o termina la coda, elimina i record completati o annullati dopo 7 giorni e quelli falliti dopo 30 giorni; tenta inoltre di conservare al massimo i 300 record terminali piu recenti. Originali, risultati e lavori attivi vengono preservati. I record illeggibili sono isolati e conservati, insieme agli eventuali file estranei. Per un lavoro fallito puoi usare **Rimuovi segnaposto**: elimina soltanto i collegamenti ancora appartenenti a quel lavoro, mantenendo record e risultati.
-
-## Compilazione
-
-Windows x64, Rust stable MSVC e Visual Studio C++ Build Tools/Windows SDK:
-
-```powershell
-.\scripts\fetch-tools.ps1
-cargo build --release --locked
-cargo build --release --locked --manifest-path .\shell-extension\Cargo.toml
-.\scripts\build-release.ps1 -SkipBuild
-```
-
-`fetch-tools.ps1` scarica versioni fissate di FFmpeg e Poppler e ne verifica gli SHA-256 prima di copiarle; non installa nulla nel sistema. È opzionale se usi strumenti già disponibili. `scripts\build-release.ps1` esegue entrambe le compilazioni. `-CertificateThumbprint` permette di firmare eseguibili, DLL e MSIX con un certificato già disponibile, ricavandone il Publisher per entrambi i manifest. MakeAppx è necessario per generare il pacchetto identità; l'applicazione può essere usata anche senza.
-
-Per preparare gli artefatti pubblici, aggiorna prima gli avvisi:
-
-```powershell
-.\release-support\collect-rust-licenses.ps1
-```
-
-Revisiona e salva in Git sorgenti, lockfile e avvisi, poi esegui la build e la preparazione dallo stesso commit con cartella di lavoro pulita:
-
-```powershell
-.\scripts\build-release.ps1
-.\scripts\prepare-public-release.ps1 -CompilerPath C:\Percorso\InnoSetup\ISCC.exe
-```
-
-Lo staging pubblico usa una lista esplicita di file e una verifica che rifiuta motori esterni o DLL aggiuntive. Per la 0.4.0 prepara `dist/releases/v0.4.0/` con setup, portable, `ConvertHere-0.4.0-source.zip` e `SHA256SUMS.txt` per tutti e tre gli archivi. Licenza del progetto e avvisi di dipendenze e font sono inclusi nei pacchetti.
-
-La preparazione richiama `release-support/build-corresponding-source.ps1`: esporta il commit Git, verifica la provenienza dei binari e usa `cargo vendor --locked --versioned-dirs --sync shell-extension/Cargo.toml` per entrambi i lockfile. L'archivio conserva sorgenti e licenze upstream, configurazione Cargo relativa a `vendor/`, metadati di checksum, toolchain e `BUILDING-OFFLINE.txt`. Dopo aver installato la toolchain indicata, MSVC x64 e Windows SDK, puoi compilare app ed estensione con Cargo offline seguendo quella ricetta. Gli strumenti di sviluppo generali non sono inclusi; Inno Setup serve solo per generare il setup. Motori esterni, certificati e credenziali non fanno parte dell'archivio sorgente.
-
-Per una distribuzione con il menu moderno, usa `prepare-public-release.ps1 -RequireModernMenu` dopo una build firmata con un certificato di produzione. Il comando include MSIX e loghi esterni, oppure si interrompe se manca una firma attendibile. Il relativo setup abilita per default la voce diretta su Windows 11 e la rimuove durante la disinstallazione. Non importa certificati di prova: la procedura locale e i requisiti di firma sono descritti in [docs/windows-integration.md](docs/windows-integration.md).
+Il download facoltativo dei motori richiede Internet e contatta i distributori; l'apertura di HTML può caricare immagini o CSS collegati, anche remoti, tramite LibreOffice. L'app conserva gli originali e non invia i file a un server dello sviluppatore. [Informativa privacy](docs/privacy.md).
 
 ## Riga di comando
 
-Usa l'eseguibile console dedicato, che restituisce output, diagnostica e codici di uscita affidabili:
+La distribuzione GitHub include `the-converter-cli.exe`. Dalla sua cartella, per esempio:
 
 ```powershell
 .\the-converter-cli.exe --diagnose
-.\the-converter-cli.exe --install-runtime ffmpeg
-.\the-converter-cli.exe --install-runtime poppler
 .\the-converter-cli.exe --convert --target mp3 --preset quality --files "C:\Video\clip.mp4"
-.\the-converter-cli.exe --convert --target png --output-dir "C:\Risultati" --files "C:\Documenti\file.pdf"
-.\the-converter-cli.exe --convert --target csv --files "C:\Documenti\tabella.xlsx"
-.\the-converter-cli.exe --convert --target xlsx --csv-separator semicolon --files "C:\Documenti\tabella.csv"
-.\the-converter-cli.exe --convert --target docx --files "C:\Documenti\file.pdf"
 .\the-converter-cli.exe --convert --target docx --ocr --ocr-language ita+eng --files "C:\Documenti\scansione.pdf"
-.\the-converter-cli.exe --convert --target txt --ocr-language ita+eng --files "C:\Documenti\scansione.png"
-.\the-converter-cli.exe --convert --target avif --files "C:\Immagini\foto.heic"
-.\the-converter-cli.exe --convert --target pdf --files "C:\Documenti\pagina.html"
-.\the-converter-cli.exe --convert --target pdf --pdf-action compress --files "C:\Documenti\file.pdf"
-.\the-converter-cli.exe --convert --target pdf --pdf-action split --files "C:\Documenti\file.pdf"
 .\the-converter-cli.exe --convert --target pdf --pdf-action merge --files "C:\Documenti\prima.pdf" "C:\Documenti\seconda.pdf"
-.\the-converter-cli.exe --convert --target pdf --pdf-action merge --files "C:\Immagini\foto.png" "C:\Documenti\documento.docx" "C:\Documenti\pagine.pdf"
-.\the-converter-cli.exe --convert --settings .\settings.json --files "C:\Audio\registrazione.wav"
 ```
 
-`--convert` lavora senza UI, continua sugli altri file dopo un errore e termina con codice non zero se almeno una conversione fallisce. Ctrl+C annulla il processo e pulisce i temporanei. I percorsi sono passati direttamente ai processi senza interpolazione in una shell.
+La CLI continua sugli altri file dopo un errore e restituisce un codice diverso da zero se almeno una conversione fallisce. **Ctrl+C** annulla il processo. [Guida completa alla CLI, opzioni ed esempi JSON](docs/command-line.md).
 
-`--install-runtime ffmpeg|poppler` e una modalita separata: richiede un download esplicito del motore fissato e verificato, senza opzioni di conversione o file in ingresso. Scrive nella cartella personale dei motori, conserva licenze e documentazione e non esegue il programma scaricato. Ctrl+C annulla l'operazione. Lo script manuale `install-runtime-tools.ps1 -InstallDirectory <cartella-app> -Engine ffmpeg` richiama la stessa CLI; omettendo `-Engine` richiede entrambi i motori. La cartella dell'app serve a trovare la CLI, non e la destinazione dei motori.
+## Sviluppo e documentazione
 
-`--pdf-action compress|split|merge` richiede destinazione PDF; `compress` e `split` accettano soltanto PDF, mentre `merge` accetta i file convertibili in PDF descritti sopra. Il default e `compress`. L'unione CLI rispetta l'ordine degli argomenti e delle pagine dentro ogni sorgente; per intercalare singole pagine usa l'editor grafico. `--ocr` attiva il riconoscimento delle scansioni PDF nelle destinazioni testuali; immagini in TXT usano sempre OCR. `--ocr-language ita+eng` sceglie i modelli, senza attivare da solo OCR dei PDF. `--csv-separator comma|semicolon|tab|pipe` sceglie il separatore sia in ingresso sia in uscita; il default e `comma`.
-
-Esempio di impostazioni JSON (i campi omessi usano i default):
-
-```json
-{
-  "format": "Mp3",
-  "audio": { "bitrate_kbps": 256, "sample_rate": 48000, "channels": 2, "normalize": true },
-  "video": { "trim_start": 5.0, "trim_end": 35.0 }
-}
-```
-
-## Verifica
+Per compilare servono Windows x64, Rust stable MSVC e Visual Studio C++ Build Tools con Windows SDK:
 
 ```powershell
-cargo test --locked
-cargo clippy --locked --all-targets -- -D warnings
-cargo test --locked --manifest-path .\shell-extension\Cargo.toml
-.\scripts\test-shell-extension.ps1
+cargo build --release --locked
+cargo build --release --locked --manifest-path .\shell-extension\Cargo.toml
 ```
 
-I test esterni usano i motori trovati localmente; se FFmpeg, Poppler, LibreOffice, Tesseract o libheif mancano, i relativi fixture vengono saltati esplicitamente. I fixture verificano codec e decodifica dei nuovi contenitori, roundtrip HEIC/AVIF e degli altri formati immagine, precisione HDR, i quattro separatori CSV con Unicode/virgolette/righe multiple e formule trattate come testo, primo foglio Excel, ricostruzione PDF in DOCX/HTML con e senza OCR, ordine delle pagine, compressione/unione/divisione PDF, collisioni dei nomi, annullamento e coda. Le verifiche del menu caricano la DLL e usano le API COM di Windows senza registrarla; una verifica di parita confronta tutte le estensioni e destinazioni della DLL con il modello applicativo. La comparsa effettiva nel menu moderno richiede un'installazione firmata e una verifica su Windows 11.
+La [guida per sviluppatori](docs/development.md) descrive test, build della distribuzione, installer e archivio dei sorgenti con dipendenze per la compilazione offline.
 
-I report di verifica si riferiscono al pacchetto e al codice effettivamente testati. Esiti correnti e prove storiche sono distinti in [store-validation.md](docs/store-validation.md).
+- [Conversioni, opzioni e limiti](docs/conversions.md)
+- [Configurazione, motori e dati locali](docs/configuration.md)
+- [Coda rapida e segnaposto](docs/queued-conversions.md)
+- [Integrazione con Esplora file](docs/windows-integration.md)
+- [Origine e versioni degli screenshot](docs/screenshots/README.md)
 
-## Licenza e sorgenti
+## Autore e licenza
 
-Copyright (C) 2026 Salvatore Corsi. Il codice originale di Convert Here e distribuito secondo la **GNU General Public License versione 3 soltanto** (`GPL-3.0-only`). Puoi usarlo, studiarlo, modificarlo e ridistribuirlo alle condizioni del testo integrale in [LICENSE](LICENSE), senza alcuna garanzia nei termini della licenza.
+**Salvatore Corsi** · [Profilo GitHub](https://github.com/salvatorecorsi) · [Supporto](mailto:salvo@salvatorecorsi.com)
 
-I [sorgenti](https://github.com/salvatorecorsi/convert-here) sono pubblici. `ConvertHere-0.4.0-source.zip` include il commit della release, entrambi i lockfile, dipendenze Cargo vendorizzate, script e istruzioni di build offline; i checksum coprono setup, portable e sorgenti. L'app mostra licenza e collegamento ai sorgenti nelle informazioni sul programma.
+Copyright (C) 2026 Salvatore Corsi. Il codice originale è distribuito con licenza **GNU GPL versione 3 soltanto** (`GPL-3.0-only`), senza garanzia nei termini della [licenza completa](LICENSE). Il progetto prosegue il lavoro di [Final Converter](https://github.com/salvatorecorsi/final-converter).
 
-La conversione dei tuoi file non cambia i diritti o le licenze dei loro contenuti e non impone la GPL ai risultati per il solo uso del programma. Dipendenze, font e motori esterni conservano le rispettive licenze: vedi [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) e [testi delle licenze](docs/release-licenses/README.md).
+I sorgenti sono pubblici; la release include `ConvertHere-0.4.0-source.zip` con entrambi i lockfile, dipendenze Cargo vendorizzate e istruzioni di build offline. La conversione non cambia i diritti dei tuoi contenuti e non impone la GPL ai risultati per il solo uso del programma. Dipendenze, font e motori conservano le rispettive licenze: [avvisi di terze parti](THIRD-PARTY-NOTICES.md) e [testi delle licenze](docs/release-licenses/README.md).

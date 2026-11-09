@@ -22,7 +22,7 @@ La [privacy 0.3.2](https://github.com/salvatorecorsi/convert-here/blob/v0.3.2/do
 
 ## Stato della 0.3.1 prima del ritiro della certificazione
 
-Stato al 4 novembre 2026: **Convert Here 0.3.1** e [pubblicata su GitHub](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.1), dal commit `884cb2c610a9197d8b4853f0fa741dbe9035b5ed`. Il candidato Store **1.0.1.0** e stato caricato e risulta **Validated**, con **Packages: Complete**. Il prodotto resta **9NPKPPCBNBM8**, [pagina Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8), `Name` **SalvatoreCorsi.ConvertHere**, `Publisher` **CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17**, `PublisherDisplayName` **Corsivo**. Titolare, autore e sviluppatore: **Salvatore Corsi**; contatto pubblico: **salvo@salvatorecorsi.com**, dalla [pagina contatti](https://www.salvatorecorsi.com/contatti/). IARC e stato accettato su consenso esplicito del proprietario; Age ratings risulta **Complete**, con classificazioni IARC/Microsoft/PEGI 3+. La submission e stata inviata il **4 novembre 2026** e risulta **In certification**. **La pubblicazione Store non e ancora iniziata.**
+Stato al 4 novembre 2026: **Convert Here 0.3.1** e [pubblicata su GitHub](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.1), dal commit `884cb2c610a9197d8b4853f0fa741dbe9035b5ed`. Il candidato Store **1.0.1.0** e stato caricato e risulta **Validated**, con **Packages: Complete**. Il prodotto resta **9NPKPPCBNBM8**, [pagina Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8), `Name` **SalvatoreCorsi.ConvertHere**, `Publisher` **CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17**. Titolare, autore e sviluppatore: **Salvatore Corsi**; contatto pubblico: **salvo@salvatorecorsi.com**, dalla [pagina contatti](https://www.salvatorecorsi.com/contatti/). IARC e stato accettato su consenso esplicito del proprietario; Age ratings risulta **Complete**, con classificazioni IARC/Microsoft/PEGI 3+. La submission e stata inviata il **4 novembre 2026** e risulta **In certification**. **La pubblicazione Store non e ancora iniziata.**
 
 ## Dettagli della precedente submission 0.3.1 / Store 1.0.1.0
 
@@ -66,7 +66,7 @@ Il menu moderno usa la DLL `IExplorerCommand`, COM surrogate e `windows.fileExpl
 | Tipo account | **Individual**, confermato in Legal info nella verifica corrente. |
 | Nome prodotto riservato | **Convert Here**, prenotazione confermata dal proprietario il 4 novembre 2026. |
 | `Package/Identity/@Name` | `SalvatoreCorsi.ConvertHere`, dalla schermata Product identity fornita dal proprietario. |
-| `Package/Identity/@Publisher` | `CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17`, dalla stessa schermata. Non sostituirlo con un `CN=CORSIVO` presunto. |
+| `Package/Identity/@Publisher` | `CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17`, dalla stessa schermata. Non sostituirlo con un `CN=Nome editore` presunto. |
 | Publisher display name | **Salvatore Corsi**, approvato; profilo **Authorized**, account **Active** e nome pubblico confermato in Legal info. |
 | Store ID | `9NPKPPCBNBM8`; l'identificativo non attesta la pubblicazione dell'app. |
 | Titolare e contatto | **Salvatore Corsi**, **salvo@salvatorecorsi.com**. |
