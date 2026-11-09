@@ -6,15 +6,15 @@
 
 Developed by **[Salvatore Corsi](https://github.com/salvatorecorsi)**, Convert Here is a free, open source program written in Rust. Use its window, the File Explorer context menu or the command line. Conversion and OCR run on your computer without uploading your files to an online service. No account, subscription, in-app purchases or usage-based charges. No payment is required to keep using it.
 
-[Download for Windows](https://github.com/salvatorecorsi/convert-here/releases/latest) · [Microsoft Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8) · [What's new in 0.7.0](docs/release-notes-0.7.0.en.md) · [Report a problem](https://github.com/salvatorecorsi/convert-here/issues)
+[Download for Windows](https://github.com/salvatorecorsi/convert-here/releases/latest) · [Microsoft Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8) · [What's new in 0.7.1](docs/release-notes-0.7.1.en.md) · [Report a problem](https://github.com/salvatorecorsi/convert-here/issues)
 
-**GitHub release 0.7.0 is bilingual, in Italian and English.** Download the installer or portable package and choose a language in **Settings → Language**. See [Languages](#languages).
+**Convert Here is bilingual, in Italian and English.** Download the installer or portable package and choose a language in **Settings → Language**. See [Languages](#languages).
 
-**0.7.0 is published on GitHub** as of 9 November 2026, with four tabs, a profile manager, JSON import/export, shared limits and advanced engine options. [English release notes](docs/release-notes-0.7.0.en.md) / [Italian](docs/release-notes-0.7.0.md). The **Store 1.0.6.0 update is in certification**, with automatic publication after approval; it is not available in the Store yet. [Store status](docs/store-submission.md). The [0.6.0 notes](docs/release-notes-0.6.0.en.md) remain as history.
+**0.7.1 is a candidate in preparation**, with a workaround for the Store package's Windows 10 context menu and refreshed app captures. The menu change has not yet been verified on a real Windows 10 host. [English notes](docs/release-notes-0.7.1.en.md) / [Italian](docs/release-notes-0.7.1.md). Features from [0.7.0, published on GitHub](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.0), remain unchanged. **Store 1.0.6.0 remains in certification**; the new **1.0.7.0** is in preparation and has not been submitted. [Store status](docs/store-submission.md).
 
-![Convert Here 0.7.0: profile manager and four tabs, shown in Italian](docs/store-assets/0.7.0/02-profili-it.jpg)
+![Convert Here: profile manager and four tabs, shown in Italian](docs/store-assets/0.7.1/02-profili-it.png)
 
-*Profiles in 0.7.0: named recipes, allowed inputs, duplication, JSON import/export and defaults. Italian interface shown; English is also available.*
+*Profiles: named recipes, allowed inputs, duplication, JSON import/export and defaults. Native capture of debug build 0.7.0, whose interface is unchanged in 0.7.1, at 150% UI zoom without later upscaling. Italian is shown; English is also available. [Capture provenance](docs/store-assets/0.7.1/README.md).*
 
 ## What you can do
 
@@ -35,18 +35,18 @@ Lay out images, text written in **New sheet…** or UTF-8 TXT on **A4/A5** witho
 
 ## Installation
 
-The GitHub distribution requires **Windows 10 build 19041 or later, x64**. The [0.7.0 release](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.0) offers:
+The GitHub distribution requires **Windows 10 build 19041 or later, x64**. Packages for [0.7.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.1), currently a candidate, will be available after publication:
 
 | Package | How to use it |
 | --- | --- |
-| [ConvertHere-0.7.0-windows-x64-setup.exe](https://github.com/salvatorecorsi/convert-here/releases/download/v0.7.0/ConvertHere-0.7.0-windows-x64-setup.exe) | Run the setup. It installs for your user without administrator privileges; optional context-menu integration is selected by default. |
-| [ConvertHere-0.7.0-windows-x64-portable.zip](https://github.com/salvatorecorsi/convert-here/releases/download/v0.7.0/ConvertHere-0.7.0-windows-x64-portable.zip) | Extract it to a stable folder and run `the-converter.exe`. It also includes the CLI and context-menu scripts. |
+| [ConvertHere-0.7.1-windows-x64-setup.exe](https://github.com/salvatorecorsi/convert-here/releases/download/v0.7.1/ConvertHere-0.7.1-windows-x64-setup.exe) | Run the setup. It installs for your user without administrator privileges; optional context-menu integration is selected by default. |
+| [ConvertHere-0.7.1-windows-x64-portable.zip](https://github.com/salvatorecorsi/convert-here/releases/download/v0.7.1/ConvertHere-0.7.1-windows-x64-portable.zip) | Extract it to a stable folder and run `the-converter.exe`. It also includes the CLI and context-menu scripts. |
 
 Check the packages against `SHA256SUMS.txt` from the same release. The executable names remain `the-converter.exe` and `the-converter-cli.exe`; some earlier releases display the name The Converter.
 
 **Native images, images to PDF and operations on existing PDFs work immediately.** Configure the [optional engines](#optional-engines) for other conversions: the setup neither includes nor downloads them. Python, Node and Rust are not required to run the app.
 
-In the GitHub distribution, the Windows 11 menu is under **Show more options**. The GitHub 0.7.0 packages are not Authenticode-signed. See the [Windows integration guide](docs/windows-integration.en.md) for classic and modern menu details.
+In the GitHub distribution, the Windows 11 menu is under **Show more options**. The GitHub distribution does not include Authenticode signing. See the [Windows integration guide](docs/windows-integration.en.md) for classic and modern menu details.
 
 To uninstall, use **Windows Settings → Apps → Installed apps → Convert Here → Uninstall**. Preferences and converted files are preserved.
 
@@ -78,7 +78,7 @@ With multiple files that can become PDFs:
 
 Open **Settings → Output formats** and enable the destinations you use. Your choices apply to both the app selector and File Explorer, without restarting Explorer. **MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4** are enabled initially. Each selection shows only compatible destinations.
 
-![Settings in 0.7.0: five output-format columns and an engine grid, shown in Italian](docs/store-assets/0.7.0/01-impostazioni-it.jpg)
+![Settings: five output-format columns and an engine grid, shown in Italian](docs/store-assets/0.7.1/01-impostazioni-it.png)
 
 *Enable every format, restore the common formats or choose individual outputs. This is a display filter: all inputs remain recognized and the CLI keeps every destination. The Language section lets you choose System, Italiano or English.*
 
@@ -112,9 +112,7 @@ For a PDF, select **PDF** and the desired operation in its options:
 - **Split: one page per file** creates `name-pagina-001.pdf`, `name-pagina-002.pdf` and so on.
 - **PDF (Merge) · arrange pages** prepares the sources and opens the editor. Move pages using the handle, arrows or **Alt+↑ / Alt+↓**, then choose **Create merged PDF**.
 
-![PDF Merge editor in English: four pages from two images and a two-page PDF, with Illustration.png placed between the PDF pages](docs/screenshots/en-merge-pdf.jpg)
-
-*Four pages from Cover.png, Document.pdf and Illustration.png. The illustration is placed between the PDF's two pages; every row identifies the file and original page number.*
+Pages from multipage PDFs, images and Office documents can be interleaved. Every row identifies the source file and original page number. [Historical PDF Merge capture](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/screenshots/en-merge-pdf.jpg).
 
 The merged result is named after the first source with the `-unito.pdf` suffix, with a number added if needed. Every page is included once, up to 10,000 pages; check the order in the editor. The originals are unchanged and intermediate PDFs are prepared in a temporary user folder. Output suffixes remain the same in both interface languages.
 
@@ -150,9 +148,7 @@ Open **Settings → Conversion engines** to detect installed tools or choose the
 
 **Download FFmpeg and Poppler directly from the app**, including the portable edition. Before confirmation, you see the source, version, size, licenses and installation folder. In 0.7.0, both archives require about **159 MB of downloads** and about **615 MB of free space** during download and extraction. SHA-256 checksums are verified and licenses and documentation are retained.
 
-![English confirmation dialog for optional FFmpeg and Poppler downloads, showing versions, sizes, licenses and the personal installation folder](docs/screenshots/en-download-engines.jpg)
-
-*Downloading starts only after confirmation. This capture shows the confirmation dialog, which was cancelled without downloading engines. Engines use your user folder; files to convert stay on your PC.*
+Downloading starts only after confirmation. Engines use your user folder; files to convert stay on your PC. [Historical confirmation dialog](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/screenshots/en-download-engines.jpg).
 
 Configure LibreOffice, libheif, Tesseract and OCR models from local installations. See the [configuration guide](docs/configuration.en.md) for paths, preferences, manual scripts and queue recovery.
 

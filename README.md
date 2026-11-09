@@ -6,15 +6,15 @@
 
 Sviluppato da **[Salvatore Corsi](https://github.com/salvatorecorsi)**, Convert Here è un programma gratuito e open source scritto in Rust. Puoi usarlo dalla sua finestra, dal menu di Esplora file o dalla riga di comando. Le conversioni e l'OCR avvengono sul computer, senza caricare i tuoi file su un servizio online. Nessun account, abbonamento, acquisto in-app o costo a consumo. Nessun pagamento richiesto per continuare a usarlo.
 
-[Scarica per Windows](https://github.com/salvatorecorsi/convert-here/releases/latest) · [Microsoft Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8) · [Novità della 0.7.0](docs/release-notes-0.7.0.md) · [Segnala un problema](https://github.com/salvatorecorsi/convert-here/issues)
+[Scarica per Windows](https://github.com/salvatorecorsi/convert-here/releases/latest) · [Microsoft Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8) · [Novità della 0.7.1](docs/release-notes-0.7.1.md) · [Segnala un problema](https://github.com/salvatorecorsi/convert-here/issues)
 
-**La release GitHub 0.7.0 è bilingue, in italiano e inglese.** Scarica installer o portable e scegli la lingua in **Impostazioni → Lingua**. Vedi [Lingue](#lingue).
+**Convert Here è bilingue, in italiano e inglese.** Scarica installer o portable e scegli la lingua in **Impostazioni → Lingua**. Vedi [Lingue](#lingue).
 
-La **0.7.0 è pubblicata su GitHub** dal 9 novembre 2026: quattro schede, manager dei profili, import/export JSON, limiti comuni e opzioni avanzate dei motori. [Note di rilascio IT](docs/release-notes-0.7.0.md) / [EN](docs/release-notes-0.7.0.en.md). L'aggiornamento **Store 1.0.6.0 è in certificazione**; la pubblicazione è prevista automaticamente dopo l'approvazione, non è ancora disponibile nello Store. [Stato Store](docs/store-submission.md). Le [note della 0.6.0](docs/release-notes-0.6.0.md) restano come storico.
+La **0.7.1 è candidata, in preparazione**, con un workaround per il menu del pacchetto Store su Windows 10 e nuove catture dell'app. La correzione del menu non è ancora verificata su un host Windows 10 reale. [Note IT](docs/release-notes-0.7.1.md) / [EN](docs/release-notes-0.7.1.en.md). Le funzioni della [0.7.0 pubblicata su GitHub](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.0) restano invariate. Lo **Store 1.0.6.0 resta in certificazione**; il nuovo **1.0.7.0** è in preparazione e non ancora inviato. [Stato Store](docs/store-submission.md).
 
-![Convert Here 0.7.0: manager dei profili e quattro schede](docs/store-assets/0.7.0/02-profili-it.jpg)
+![Convert Here: manager dei profili e quattro schede](docs/store-assets/0.7.1/02-profili-it.png)
 
-*Profili della 0.7.0: ricette con nome, ingressi consentiti, duplicazione, import/export JSON e predefiniti. Interfaccia disponibile in italiano e inglese.*
+*Profili: ricette con nome, ingressi consentiti, duplicazione, import/export JSON e predefiniti. Cattura nativa della build debug 0.7.0, con interfaccia invariata nella 0.7.1 e zoom al 150%, senza ingrandimento successivo. [Provenienza delle catture](docs/store-assets/0.7.1/README.md).*
 
 ## Cosa puoi fare
 
@@ -35,18 +35,18 @@ Impagina immagini, testo scritto in **Nuovo foglio…** o TXT UTF-8 su **A4/A5**
 
 ## Installazione
 
-La distribuzione GitHub richiede **Windows 10 build 19041 o successivo, x64**. Dalla [release 0.7.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.0) puoi scegliere:
+La distribuzione GitHub richiede **Windows 10 build 19041 o successivo, x64**. I pacchetti della [0.7.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.1), attualmente candidata, saranno disponibili dopo la pubblicazione:
 
 | Pacchetto | Come si usa |
 | --- | --- |
-| [ConvertHere-0.7.0-windows-x64-setup.exe](https://github.com/salvatorecorsi/convert-here/releases/download/v0.7.0/ConvertHere-0.7.0-windows-x64-setup.exe) | Avvia il setup. Installa per il tuo utente, senza privilegi amministrativi; l'integrazione con il menu contestuale è facoltativa e selezionata per default. |
-| [ConvertHere-0.7.0-windows-x64-portable.zip](https://github.com/salvatorecorsi/convert-here/releases/download/v0.7.0/ConvertHere-0.7.0-windows-x64-portable.zip) | Estrai in una cartella stabile e avvia `the-converter.exe`. Include anche la CLI e gli script per il menu contestuale. |
+| [ConvertHere-0.7.1-windows-x64-setup.exe](https://github.com/salvatorecorsi/convert-here/releases/download/v0.7.1/ConvertHere-0.7.1-windows-x64-setup.exe) | Avvia il setup. Installa per il tuo utente, senza privilegi amministrativi; l'integrazione con il menu contestuale è facoltativa e selezionata per default. |
+| [ConvertHere-0.7.1-windows-x64-portable.zip](https://github.com/salvatorecorsi/convert-here/releases/download/v0.7.1/ConvertHere-0.7.1-windows-x64-portable.zip) | Estrai in una cartella stabile e avvia `the-converter.exe`. Include anche la CLI e gli script per il menu contestuale. |
 
 Puoi verificare i pacchetti con `SHA256SUMS.txt` nella stessa release. I nomi tecnici degli eseguibili restano `the-converter.exe` e `the-converter-cli.exe`; alcune release precedenti mostrano il nome The Converter.
 
 **Immagini native, immagini in PDF e operazioni sui PDF esistenti funzionano subito.** Per le altre conversioni configura i [motori opzionali](#motori-opzionali): il setup non li include e non li scarica. L'app non richiede Python, Node o Rust per essere eseguita.
 
-Nella distribuzione GitHub il menu di Windows 11 si trova in **Mostra altre opzioni**. I pacchetti GitHub 0.7.0 non sono firmati Authenticode. Per i dettagli sul menu classico e moderno consulta la [guida all'integrazione con Windows](docs/windows-integration.md).
+Nella distribuzione GitHub il menu di Windows 11 si trova in **Mostra altre opzioni**. La distribuzione GitHub non prevede firma Authenticode. Per i dettagli sul menu classico e moderno consulta la [guida all'integrazione con Windows](docs/windows-integration.md).
 
 Per disinstallare usa **Impostazioni Windows → App → App installate → Convert Here → Disinstalla**. Preferenze e file convertiti restano conservati.
 
@@ -78,7 +78,7 @@ Con più file convertibili in PDF:
 
 Apri **Impostazioni → Formati di uscita** e abilita le destinazioni che usi. Le scelte valgono sia nel selettore dell'app sia nel menu di Esplora file, senza riavviare Explorer. All'inizio sono attivi **MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4**. Ogni selezione mostra soltanto le destinazioni compatibili.
 
-![Impostazioni 0.7.0: cinque colonne per i formati di uscita e griglia dei motori](docs/store-assets/0.7.0/01-impostazioni-it.jpg)
+![Impostazioni: cinque colonne per i formati di uscita e griglia dei motori](docs/store-assets/0.7.1/01-impostazioni-it.png)
 
 *Puoi attivare tutti i formati, ripristinare i più comuni o scegliere le singole uscite. Il filtro riguarda la visualizzazione: tutti gli ingressi restano riconosciuti e la CLI mantiene tutte le destinazioni.*
 
@@ -112,9 +112,7 @@ Per un PDF scegli **PDF** e l'operazione desiderata nelle opzioni:
 - **Dividi: una pagina per file**: crea `nome-pagina-001.pdf`, `nome-pagina-002.pdf` e così via.
 - **PDF (Merge) · ordina pagine**: prepara le sorgenti e apre l'editor. Sposta le pagine con la maniglia, le frecce o **Alt+↑ / Alt+↓**, poi scegli **Crea PDF unico**.
 
-![Editor PDF Merge: cinque pagine provenienti da due immagini e un PDF, riordinate prima dell'unione](docs/screenshots/unione-pdf.png)
-
-*Puoi intercalare le pagine di PDF multipagina, immagini e documenti Office. Ogni riga indica il file e il numero di pagina originale.*
+Puoi intercalare le pagine di PDF multipagina, immagini e documenti Office. Ogni riga indica il file e il numero di pagina originale. [Cattura storica di PDF Merge](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/screenshots/unione-pdf.png).
 
 Il risultato dell'unione si chiama `primo-unito.pdf`, con un numero aggiunto se il nome esiste già. Sono incluse tutte le pagine una volta, fino a 10.000; controlla l'ordine nell'editor. Gli originali restano invariati e i PDF intermedi vengono preparati in una cartella temporanea dell'utente.
 
@@ -150,9 +148,7 @@ Apri **Impostazioni → Motori** per rilevare gli strumenti già installati o sc
 
 **FFmpeg e Poppler si possono scaricare direttamente dall'app**, anche nella versione portable. Prima della conferma vedi origine, versione, dimensioni, licenze e cartella di installazione. Nella 0.7.0 i due archivi richiedono circa **159 MB di download** e circa **615 MB liberi** durante download ed estrazione. Gli archivi vengono verificati con SHA-256; licenze e documentazione restano incluse.
 
-![Conferma del download opzionale di FFmpeg e Poppler con versioni, dimensioni, licenze e cartella personale](docs/screenshots/download-motori.png)
-
-*Il download parte soltanto dopo la conferma. I motori vengono installati nella cartella dell'utente; i file da convertire restano sul PC.*
+Il download parte soltanto dopo la conferma. I motori vengono installati nella cartella dell'utente; i file da convertire restano sul PC. [Cattura storica del dialogo](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/screenshots/download-motori.png).
 
 LibreOffice, libheif, Tesseract e i modelli OCR si configurano da installazioni locali. Per percorsi, preferenze, script manuali e recupero della coda consulta la [guida alla configurazione](docs/configuration.md).
 

@@ -128,6 +128,9 @@ try {
     Change-Manifest { param($doc) $doc.SelectSingleNode('//*[local-name()="Class"]').SetAttribute('Path', '..\external.dll') }
     Assert-Fails { Assert-StorePackageLayout -StageDirectory $layout -Identity $preview } 'External COM server path accepted.'
     Reset-Manifest
+    Change-Manifest { param($doc) $doc.SelectSingleNode('//*[local-name()="Verb"]').SetAttribute('Id', 'ConvertWithTheConverter') }
+    Assert-Fails { Assert-StorePackageLayout -StageDirectory $layout -Identity $preview } 'Classic-menu compatibility verb ID regressed.'
+    Reset-Manifest
     Change-Manifest { param($doc) $element = $doc.CreateElement('rescap', 'Capability', 'http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities'); $element.SetAttribute('Name', 'unvirtualizedResources'); [void]$doc.Package.Capabilities.AppendChild($element) }
     Assert-Fails { Assert-StorePackageLayout -StageDirectory $layout -Identity $preview } 'Unexpected restricted capability accepted.'
     Reset-Manifest

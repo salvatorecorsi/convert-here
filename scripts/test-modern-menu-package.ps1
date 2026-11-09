@@ -59,6 +59,8 @@ try {
     Assert-Fails { Get-ModernMenuPackageInfo -PackagePath $badName -InstallDirectory $stage } 'Wrong identity accepted.'
     $badClass = New-Package 'wrong-class.msix' ($manifestText.Replace('67B51BA1-8A78-4B4B-A5F9-08A825BE91F8', '00000000-0000-0000-0000-000000000001'))
     Assert-Fails { Get-ModernMenuPackageInfo -PackagePath $badClass -InstallDirectory $stage } 'Wrong COM class accepted.'
+    $oldVerb = New-Package 'old-verb-id.msix' ($manifestText.Replace('0000ConvertHere', 'ConvertWithTheConverter'))
+    Assert-Fails { Get-ModernMenuPackageInfo -PackagePath $oldVerb -InstallDirectory $stage } 'Classic-menu compatibility verb ID regressed.'
     $badDtd = New-Package 'dtd.msix' ($manifestText.Replace('<Package', '<!DOCTYPE Package [<!ENTITY injected "bad">]><Package'))
     Assert-Fails { Get-ModernMenuPackageInfo -PackagePath $badDtd -InstallDirectory $stage } 'DTD accepted.'
     $badLogo = New-Package 'missing-asset.msix' ($manifestText.Replace('Assets\StoreLogo.png', 'Assets\Missing.png'))

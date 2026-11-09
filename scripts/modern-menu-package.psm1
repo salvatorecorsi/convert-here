@@ -65,7 +65,8 @@ function Get-ModernMenuPackageInfo {
         $classes[0].GetAttribute('Path') -cne 'the_converter_shell.dll' -or
         $classes[0].GetAttribute('ThreadingModel') -cne 'STA') { throw 'Server COM del menu inatteso.' }
     $verbs = @($manifest.SelectNodes('/p:Package/p:Applications/p:Application/p:Extensions/desktop4:Extension[@Category="windows.fileExplorerContextMenus"]/desktop4:FileExplorerContextMenus/desktop5:ItemType[@Type="*"]/desktop5:Verb', $ns))
-    if ($verbs.Count -ne 1 -or $verbs[0].GetAttribute('Clsid') -ine $classId) { throw 'Comando del menu Windows 11 mancante o inatteso.' }
+    if ($verbs.Count -ne 1 -or $verbs[0].GetAttribute('Clsid') -ine $classId -or
+        $verbs[0].GetAttribute('Id') -cne '0000ConvertHere') { throw 'Comando del menu o ID compatibile con il menu classico mancante o inatteso.' }
 
     $assetValues = @()
     $logo = $manifest.SelectSingleNode('/p:Package/p:Properties/p:Logo', $ns)

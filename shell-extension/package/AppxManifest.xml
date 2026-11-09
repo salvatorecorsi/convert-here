@@ -8,7 +8,7 @@
  xmlns:desktop5="http://schemas.microsoft.com/appx/manifest/desktop/windows10/5"
  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
  IgnorableNamespaces="uap uap10 com desktop4 desktop5 rescap">
- <Identity Name="SalvatoreCorsi.TheConverter" Publisher="CN=Salvatore Corsi" Version="0.7.0.0" ProcessorArchitecture="x64"/>
+ <Identity Name="SalvatoreCorsi.TheConverter" Publisher="CN=Salvatore Corsi" Version="0.7.1.0" ProcessorArchitecture="x64"/>
  <Properties>
   <DisplayName>Convert Here</DisplayName>
   <PublisherDisplayName>Salvatore Corsi</PublisherDisplayName>
@@ -28,7 +28,9 @@
     </com:Extension>
     <desktop4:Extension Category="windows.fileExplorerContextMenus">
      <desktop4:FileExplorerContextMenus><desktop5:ItemType Type="*">
-      <desktop5:Verb Id="ConvertWithTheConverter" Clsid="67B51BA1-8A78-4B4B-A5F9-08A825BE91F8"/>
+      <!-- Early-sorting ID mitigates missing packaged verbs in the classic Shell menu.
+           Observed workaround: https://github.com/MediaArea/MediaInfo/pull/998 -->
+      <desktop5:Verb Id="0000ConvertHere" Clsid="67B51BA1-8A78-4B4B-A5F9-08A825BE91F8"/>
      </desktop5:ItemType></desktop4:FileExplorerContextMenus>
     </desktop4:Extension>
    </Extensions>

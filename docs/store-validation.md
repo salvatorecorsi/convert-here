@@ -164,3 +164,11 @@ Il report WACK locale della precedente preview **1.0.1.0**, eseguito con kit 10.
 **Il precedente report WACK riguarda una preview distinta e non viene dichiarato superato.** Microsoft considera il WACK un controllo locale deprecato e facoltativo: non e stato eseguito sul nuovo candidato e il suo esito non garantirebbe l'approvazione Store. Installazione/aggiornamento/disinstallazione, menu registrato e motori opzionali del MSIX finale restano senza un collaudo su ambiente pulito. [Validazione locale MSIX](https://learn.microsoft.com/en-us/windows/msix/package/packaging-uwp-apps#validate-your-app-package-locally).
 
 Il precedente pacchetto 1.0.1.0 è stato sostituito dal 1.0.2.0. Il nuovo nome **Salvatore Corsi** e approvato, il pacchetto 1.0.2.0 e Validated e la submission e **In certification** dal 4 novembre 2026; la pubblicazione Store non e ancora iniziata. Vedi la [procedura di submission](store-submission.md).
+
+## 0.7.1 / Store 1.0.7.0 — candidata del 9 novembre 2026
+
+La modifica del menu packaged usa `0000ConvertHere`, mantenendo identità, CLSID e capability. I controlli mirati passano: branding 37, Store 51 più MakeAppx semantico, sparse 26, installer 7 e cleanup 6, sorgenti corrispondenti 21, parità delle 93 estensioni con due fixture incoerenti respinte. Il nuovo probe COM/menu classico è passato sul pacchetto **installato 1.0.6.0** e Windows 11 build 26200: questo dato non collauda il candidato 1.0.7.0 né Windows 10. Il gate richiede `-ExpectedVersion 1.0.7.0` dopo l'installazione. Non è disponibile un host Windows 10 reale.
+
+Le due [nuove catture](store-assets/0.7.1/README.md) sono PNG 2562 × 1430, senza puntatore. Provengono dalla UI debug 0.7.0 invariata in 0.7.1, zoom nativo 150%, senza ingrandimento successivo; la CLI ha convertito i JPEG nativi in PNG. I 20 screenshot precedenti con puntatore/alone sono ritirati dal ramo corrente; gli archivi rimandano al tag storico v0.7.0.
+
+Build, audit finali, push, release e stato della nuova submission saranno registrati dopo l'esecuzione; non trasferire checksum o prove della 0.7.0 al candidato.

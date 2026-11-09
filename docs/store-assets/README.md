@@ -1,19 +1,22 @@
 # Materiale visivo Store
 
-## 0.7.0 in preparazione
+## Galleria corrente 0.7.1
 
-Le [catture native 0.7.0](0.7.0/README.md) documentano la nuova finestra a quattro schede dalla build debug locale del 9 novembre 2026: [Impostazioni](0.7.0/01-impostazioni-it.jpg) e [Profili](0.7.0/02-profili-it.jpg), entrambe JPEG **1722 × 959**. Il registro conserva provenienza e SHA-256. Non attestano distribuzione release, installazione del candidato Store, WACK o collaudo Windows 10.
+Le due [catture correnti](0.7.1/README.md) mostrano [Impostazioni](0.7.1/01-impostazioni-it.png) e [Profili](0.7.1/02-profili-it.png), entrambe PNG **2562 × 1430**. Sono state acquisite il 9 novembre 2026 dalla build debug nativa **0.7.0**, con interfaccia invariata nella 0.7.1 e **zoom dell'app al 150%**, senza ingrandimento successivo. La CLI release 0.7.0 ha convertito i JPEG nativi in PNG senza ridimensionamento. Il registro riporta provenienza, dimensioni, byte e SHA-256. Non sono catture di una build 0.7.1 e non attestano installazione del candidato Store, WACK o collaudo del menu Windows 10.
 
 ## Catture precedenti
 
+Le catture precedenti con puntatore o alone di acquisizione non fanno parte della galleria corrente. I collegamenti seguenti aprono copie dello snapshot immutabile **v0.7.0**; i relativi report storici restano conservati.
+
 - `store-icon-300.png`: icona prodotto PNG trasparente 300 × 300, riproducibile dalla sorgente `assets/app.svg` con `scripts/render-app-icon.ps1`.
-- [0.4.0/01-conversione-immagini.png](0.4.0/01-conversione-immagini.png): conversione locale di due PNG in JPEG completata nell'interfaccia nativa 0.4.0.
-- [0.3.1/02-pdf-merge.png](0.3.1/02-pdf-merge.png): ordinamento delle singole pagine in PDF Merge, PNG 1538 × 911, riusato per la 0.4.0 con interfaccia invariata.
-- [0.4.0/03-impostazioni-formati.png](0.4.0/03-impostazioni-formati.png): Impostazioni della 0.4.0 con le otto uscite predefinite raggruppate per categoria.
-- [0.4.0/04-download-motori.png](0.4.0/04-download-motori.png): conferma download di FFmpeg e Poppler con fonti, versioni, dimensioni, licenze e destinazione personale. Non attesta l'avvio o il completamento del download.
+- [0.7.0/01-impostazioni-it.jpg](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/store-assets/0.7.0/01-impostazioni-it.jpg) e [0.7.0/02-profili-it.jpg](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/store-assets/0.7.0/02-profili-it.jpg): precedenti JPEG 1722 × 959 della finestra a quattro schede. [Registro storico](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/store-assets/0.7.0/README.md).
+- [0.4.0/01-conversione-immagini.png](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/store-assets/0.4.0/01-conversione-immagini.png): conversione locale di due PNG in JPEG completata nell'interfaccia nativa 0.4.0.
+- [0.3.1/02-pdf-merge.png](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/store-assets/0.3.1/02-pdf-merge.png): ordinamento delle singole pagine in PDF Merge, PNG 1538 × 911, riusato per la 0.4.0 con interfaccia invariata.
+- [0.4.0/03-impostazioni-formati.png](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/store-assets/0.4.0/03-impostazioni-formati.png): Impostazioni della 0.4.0 con le otto uscite predefinite raggruppate per categoria.
+- [0.4.0/04-download-motori.png](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/store-assets/0.4.0/04-download-motori.png): conferma download di FFmpeg e Poppler con fonti, versioni, dimensioni, licenze e destinazione personale. Non attesta l'avvio o il completamento del download.
 
-Le nuove catture documentano l'interfaccia nativa 0.4.0 con file dimostrativi e senza dati personali. Non attestano installazione o certificazione del nuovo MSIX. La UI e italiana anche nelle immagini per la scheda inglese. Il [registro 0.3.1](0.3.1/README.md) conserva origine, verifiche, dimensioni e hash precedenti: le sue schermate immagini e Strumenti restano storiche; PDF Merge e riusato come indicato sopra.
+Le catture della 0.4.0 documentavano l'interfaccia nativa con file dimostrativi e senza dati personali. Non attestavano installazione o certificazione del nuovo MSIX. La UI è italiana anche nelle immagini per la scheda inglese. Il [registro storico 0.3.1](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/store-assets/0.3.1/README.md) conserva origine, verifiche, dimensioni e hash precedenti.
 
-Le due [catture della 0.3.0](0.3.0/README.md) restano come storico della conversione immagini e di PDF Merge, separate dalle schermate correnti.
+Le due [catture della 0.3.0](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/store-assets/0.3.0/README.md) restano come storico della conversione immagini e di PDF Merge, separate dalle schermate correnti.
 
-I file precedenti `01-conversione-immagini.png` (1062 × 790) e `02-conversione-scura.png` (1536 × 912) restano nella cartella principale come storico. Nonostante l'estensione `.png`, il loro contenuto è JPEG/JFIF; la prima è inoltre più stretta del minimo desktop di 1366 pixel. Questo materiale storico non documenta PDF Merge. I motori visibili appartengono al PC di prova e non al pacchetto Store.
+I file precedenti [01-conversione-immagini.png](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/store-assets/01-conversione-immagini.png) (1062 × 790) e [02-conversione-scura.png](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/store-assets/02-conversione-scura.png) (1536 × 912) restano nello snapshot storico. Nonostante l'estensione `.png`, il loro contenuto è JPEG/JFIF; la prima è inoltre più stretta del minimo desktop di 1366 pixel. Questo materiale storico non documenta PDF Merge. I motori visibili appartengono al PC di prova e non al pacchetto Store.

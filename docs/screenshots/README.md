@@ -2,32 +2,38 @@
 
 Schermate reali dell'interfaccia Windows, usate nel [README italiano](../../README.md) e nel [README inglese](../../README.en.md) per illustrare l'uso del programma. Mostrano file dimostrativi; i motori visibili appartengono all'ambiente di prova.
 
-## Nuova interfaccia 0.7.0 · in preparazione
+## Galleria corrente 0.7.1
 
-Le nuove catture sono nel [registro Store 0.7.0](../store-assets/0.7.0/README.md): [Impostazioni](../store-assets/0.7.0/01-impostazioni-it.jpg) e [Profili](../store-assets/0.7.0/02-profili-it.jpg). Sono JPEG **1722 × 959**, acquisiti il 9 novembre 2026 dalla build debug nativa 0.7.0 degli stessi sorgenti destinati alla release. Mostrano colonne dei formati, griglia dei motori e manager dei profili. Il registro riporta i digest e distingue la QA funzionale dalle catture; non si dichiara pubblicato o installato il nuovo pacchetto Store.
+La galleria corrente contiene soltanto le due immagini nel [registro 0.7.1](../store-assets/0.7.1/README.md): [Impostazioni](../store-assets/0.7.1/01-impostazioni-it.png) e [Profili](../store-assets/0.7.1/02-profili-it.png). Sono PNG **2562 × 1430**, da catture native CUA del 9 novembre 2026 della build debug **0.7.0**, con interfaccia invariata nella 0.7.1. Lo zoom al **150%** è impostato nell'app: non è un ingrandimento successivo delle immagini. La CLI release 0.7.0 ha convertito gli originali JPEG in PNG senza ridimensionarli. Il registro riporta formato verificato, provenienza e SHA-256. Queste immagini non attestano una build 0.7.1 catturata, installazione del candidato Store, WACK o menu su Windows 10 reale.
 
-## Interfaccia inglese · 9 novembre 2026
+## Catture precedenti · archivio
+
+Le immagini precedenti con puntatore o alone di acquisizione sono ritirate dalla galleria corrente. I collegamenti storici aprono lo snapshot immutabile **v0.7.0**, senza modificare tag o report.
+
+Le precedenti [Impostazioni 0.7.0](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/store-assets/0.7.0/01-impostazioni-it.jpg) e [Profili 0.7.0](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/store-assets/0.7.0/02-profili-it.jpg) erano JPEG 1722 × 959. Il [registro originale](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/store-assets/0.7.0/README.md) conserva provenienza e digest.
+
+### Interfaccia inglese · 9 novembre 2026
 
 Catture native ottenute il **9 novembre 2026** da una build debug dei sorgenti bilingui successivi alla release 0.4.0. Le immagini sono **JPEG integrali della finestra**, senza ritocchi, sovrapposizioni o ridimensionamenti. Documentano l'interfaccia bilingue inclusa nella 0.5.0; sono state acquisite durante le verifiche dei sorgenti prima della build release.
 
 | Screenshot | Cosa mostra | Dimensioni |
 | --- | --- | --- |
-| [en-conversion.jpg](en-conversion.jpg) | Due PNG, Cover.png e Illustration.png, convertiti in JPEG nell'interfaccia inglese: due completati e zero errori | 1062 × 791 |
-| [en-settings.jpg](en-settings.jpg) | Formati di uscita per categoria e selettore Language con System, Italiano ed English | 1062 × 791 |
-| [en-download-engines.jpg](en-download-engines.jpg) | Dialogo inglese di conferma per FFmpeg e Poppler con fonti, versioni, dimensioni, licenze e destinazione personale | 1062 × 791 |
-| [en-merge-pdf.jpg](en-merge-pdf.jpg) | Quattro pagine da Cover.png, Document.pdf di due pagine e Illustration.png; l'illustrazione è intercalata fra le due pagine del PDF | 922 × 751 |
+| [en-conversion.jpg](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/screenshots/en-conversion.jpg) | Due PNG, Cover.png e Illustration.png, convertiti in JPEG nell'interfaccia inglese: due completati e zero errori | 1062 × 791 |
+| [en-settings.jpg](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/screenshots/en-settings.jpg) | Formati di uscita per categoria e selettore Language con System, Italiano ed English | 1062 × 791 |
+| [en-download-engines.jpg](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/screenshots/en-download-engines.jpg) | Dialogo inglese di conferma per FFmpeg e Poppler con fonti, versioni, dimensioni, licenze e destinazione personale | 1062 × 791 |
+| [en-merge-pdf.jpg](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/screenshots/en-merge-pdf.jpg) | Quattro pagine da Cover.png, Document.pdf di due pagine e Illustration.png; l'illustrazione è intercalata fra le due pagine del PDF | 922 × 751 |
 
-Il dialogo dei motori è stato annullato: la cattura mostra soltanto la conferma e **non è stato avviato alcun download**. La schermata PDF Merge mostra l'ordine delle pagine prima del salvataggio. Queste quattro immagini sono integrate nel README inglese.
+Il dialogo dei motori è stato annullato: la cattura mostra soltanto la conferma e **non è stato avviato alcun download**. La schermata PDF Merge mostra l'ordine delle pagine prima del salvataggio. Queste immagini restano esclusivamente storiche e non sono più incorporate nel README corrente.
 
-## Interfaccia italiana · catture storiche
+### Interfaccia italiana · catture storiche
 
 | Screenshot | Cosa mostra | Versione dell'app | Cattura originale |
 | --- | --- | --- | --- |
-| [conversione-immagini.png](conversione-immagini.png) | Due immagini PNG convertite in JPEG, con risultato per file e opzioni di destinazione | 0.4.0 | [Originale](../store-assets/0.4.0/01-conversione-immagini.png) |
-| [unione-pdf.png](unione-pdf.png) | Cinque pagine da immagini e PDF, intercalate nell'editor PDF Merge | 0.3.1, interfaccia di questo flusso invariata nella 0.4.0 | [Originale](../store-assets/0.3.1/02-pdf-merge.png) |
-| [impostazioni-formati.png](impostazioni-formati.png) | Formati di uscita per categoria e scelta del tema | 0.4.0 | [Originale](../store-assets/0.4.0/03-impostazioni-formati.png) |
-| [download-motori.png](download-motori.png) | Conferma del download opzionale di FFmpeg e Poppler | 0.4.0 | [Originale](../store-assets/0.4.0/04-download-motori.png) |
+| [conversione-immagini.png](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/screenshots/conversione-immagini.png) | Due immagini PNG convertite in JPEG, con risultato per file e opzioni di destinazione | 0.4.0 | [Originale](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/store-assets/0.4.0/01-conversione-immagini.png) |
+| [unione-pdf.png](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/screenshots/unione-pdf.png) | Cinque pagine da immagini e PDF, intercalate nell'editor PDF Merge | 0.3.1, interfaccia di questo flusso invariata nella 0.4.0 | [Originale](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/store-assets/0.3.1/02-pdf-merge.png) |
+| [impostazioni-formati.png](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/screenshots/impostazioni-formati.png) | Formati di uscita per categoria e scelta del tema | 0.4.0 | [Originale](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/store-assets/0.4.0/03-impostazioni-formati.png) |
+| [download-motori.png](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/screenshots/download-motori.png) | Conferma del download opzionale di FFmpeg e Poppler | 0.4.0 | [Originale](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/store-assets/0.4.0/04-download-motori.png) |
 
-Le quattro immagini italiane sono copie integrali degli originali già presenti nella repository, senza ritocchi o ridimensionamenti. Dimensioni: 1538 × 911 pixel, formato PNG. La schermata del download mostra la conferma, senza attestare l'avvio o il completamento dell'installazione. Restano integrate nel README italiano come documentazione delle versioni indicate.
+Le quattro immagini italiane erano copie integrali degli originali, senza ritocchi o ridimensionamenti. Dimensioni: 1538 × 911 pixel, formato PNG. La schermata del download mostra la conferma, senza attestare l'avvio o il completamento dell'installazione. Non sono più incorporate nel README corrente.
 
-Il [registro delle catture](../store-assets/README.md) e il [registro della sessione PDF Merge](../store-assets/0.3.1/README.md) conservano provenienza e verifiche delle immagini.
+Il [registro delle catture](../store-assets/README.md) e il [registro storico della sessione PDF Merge](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/store-assets/0.3.1/README.md) conservano provenienza e verifiche delle immagini.
