@@ -25,6 +25,19 @@ use output_preferences_shared as output_preferences;
 #[rustfmt::skip]
 mod profile_menu_shared;
 use profile_menu_shared::{ProfileInputPolicy, ProfileMenuItem};
+#[path = "../../src/language_shared.rs"]
+#[allow(dead_code)] // Shared language-code serialization is used by the application.
+#[rustfmt::skip]
+mod language_shared;
+use language_shared::Language;
+
+fn localized(language: Language, italian: &'static str, english: &'static str) -> &'static str {
+    if language.is_english() {
+        english
+    } else {
+        italian
+    }
+}
 
 type HResult = i32;
 const S_OK: HResult = 0;
@@ -104,12 +117,12 @@ const IID_IENUMEXPLORERCOMMAND: Guid = Guid {
 const TARGETS: [&str; 44] = output_preferences::ALL_OUTPUT_EXTENSIONS;
 const ALL_TARGETS: u64 = (1 << TARGETS.len()) - 1;
 
-fn text_target_title(selection: u64) -> &'static str {
+fn text_target_title(selection: u64, language: Language) -> &'static str {
     if selection == UNKNOWN_SELECTION_MASK {
         return "TXT";
     }
     if selection & SELECTION_CONTAINS_IMAGE != 0 && selection & SELECTION_CONTAINS_PDF != 0 {
-        "TXT · OCR / testo PDF"
+        localized(language, "TXT · OCR / testo PDF", "TXT · OCR / PDF text")
     } else if selection & SELECTION_CONTAINS_IMAGE != 0 {
         "TXT · OCR"
     } else {
@@ -117,11 +130,11 @@ fn text_target_title(selection: u64) -> &'static str {
     }
 }
 
-fn pdf_target_title(selection: u64) -> &'static str {
+fn pdf_target_title(selection: u64, language: Language) -> &'static str {
     if selection != UNKNOWN_SELECTION_MASK && selection & SELECTION_MULTIPLE != 0 {
         "PDF (Bulk)"
     } else if selection != UNKNOWN_SELECTION_MASK && selection & SELECTION_CONTAINS_PDF != 0 {
-        "PDF · comprimi"
+        localized(language, "PDF · comprimi", "PDF · compress")
     } else {
         "PDF"
     }
@@ -562,8 +575,9 @@ unsafe extern "system" fn explorer_title(
     out: *mut *mut u16,
 ) -> HResult {
     let command = &*(this as *mut ExplorerObject);
+    let language = ui_language();
     if command.parent {
-        string_result("Converti in", out)
+        string_result(localized(language, "Converti in", "Convert to"), out)
     } else if let Some(profile) = &command.profile {
         string_result(
             &format!(
@@ -577,10 +591,12 @@ unsafe extern "system" fn explorer_title(
         string_result("PDF (Merge)", out)
     } else if let Some(target) = command.target.as_deref() {
         let label = match target {
-            "txt" => text_target_title(command.selection_mask.load(Ordering::Acquire)).to_owned(),
-            "pdf" => pdf_target_title(command.selection_mask.load(Ordering::Acquire)).to_owned(),
-            "docx" => "Word (DOCX) · testo".to_owned(),
-            "html" => "HTML · testo".to_owned(),
+            "txt" => text_target_title(command.selection_mask.load(Ordering::Acquire), language)
+                .to_owned(),
+            "pdf" => pdf_target_title(command.selection_mask.load(Ordering::Acquire), language)
+                .to_owned(),
+            "docx" => localized(language, "Word (DOCX) · testo", "Word (DOCX) · text").to_owned(),
+            "html" => localized(language, "HTML · testo", "HTML · text").to_owned(),
             "jpg" => "JPEG".to_owned(),
             "webp" => "WebP".to_owned(),
             "ff" => "Farbfeld".to_owned(),
@@ -591,7 +607,10 @@ unsafe extern "system" fn explorer_title(
         };
         string_result(&label, out)
     } else {
-        string_result("Impostazioni personalizzate…", out)
+        string_result(
+            localized(language, "Impostazioni personalizzate…", "Custom settings…"),
+            out,
+        )
     }
 }
 unsafe extern "system" fn explorer_tooltip(
@@ -600,14 +619,43 @@ unsafe extern "system" fn explorer_tooltip(
     out: *mut *mut u16,
 ) -> HResult {
     let command = &*(this as *mut ExplorerObject);
+    let language = ui_language();
     if command.profile.is_some() {
-        string_result("Esegui il profilo salvato senza aprire le opzioni", out)
+        string_result(
+            localized(
+                language,
+                "Esegui il profilo salvato senza aprire le opzioni",
+                "Run the saved profile without opening options",
+            ),
+            out,
+        )
     } else if command.pdf_merge {
-        string_result("Ordina le pagine e crea un unico PDF", out)
+        string_result(
+            localized(
+                language,
+                "Ordina le pagine e crea un unico PDF",
+                "Reorder pages and create a single PDF",
+            ),
+            out,
+        )
     } else if command.target.is_some() {
-        string_result("Converti subito con le impostazioni salvate", out)
+        string_result(
+            localized(
+                language,
+                "Converti subito con le impostazioni salvate",
+                "Convert immediately using saved settings",
+            ),
+            out,
+        )
     } else {
-        string_result("Scegli formato, qualità e destinazione", out)
+        string_result(
+            localized(
+                language,
+                "Scegli formato, qualità e destinazione",
+                "Choose format, quality and destination",
+            ),
+            out,
+        )
     }
 }
 unsafe extern "system" fn explorer_icon(
@@ -936,7 +984,7 @@ fn selection_metadata(paths: &[PathBuf]) -> u64 {
     metadata
 }
 
-fn load_menu_preferences_at_paths(paths: &[PathBuf]) -> MenuPreferences {
+fn saved_preferences_at_paths(paths: &[PathBuf]) -> Option<serde_json::Value> {
     use profile_menu_shared::MAX_PREFERENCES_BYTES;
     for path in paths {
         let file = match std::fs::File::open(path) {
@@ -953,23 +1001,26 @@ fn load_menu_preferences_at_paths(paths: &[PathBuf]) -> MenuPreferences {
         {
             break;
         }
-        let saved: Option<serde_json::Value> = serde_json::from_slice(&bytes).ok();
-        return MenuPreferences {
-            enabled: extension_mask(output_preferences::decode_extensions(
-                saved
-                    .as_ref()
-                    .and_then(|saved| saved.get("enabled_output_formats")),
-            )),
-            profiles: profile_menu_shared::decode_profiles(
-                saved
-                    .as_ref()
-                    .and_then(|value| value.get("conversion_profiles")),
-            ),
-        };
+        // A present but invalid package-local file must not expose historical
+        // settings belonging to a different installation.
+        return serde_json::from_slice(&bytes).ok();
     }
+    None
+}
+
+fn load_menu_preferences_at_paths(paths: &[PathBuf]) -> MenuPreferences {
+    let saved = saved_preferences_at_paths(paths);
     MenuPreferences {
-        enabled: extension_mask(output_preferences::COMMON_OUTPUT_EXTENSIONS),
-        profiles: vec![],
+        enabled: extension_mask(output_preferences::decode_extensions(
+            saved
+                .as_ref()
+                .and_then(|saved| saved.get("enabled_output_formats")),
+        )),
+        profiles: profile_menu_shared::decode_profiles(
+            saved
+                .as_ref()
+                .and_then(|value| value.get("conversion_profiles")),
+        ),
     }
 }
 
@@ -978,15 +1029,32 @@ fn enabled_target_mask_at_paths(paths: &[PathBuf]) -> u64 {
     load_menu_preferences_at_paths(paths).enabled
 }
 
-fn load_menu_preferences() -> MenuPreferences {
+fn ui_language_at_paths(paths: &[PathBuf]) -> Language {
+    saved_preferences_at_paths(paths)
+        .as_ref()
+        .and_then(|saved| saved.get("ui_language"))
+        .and_then(serde_json::Value::as_str)
+        .map(Language::from_code)
+        .unwrap_or(Language::System)
+}
+
+fn current_preferences_paths() -> Vec<PathBuf> {
     let executable = executable_path();
     let roaming = std::env::var_os("APPDATA").map(PathBuf::from);
     let local = std::env::var_os("LOCALAPPDATA").map(PathBuf::from);
-    load_menu_preferences_at_paths(&preferences_paths(
+    preferences_paths(
         executable.as_deref().and_then(Path::parent),
         roaming.as_deref(),
         local.as_deref(),
-    ))
+    )
+}
+
+fn load_menu_preferences() -> MenuPreferences {
+    load_menu_preferences_at_paths(&current_preferences_paths())
+}
+
+fn ui_language() -> Language {
+    ui_language_at_paths(&current_preferences_paths()).resolve()
 }
 
 unsafe extern "system" fn explorer_state(
@@ -1244,6 +1312,15 @@ mod page_layout {
     pub struct PageLayoutSettings;
 }
 
+// Core-model inclusion is for format and extension parity, independent of the
+// application's process-wide UI selection. Explorer uses its own preference.
+#[cfg(test)]
+mod i18n {
+    pub fn tr(italian: &'static str, _english: &'static str) -> &'static str {
+        italian
+    }
+}
+
 #[cfg(test)]
 use model as core_model;
 
@@ -1476,6 +1553,83 @@ mod tests {
     }
 
     #[test]
+    fn language_preferences_follow_package_precedence_and_refresh_without_cache() {
+        let directory = std::env::temp_dir().join(format!(
+            "convert-here-language-preferences-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&directory).unwrap();
+        struct Cleanup(PathBuf);
+        impl Drop for Cleanup {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_dir_all(&self.0);
+            }
+        }
+        let _cleanup = Cleanup(directory.clone());
+        let package = directory.join("packaged.json");
+        let legacy = directory.join("standalone.json");
+        let paths = [package.clone(), legacy.clone()];
+        assert_eq!(ui_language_at_paths(&paths), Language::System);
+        std::fs::write(&legacy, br#"{"ui_language":"it"}"#).unwrap();
+        assert_eq!(ui_language_at_paths(&paths), Language::Italian);
+        std::fs::write(&package, br#"{"ui_language":"en"}"#).unwrap();
+        assert_eq!(ui_language_at_paths(&paths), Language::English);
+        std::fs::write(&package, br#"{"ui_language":"it"}"#).unwrap();
+        assert_eq!(ui_language_at_paths(&paths), Language::Italian);
+        for bytes in [
+            br#"{}"#.as_slice(),
+            br#"{"ui_language":"unknown"}"#,
+            br#"{"ui_language":17}"#,
+            br#"{broken"#,
+        ] {
+            std::fs::write(&package, bytes).unwrap();
+            assert_eq!(ui_language_at_paths(&paths), Language::System);
+        }
+        std::fs::write(
+            &package,
+            vec![b' '; profile_menu_shared::MAX_PREFERENCES_BYTES as usize + 1],
+        )
+        .unwrap();
+        assert_eq!(ui_language_at_paths(&paths), Language::System);
+        std::fs::remove_file(&package).unwrap();
+        assert_eq!(ui_language_at_paths(&paths), Language::Italian);
+    }
+
+    #[test]
+    fn english_titles_keep_format_identifiers_and_pdf_semantics() {
+        assert_eq!(
+            localized(Language::English, "Converti in", "Convert to"),
+            "Convert to"
+        );
+        assert_eq!(
+            text_target_title(
+                TEXT_TARGET | SELECTION_CONTAINS_IMAGE | SELECTION_CONTAINS_PDF,
+                Language::English
+            ),
+            "TXT · OCR / PDF text"
+        );
+        assert_eq!(
+            text_target_title(TEXT_TARGET | SELECTION_CONTAINS_IMAGE, Language::English),
+            "TXT · OCR"
+        );
+        assert_eq!(
+            pdf_target_title(SELECTION_CONTAINS_PDF, Language::English),
+            "PDF · compress"
+        );
+        assert_eq!(
+            pdf_target_title(
+                SELECTION_MULTIPLE | SELECTION_CONTAINS_PDF,
+                Language::English
+            ),
+            "PDF (Bulk)"
+        );
+    }
+
+    #[test]
     fn com_lifetime_and_interface_contract() {
         let _guard = COM_TEST_LOCK.lock().unwrap();
         unsafe {
@@ -1680,21 +1834,39 @@ mod tests {
             0
         );
         assert_eq!(common_target_mask(std::iter::empty()), 0);
-        assert_eq!(text_target_title(UNKNOWN_SELECTION_MASK), "TXT");
-        assert_eq!(text_target_title(TEXT_TARGET), "TXT");
         assert_eq!(
-            text_target_title(TEXT_TARGET | SELECTION_CONTAINS_IMAGE),
+            text_target_title(UNKNOWN_SELECTION_MASK, Language::Italian),
+            "TXT"
+        );
+        assert_eq!(text_target_title(TEXT_TARGET, Language::Italian), "TXT");
+        assert_eq!(
+            text_target_title(TEXT_TARGET | SELECTION_CONTAINS_IMAGE, Language::Italian),
             "TXT · OCR"
         );
         assert_eq!(
-            text_target_title(TEXT_TARGET | SELECTION_CONTAINS_IMAGE | SELECTION_CONTAINS_PDF),
+            text_target_title(
+                TEXT_TARGET | SELECTION_CONTAINS_IMAGE | SELECTION_CONTAINS_PDF,
+                Language::Italian
+            ),
             "TXT · OCR / testo PDF"
         );
-        assert_eq!(pdf_target_title(UNKNOWN_SELECTION_MASK), "PDF");
-        assert_eq!(pdf_target_title(SELECTION_CONTAINS_PDF), "PDF · comprimi");
-        assert_eq!(pdf_target_title(SELECTION_MULTIPLE), "PDF (Bulk)");
         assert_eq!(
-            pdf_target_title(SELECTION_MULTIPLE | SELECTION_CONTAINS_PDF),
+            pdf_target_title(UNKNOWN_SELECTION_MASK, Language::Italian),
+            "PDF"
+        );
+        assert_eq!(
+            pdf_target_title(SELECTION_CONTAINS_PDF, Language::Italian),
+            "PDF · comprimi"
+        );
+        assert_eq!(
+            pdf_target_title(SELECTION_MULTIPLE, Language::Italian),
+            "PDF (Bulk)"
+        );
+        assert_eq!(
+            pdf_target_title(
+                SELECTION_MULTIPLE | SELECTION_CONTAINS_PDF,
+                Language::Italian
+            ),
             "PDF (Bulk)"
         );
     }

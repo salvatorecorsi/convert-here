@@ -29,14 +29,22 @@ impl PendingLink {
     pub fn create(output: &Path, executable: &Path, job_id: &str, status: &str) -> Result<Self> {
         validate_job_id(job_id)?;
         if !executable.is_file() {
-            bail!("Applicazione non disponibile per mostrare lo stato della conversione");
+            bail!(crate::trf!(
+                "Applicazione non disponibile per mostrare lo stato della conversione",
+                "The application is unavailable to display conversion status"
+            ));
         }
         if output.exists() {
-            bail!("La destinazione esiste già: {}", output.display());
+            bail!(crate::trf!(
+                "La destinazione esiste già: {}",
+                "The destination already exists: {}",
+                output.display()
+            ));
         }
-        let parent = output
-            .parent()
-            .context("Destinazione della conversione non valida")?;
+        let parent = output.parent().context(crate::i18n::tr(
+            "Destinazione della conversione non valida",
+            "Invalid conversion destination",
+        ))?;
         fs::create_dir_all(parent)?;
         let target = crate::package::preview_target(executable);
         let pending = Self {
@@ -63,8 +71,9 @@ impl PendingLink {
             .persist_noclobber(&pending.path)
             .map_err(|error| error.error)
             .with_context(|| {
-                format!(
+                crate::trf!(
                     "Impossibile creare l'anteprima senza sovrascrivere: {}",
+                    "Unable to create the placeholder without overwriting: {}",
                     pending.path.display()
                 )
             })?;
@@ -98,15 +107,18 @@ impl PendingLink {
 
     /// Keeps a failed job visible at its intended destination, with a red error icon.
     pub fn fail(&self, message: &str) -> Result<()> {
-        self.write_state(&format!("Errore — {message}"), true)
+        self.write_state(
+            &crate::trf!("Errore — {message}", "Error — {message}"),
+            true,
+        )
     }
 
     fn write_state(&self, status: &str, failed: bool) -> Result<()> {
         self.check_ownership()?;
-        let parent = self
-            .path
-            .parent()
-            .context("Percorso anteprima non valido")?;
+        let parent = self.path.parent().context(crate::i18n::tr(
+            "Percorso anteprima non valido",
+            "Invalid placeholder path",
+        ))?;
         let temporary = tempfile::Builder::new()
             .prefix(".the-converter-preview-")
             .suffix(".lnk")
@@ -126,7 +138,10 @@ impl PendingLink {
         temporary
             .persist(&self.path)
             .map_err(|error| error.error)
-            .context("Impossibile aggiornare lo stato della conversione in Esplora file")?;
+            .context(crate::i18n::tr(
+                "Impossibile aggiornare lo stato della conversione in Esplora file",
+                "Unable to update conversion status in File Explorer",
+            ))?;
         native::notify(&self.path, native::UPDATE);
         Ok(())
     }
@@ -137,8 +152,10 @@ impl PendingLink {
             return Ok(());
         }
         self.check_ownership()?;
-        fs::remove_file(&self.path)
-            .context("Impossibile rimuovere l'anteprima della conversione")?;
+        fs::remove_file(&self.path).context(crate::i18n::tr(
+            "Impossibile rimuovere l'anteprima della conversione",
+            "Unable to remove the conversion placeholder",
+        ))?;
         native::notify(&self.path, native::DELETE);
         Ok(())
     }
@@ -148,10 +165,11 @@ impl PendingLink {
         if !same_path(&details.executable, &self.executable)
             || details.arguments != format!("--queue-job {}", self.job_id)
         {
-            bail!(
+            bail!(crate::trf!(
                 "L'anteprima è stata modificata da un altro programma: {}",
+                "Another program modified the placeholder: {}",
                 self.path.display()
-            );
+            ));
         }
         Ok(())
     }
@@ -169,7 +187,10 @@ fn validate_job_id(job_id: &str) -> Result<()> {
             .bytes()
             .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
     {
-        bail!("Identificatore della conversione non valido");
+        bail!(crate::trf!(
+            "Identificatore della conversione non valido",
+            "Invalid conversion identifier"
+        ));
     }
     Ok(())
 }
@@ -276,7 +297,10 @@ mod native {
         fn enter() -> Result<Self> {
             let result = unsafe { CoInitializeEx(ptr::null_mut(), 2) };
             if result < 0 && result != RPC_E_CHANGED_MODE {
-                check(result, "Inizializzazione COM")?;
+                check(
+                    result,
+                    crate::i18n::tr("Inizializzazione COM", "COM initialization"),
+                )?;
             }
             Ok(Self(result >= 0))
         }
@@ -297,10 +321,13 @@ mod native {
             let mut value = ptr::null_mut();
             check(
                 unsafe { (self.vtable::<Unknown>().query)(self.0, iid, &mut value) },
-                "Interfaccia COM collegamento",
+                crate::i18n::tr("Interfaccia COM collegamento", "Shortcut COM interface"),
             )?;
             if value.is_null() {
-                bail!("Interfaccia COM collegamento vuota");
+                bail!(crate::trf!(
+                    "Interfaccia COM collegamento vuota",
+                    "Empty shortcut COM interface"
+                ));
             }
             Ok(Self(value))
         }
@@ -315,13 +342,20 @@ mod native {
 
     fn check(status: i32, operation: &str) -> Result<()> {
         if status < 0 {
-            bail!("{operation}: errore Windows 0x{:08X}", status as u32);
+            bail!(crate::trf!(
+                "{operation}: errore Windows 0x{:08X}",
+                "{operation}: Windows error 0x{:08X}",
+                status as u32
+            ));
         }
         Ok(())
     }
     fn wide(value: &str) -> Result<Vec<u16>> {
         if value.contains('\0') {
-            bail!("Il testo contiene un carattere nullo");
+            bail!(crate::trf!(
+                "Il testo contiene un carattere nullo",
+                "The text contains a null character"
+            ));
         }
         Ok(value.encode_utf16().chain(Some(0)).collect())
     }
@@ -340,10 +374,16 @@ mod native {
                     &mut raw,
                 )
             },
-            "Creazione collegamento Esplora file",
+            crate::i18n::tr(
+                "Creazione collegamento Esplora file",
+                "Creating File Explorer shortcut",
+            ),
         )?;
         if raw.is_null() {
-            bail!("Collegamento Esplora file non disponibile");
+            bail!(crate::trf!(
+                "Collegamento Esplora file non disponibile",
+                "File Explorer shortcut unavailable"
+            ));
         }
         Ok(Object(raw))
     }
@@ -368,8 +408,9 @@ mod native {
         // tolerate control bytes in a converter's diagnostic text.
         let mut description_text = String::new();
         let mut units = 0;
-        for character in format!(
+        for character in crate::trf!(
             "Convert Here — {status}\nDestinazione: {}",
+            "Convert Here — {status}\nDestination: {}",
             display_path(output)
         )
         .chars()
@@ -386,35 +427,35 @@ mod native {
         unsafe {
             check(
                 (vtable.set_path)(link.0, target.as_ptr()),
-                "Destinazione collegamento",
+                crate::i18n::tr("Destinazione collegamento", "Shortcut destination"),
             )?;
             check(
                 (vtable.set_arguments)(link.0, args.as_ptr()),
-                "Argomenti collegamento",
+                crate::i18n::tr("Argomenti collegamento", "Shortcut arguments"),
             )?;
             check(
                 (vtable.set_description)(link.0, description.as_ptr()),
-                "Stato collegamento",
+                crate::i18n::tr("Stato collegamento", "Shortcut status"),
             )?;
             check(
                 (vtable.set_icon)(link.0, icon.as_ptr(), if failed { -3 } else { -2 }),
-                "Icona collegamento",
+                crate::i18n::tr("Icona collegamento", "Shortcut icon"),
             )?;
             check(
                 (vtable.set_show_command)(link.0, 1),
-                "Finestra collegamento",
+                crate::i18n::tr("Finestra collegamento", "Shortcut window"),
             )?;
             if let Some(parent) = icon_executable.parent() {
                 let directory = wide_path(parent)?;
                 check(
                     (vtable.set_working_directory)(link.0, directory.as_ptr()),
-                    "Cartella collegamento",
+                    crate::i18n::tr("Cartella collegamento", "Shortcut folder"),
                 )?;
             }
             let persist = link.query(&IID_PERSIST_FILE)?;
             check(
                 (persist.vtable::<PersistFile>().save)(persist.0, file.as_ptr(), 1),
-                "Salvataggio collegamento",
+                crate::i18n::tr("Salvataggio collegamento", "Saving shortcut"),
             )?;
         }
         Ok(())

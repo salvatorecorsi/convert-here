@@ -1,28 +1,28 @@
 # Microsoft Store listing — English (en-US)
 
-Draft for Convert Here **0.6.0**, candidate Store package **1.0.5.0**. Publisher and developer: **Salvatore Corsi**. Copy is ready with 20 features; screenshots, versioned URLs and upload must be verified against the final candidate. This document does not attest publication, submission or approval of 0.6.0. Earlier 0.4.0 evidence remains historical. The app UI is Italian. Do not copy this preamble into public listing fields.
+Draft for Convert Here **0.6.0**, candidate Store package **1.0.5.0**. Publisher and developer: **Salvatore Corsi**. Copy is ready with 20 features; screenshots, versioned URLs and upload must be verified against the final candidate. This document does not attest publication, submission or approval of 0.6.0. Earlier release evidence remains historical. The app supports Italian and English. Do not copy this preamble into public listing fields.
 
 ## Short description
 
-Local file conversion, an image editor with exact size, A4/A5 pages and profiles in the Windows 11 context menu. Optional engines add formats and OCR. UI is Italian.
+Local conversion, an image editor with exact size, A4/A5 pages and Windows 11 menu profiles. Optional engines add formats and OCR. Italian and English interface.
 
 ## Description
 
-Native image formats and image-to-PDF conversion work immediately, as do PDF compression, splitting and merging. Audio/video requires FFmpeg; PDF export requires Poppler; Office, Excel/CSV and HTML-to-PDF requires LibreOffice. HEIC/HEIF and AVIF require libheif; OCR requires Tesseract and language models, plus Poppler for scanned PDFs. These optional engines are not included. The application UI is Italian. Impostazioni > Motori lets you request FFmpeg, Poppler or both after confirming the source, version, size, licenses and folder. Internet is needed for this optional download; conversion and OCR remain local.
+Native image formats and image-to-PDF conversion work immediately, as do PDF compression, splitting and merging. Audio/video requires FFmpeg; PDF export requires Poppler; Office, Excel/CSV and HTML-to-PDF requires LibreOffice. HEIC/HEIF and AVIF require libheif; OCR requires Tesseract and language models, plus Poppler for scanned PDFs. These optional engines are not included. The interface and menu support Italian and English. Settings > Conversion engines lets you request FFmpeg, Poppler or both after confirming the source, version, size, licenses and folder. Internet is needed for this optional download; conversion and OCR remain local.
 
-Convert Here brings conversion to the folder where you work. In the Windows 11 context menu, choose Converti in and a compatible format. The job joins a queue with your saved settings, without opening the options window every time.
+Convert Here brings conversion to the folder where you work. In the Windows 11 context menu, choose Convert to and a compatible format. The job joins a queue with your saved settings, without opening the options window every time.
 
 A placeholder with a pending icon immediately shows where the result will appear. Open it to check progress or cancel the job. When conversion finishes, the completed file replaces the placeholder. Outputs are saved beside their originals by default; numbered names preserve files that already exist.
 
-There are 44 destination formats and 93 recognized input extensions across compatible categories. Native image conversions cover PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR and PNM, plus a separate A4 PDF for each source image. Adjust JPEG quality and image width. Choose which outputs appear in the GUI and Explorer menu in Impostazioni: defaults are MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4. Other outputs can be enabled; all 93 input extensions remain recognized, and the menu refreshes without restarting Explorer.
+There are 44 destination formats and 93 recognized input extensions across compatible categories. Native image conversions cover PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR and PNM, plus a separate A4 PDF for each source image. Adjust JPEG quality and image width. Choose which outputs appear in the GUI and Explorer menu in Settings: defaults are MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4. Other outputs can be enabled; all 93 input extensions remain recognized, and the menu refreshes without restarting Explorer.
 
-Open Modifica… beside an image to crop, resize or create a canvas with a custom resolution, background, position and anchor. Export PNG, JPEG, WebP or PDF with a preview of the prepared result and its actual encoded byte size. JPEG and WebP offer adjustable quality: a size limit searches for a suitable quality; 300 kB is 300000 bytes. Further dimension reduction requires explicit permission. For PDFs, adjust quality, dimensions and DPI to change the size. If the limit cannot be met, saving is disabled and quick conversion does not publish an oversized file. Salva con nome writes those same prepared bytes and preserves existing files.
+Open Edit… beside an image to crop, resize or create a canvas with a custom resolution, background, position and anchor. Export PNG, JPEG, WebP or PDF with a preview of the prepared result and its actual encoded byte size. JPEG and WebP offer adjustable quality: a size limit searches for a suitable quality; 300 kB is 300000 bytes. Further dimension reduction requires explicit permission. For PDFs, adjust quality, dimensions and DPI to change the size. If the limit cannot be met, saving is disabled and quick conversion does not publish an oversized file. Save as writes those same prepared bytes and preserves existing files.
 
-Lay out images, text written in Nuovo foglio… or UTF-8 TXT files on A4/A5 pages in portrait or landscape with custom margins. Plain text supports font size, line spacing, alignment and automatic pages, with embedded Ubuntu Light and selectable PDF text. Unsupported characters produce an explicit error. This native path does not require LibreOffice; Word documents keep the existing Office conversion workflow.
+Lay out images, text written in New sheet… or UTF-8 TXT files on A4/A5 pages in portrait or landscape with custom margins. Plain text supports font size, line spacing, alignment and automatic pages, with embedded Ubuntu Light and selectable PDF text. Unsupported characters produce an explicit error. This native path does not require LibreOffice; Word documents keep the existing Office conversion workflow.
 
-Salva le mie impostazioni creates named profiles: up to 32 saved, with 8 visible in Converti in. Reuse relative crop, dimensions, canvas, quality, byte limits and page settings without storing the sample image or typed text. I miei profili in Impostazioni lets you apply and update recipes. Menu profiles appear only when enabled, their output format is active and selected inputs are compatible. Queue jobs retain the settings with which they were created.
+Save my settings creates named profiles: up to 32 saved, with 8 visible in Convert to. Reuse relative crop, dimensions, canvas, quality, byte limits and page settings without storing the sample image or typed text. My profiles in Settings lets you apply and update recipes. Menu profiles appear only when enabled, their output format is active and selected inputs are compatible. Queue jobs retain the settings with which they were created.
 
-With libheif, read HEIC/HEIF and AVIF files or create HEIC and AVIF from supported images. Configure heif-dec.exe and heif-enc.exe in Impostazioni > Motori, keeping the build's DLLs and plugins together. Availability depends on installed HEVC/AV1 decoders and encoders. Choose output quality and width. Only the first image in a container is converted; image sequences and animations are not preserved.
+With libheif, read HEIC/HEIF and AVIF files or create HEIC and AVIF from supported images. Configure heif-dec.exe and heif-enc.exe in Settings > Conversion engines, keeping the build's DLLs and plugins together. Availability depends on installed HEVC/AV1 decoders and encoders. Choose output quality and width. Only the first image in a container is converted; image sequences and animations are not preserved.
 
 With optional FFmpeg, convert audio to MP3, WAV, FLAC, AAC, OGG, Opus, AIFF, M4A with AAC, WMA, AC3, AU and CAF with ALAC; convert video to MP4, MKV, MOV, WebM, AVI, MPEG, WMV, FLV, MPEG-TS, M4V, 3GP and animated GIF; or extract its audio. Codec availability depends on the selected FFmpeg engine. Settings include quality presets, bitrate, sample rate, channels, normalization, video quality, width, frame rate and time trimming.
 
@@ -40,14 +40,14 @@ Convert Here is free, with no subscriptions, in-app purchases or usage-based cha
 
 The project's original code is free software licensed under GPL-3.0-only; source code is available at https://github.com/salvatorecorsi/convert-here. Dependencies, fonts and engines retain their own licenses. Conversion does not change rights in the contents of your files.
 
-Limitations: free editing of PDF page content is not available. OCR recognizes text without reconstructing graphics or layout. Animated GIFs, multipage TIFFs and HEIC/AVIF containers use their first frame or image. PDF (Bulk) keeps separate results; PDF (Merge) includes every prepared page once, up to 10,000 pages. Office document layout depends on LibreOffice and available fonts. The modern context menu requires Windows 11 x64. The application UI is Italian.
+Limitations: free editing of PDF page content is not available. OCR recognizes text without reconstructing graphics or layout. Animated GIFs, multipage TIFFs and HEIC/AVIF containers use their first frame or image. PDF (Bulk) keeps separate results; PDF (Merge) includes every prepared page once, up to 10,000 pages. Office document layout depends on LibreOffice and available fonts. The modern context menu requires Windows 11 x64. Interface language can be selected separately from OCR language.
 
 ## Product features
 
 Enter each line in a separate feature field, without adding bullet characters:
 
 ```text
-Converti in command directly in the Windows 11 File Explorer context menu
+Convert to command directly in the Windows 11 File Explorer context menu
 Quick conversions join a queue without opening the options window each time
 Output-folder placeholders with job status available on demand
 Images in PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR and PNM
@@ -65,7 +65,7 @@ Format conversion processed on your PC without an in-app account
 Choose visible outputs: eight defaults and 93 recognized input extensions
 Optional FFmpeg and Poppler downloads with confirmation, SHA-256 verification and retained licenses
 Preview and exact byte size for PNG/JPEG/WebP/PDF; save the same prepared bytes
-Up to 32 personal profiles, with 8 Converti in menu shortcuts for compatible inputs
+Up to 32 personal profiles, with 8 Convert to menu shortcuts for compatible inputs
 Typed text or UTF-8 TXT to PDF with embedded font and selectable text
 ```
 
@@ -87,26 +87,26 @@ conversion queue
 
 ```text
 Windows 11 x64 for the modern context menu
-FFmpeg for audio/video; Poppler for PDF export; LibreOffice for Office/HTML to PDF and Excel/CSV conversion. Optional engines are not included. The application UI is Italian. Optional FFmpeg/Poppler downloads from Impostazioni > Motori require Internet.
+FFmpeg for audio/video; Poppler for PDF export; LibreOffice for Office/HTML to PDF and Excel/CSV conversion. Optional engines are not included. Optional FFmpeg/Poppler downloads from Settings > Conversion engines require Internet.
 libheif with heif-dec.exe, heif-enc.exe, DLLs and plugins for HEIC/AVIF; Tesseract and language models for OCR, plus Poppler for PDFs. Not included.
 ```
 
 ## What's new
 
 ```text
-Edit images with crop, resize and custom canvas; export PNG, JPEG, WebP or PDF with preview and actual byte size. Adjust quality and set a size limit, with dimension reduction only when permitted. Lay out images, typed text or UTF-8 TXT on A4/A5 pages. Save up to 32 profiles with 8 Converti in menu shortcuts. Processing stays on your PC, with 44 outputs and 93 recognized input extensions. Free: no payment is required to keep using it.
+Edit images with crop, resize and custom canvas; export PNG, JPEG, WebP or PDF with preview and actual byte size. Adjust quality and set a size limit, with dimension reduction only when permitted. Lay out images, typed text or UTF-8 TXT on A4/A5 pages. Save up to 32 profiles with 8 Convert to menu shortcuts. Processing stays on your PC, with 44 outputs and 93 recognized input extensions. Free: no payment is required to keep using it.
 ```
 
 ## Screenshot captions
 
 1. Two local image-to-JPEG conversions completed. App UI shown in Italian.
 2. Reorder individual pages in PDF Merge to create one document. App UI shown in Italian.
-3. Choose visible outputs in Impostazioni, with eight defaults and separate categories. App UI shown in Italian.
+3. Choose visible outputs in Settings, with eight defaults and separate categories. App UI shown in Italian.
 4. Confirm sources, versions, sizes and folder before downloading FFmpeg and Poppler. App UI shown in Italian.
 
 Screenshots 1, 3 and 4 show 0.4.0; screenshot 2 reuses the unchanged PDF Merge UI from 0.3.1. [Screenshot paths](store-assets/README.md).
 
-Native editor and profile screenshots remain to be captured for the 0.6.0 candidate. Match captions only after verifying the image: “Crop and adjust quality and size on the prepared result”; “Lay out text on A4 or A5”; “Save settings and reuse your profiles”. The app UI is Italian. Do not attribute these new functions to historical screenshots.
+Native editor and profile screenshots remain to be captured for the 0.6.0 candidate. Match captions only after verifying the image: “Crop and adjust quality and size on the prepared result”; “Lay out text on A4 or A5”; “Save settings and reuse your profiles”. State the language actually shown in each screenshot. Do not attribute these new functions to historical screenshots.
 
 ## Copyright and additional license terms
 

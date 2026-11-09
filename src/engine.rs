@@ -1,4 +1,5 @@
 //! Local conversion engine. Inputs are never modified; outputs are committed without clobbering.
+use crate::i18n::tr;
 use crate::model::{
     ConversionSettings, MediaKind, OutputFormat, PdfAction, VideoCodec, supported_formats,
 };
@@ -37,7 +38,7 @@ pub struct Progress {
 
 pub(crate) fn cancelled(cancel: &AtomicBool) -> Result<()> {
     if cancel.load(Ordering::Relaxed) {
-        bail!("Conversione annullata");
+        bail!(crate::trf!("Conversione annullata", "Conversion cancelled"));
     }
     Ok(())
 }
@@ -108,25 +109,37 @@ pub fn convert(
     mut on_progress: impl FnMut(Progress),
 ) -> Result<Vec<PathBuf>> {
     cancelled(cancel)?;
-    let input = fs::canonicalize(input)
-        .with_context(|| format!("File non accessibile: {}", input.display()))?;
+    let input = fs::canonicalize(input).with_context(|| {
+        crate::trf!(
+            "File non accessibile: {}",
+            "File cannot be accessed: {}",
+            input.display()
+        )
+    })?;
     if !input.is_file() {
-        bail!("La selezione deve contenere file, non cartelle");
+        bail!(crate::trf!(
+            "La selezione deve contenere file, non cartelle",
+            "Select files, not folders"
+        ));
     }
     let kind = MediaKind::from_path(&input);
     if !supported_formats(kind).contains(&settings.format) {
-        bail!(
+        bail!(crate::trf!(
             "Conversione non supportata: {:?} → {}",
+            "Unsupported conversion: {:?} → {}",
             kind,
             settings.format
-        );
+        ));
     }
     validate_for_input(&input, settings)?;
     if kind == MediaKind::Pdf
         && settings.format == OutputFormat::Pdf
         && settings.pdf.action == PdfAction::Merge
     {
-        bail!("Per unire i PDF seleziona almeno due file e avvia l'operazione di gruppo");
+        bail!(crate::trf!(
+            "Per unire i PDF seleziona almeno due file e avvia l'operazione di gruppo",
+            "To merge PDFs, select at least two files and start the batch operation"
+        ));
     }
     if let Some(reason) = tools.missing_for_input(&input, settings) {
         bail!("{reason}");
@@ -135,11 +148,14 @@ pub fn convert(
         .output_dir
         .clone()
         .unwrap_or_else(|| input.parent().unwrap().to_owned());
-    fs::create_dir_all(&out_dir).context("Impossibile creare la cartella di destinazione")?;
+    fs::create_dir_all(&out_dir).context(crate::i18n::tr(
+        "Impossibile creare la cartella di destinazione",
+        "Unable to create the output folder",
+    ))?;
     let out_dir = fs::canonicalize(out_dir)?;
     on_progress(Progress {
         fraction: 0.0,
-        message: "Preparazione…".into(),
+        message: crate::i18n::tr("Preparazione…", "Preparing…").into(),
     });
     let outputs = match kind {
         MediaKind::Audio | MediaKind::Video => vec![convert_media(
@@ -194,11 +210,15 @@ pub fn convert(
                 &mut on_progress,
             )?]
         }
-        _ => bail!("Formato non supportato"),
+        _ => bail!(crate::trf!("Formato non supportato", "Unsupported format")),
     };
     on_progress(Progress {
         fraction: 1.0,
-        message: format!("Completato: {} file", outputs.len()),
+        message: crate::trf!(
+            "Completato: {} file",
+            "Output files created: {}",
+            outputs.len()
+        ),
     });
     Ok(outputs)
 }
@@ -212,10 +232,16 @@ pub fn merge_pdfs(
 ) -> Result<Vec<PathBuf>> {
     cancelled(cancel)?;
     if inputs.len() < 2 {
-        bail!("Per unire i PDF seleziona almeno due file compatibili");
+        bail!(crate::trf!(
+            "Per unire i PDF seleziona almeno due file compatibili",
+            "To merge PDFs, select at least two compatible files"
+        ));
     }
     if settings.format != OutputFormat::Pdf || settings.pdf.action != PdfAction::Merge {
-        bail!("L'unione richiede destinazione PDF e operazione Merge");
+        bail!(crate::trf!(
+            "L'unione richiede destinazione PDF e operazione Merge",
+            "Merging requires PDF output and the Merge action"
+        ));
     }
     validate(settings)?;
     let prepared = crate::pdf_merge::prepare_pdf_merge(
@@ -240,13 +266,22 @@ pub fn merge_pdfs(
 
 pub(crate) fn validate(s: &ConversionSettings) -> Result<()> {
     if !(8..=512).contains(&s.audio.bitrate_kbps) {
-        bail!("Il bitrate deve essere tra 8 e 512 kbps");
+        bail!(crate::trf!(
+            "Il bitrate deve essere tra 8 e 512 kbps",
+            "Bitrate must be between 8 and 512 kbps"
+        ));
     }
     if s.audio.sample_rate != 0 && !(8000..=192000).contains(&s.audio.sample_rate) {
-        bail!("Frequenza audio non valida (8000–192000 Hz oppure 0 per la sorgente)");
+        bail!(crate::trf!(
+            "Frequenza audio non valida (8000–192000 Hz oppure 0 per la sorgente)",
+            "Invalid sample rate (8000–192000 Hz, or 0 to use the source)"
+        ));
     }
     if s.audio.channels > 2 {
-        bail!("Canali audio: 0 = sorgente, 1 = mono, 2 = stereo");
+        bail!(crate::trf!(
+            "Canali audio: 0 = sorgente, 1 = mono, 2 = stereo",
+            "Audio channels: 0 = source, 1 = mono, 2 = stereo"
+        ));
     }
     if let Some(rates) = s.format.audio_sample_rates()
         && !rates.contains(&s.audio.sample_rate)
@@ -257,37 +292,53 @@ pub(crate) fn validate(s: &ConversionSettings) -> Result<()> {
             .map(u32::to_string)
             .collect::<Vec<_>>()
             .join(", ");
-        bail!(
+        bail!(crate::trf!(
             "{}: frequenze audio supportate {choices} Hz (0 = automatica)",
+            "{}: supported sample rates {choices} Hz (0 = automatic)",
             s.format.label()
-        );
+        ));
     }
     if s.video.crf > 51 {
-        bail!("CRF non valido (0–51)");
+        bail!(crate::trf!("CRF non valido (0–51)", "Invalid CRF (0–51)"));
     }
     if s.video.width.is_some_and(|v| !(16..=16384).contains(&v))
         || s.image.width.is_some_and(|v| !(1..=32768).contains(&v))
     {
-        bail!("Larghezza non valida");
+        bail!(crate::trf!("Larghezza non valida", "Invalid width"));
     }
     if s.video.fps.is_some_and(|v| !(1..=240).contains(&v)) {
-        bail!("FPS non validi (1–240)");
+        bail!(crate::trf!(
+            "FPS non validi (1–240)",
+            "Invalid frame rate (1–240 FPS)"
+        ));
     }
     if !(1..=100).contains(&s.image.quality) {
-        bail!("Qualità JPEG non valida (1–100)");
+        bail!(crate::trf!(
+            "Qualità JPEG non valida (1–100)",
+            "Invalid JPEG quality (1–100)"
+        ));
     }
     if !(36..=600).contains(&s.pdf.dpi) {
-        bail!("DPI non validi (36–600)");
+        bail!(crate::trf!(
+            "DPI non validi (36–600)",
+            "Invalid DPI (36–600)"
+        ));
     }
     if s.video.trim_start.is_some_and(|v| !v.is_finite() || v < 0.)
         || s.video.trim_end.is_some_and(|v| !v.is_finite() || v <= 0.)
     {
-        bail!("Tempi di taglio non validi");
+        bail!(crate::trf!(
+            "Tempi di taglio non validi",
+            "Invalid trim times"
+        ));
     }
     if let Some(end) = s.video.trim_end
         && end <= s.video.trim_start.unwrap_or(0.)
     {
-        bail!("La fine del taglio deve essere successiva all'inizio");
+        bail!(crate::trf!(
+            "La fine del taglio deve essere successiva all'inizio",
+            "The trim end must be after the start"
+        ));
     }
     Ok(())
 }
@@ -297,11 +348,12 @@ fn validate_for_input(input: &Path, settings: &ConversionSettings) -> Result<()>
     // Loaded plans can outlive a removed conversion route. Reject them before
     // allocating a workspace or starting any optional conversion tool.
     if !supported_formats(kind).contains(&settings.format) {
-        bail!(
+        bail!(crate::trf!(
             "Conversione non supportata: {:?} → {}",
+            "Unsupported conversion: {:?} → {}",
             kind,
             settings.format
-        );
+        ));
     }
     validate(settings)?;
     if kind == MediaKind::Image {
@@ -311,7 +363,10 @@ fn validate_for_input(input: &Path, settings: &ConversionSettings) -> Result<()>
                 settings.format,
                 OutputFormat::Png | OutputFormat::Jpg | OutputFormat::Webp | OutputFormat::Pdf
             ) {
-                bail!("Le modifiche immagine richiedono una destinazione PNG, JPEG, WebP o PDF");
+                bail!(tr(
+                    "Le modifiche immagine richiedono una destinazione PNG, JPEG, WebP o PDF",
+                    "Image editing requires PNG, JPEG, WebP or PDF output"
+                ));
             }
         }
         if settings.format == OutputFormat::Pdf
@@ -369,14 +424,29 @@ pub(crate) fn external_temporary(dir: &Path, ext: &str) -> Result<(TempDir, Name
 /// The enclosing TempDir/WorkGuard remains responsible for failed publications;
 /// the adopted path must never be an original user input or a symbolic link.
 pub(crate) fn staged_temporary(source: &Path, stage: &Path) -> Result<NamedTempFile> {
-    let metadata = fs::symlink_metadata(source).context("Risultato temporaneo non accessibile")?;
+    let metadata = fs::symlink_metadata(source).context(crate::i18n::tr(
+        "Risultato temporaneo non accessibile",
+        "Temporary output cannot be accessed",
+    ))?;
     if !metadata.file_type().is_file() {
-        bail!("Il risultato temporaneo deve essere un file regolare");
+        bail!(crate::trf!(
+            "Il risultato temporaneo deve essere un file regolare",
+            "Temporary output must be a regular file"
+        ));
     }
-    let stage = fs::canonicalize(stage).context("Cartella temporanea non accessibile")?;
-    let source = fs::canonicalize(source).context("Risultato temporaneo non accessibile")?;
+    let stage = fs::canonicalize(stage).context(crate::i18n::tr(
+        "Cartella temporanea non accessibile",
+        "Temporary folder cannot be accessed",
+    ))?;
+    let source = fs::canonicalize(source).context(crate::i18n::tr(
+        "Risultato temporaneo non accessibile",
+        "Temporary output cannot be accessed",
+    ))?;
     if source.parent() != Some(stage.as_path()) {
-        bail!("Il risultato non appartiene alla cartella temporanea della conversione");
+        bail!(crate::trf!(
+            "Il risultato non appartiene alla cartella temporanea della conversione",
+            "The output does not belong to this conversion's temporary folder"
+        ));
     }
     // Keep this handle across the rename. Reopening the published path could
     // fail or observe a replacement created by another program in the meantime.
@@ -384,9 +454,15 @@ pub(crate) fn staged_temporary(source: &Path, stage: &Path) -> Result<NamedTempF
         .read(true)
         .write(true)
         .open(&source)
-        .context("Impossibile aprire il risultato temporaneo")?;
+        .context(crate::i18n::tr(
+            "Impossibile aprire il risultato temporaneo",
+            "Unable to open the temporary output",
+        ))?;
     if file.metadata()?.len() == 0 {
-        bail!("Il convertitore ha prodotto un file vuoto");
+        bail!(crate::trf!(
+            "Il convertitore ha prodotto un file vuoto",
+            "The converter produced an empty file"
+        ));
     }
     let mut path = tempfile::TempPath::try_from_path(source)?;
     // A failed no-clobber attempt must leave the owned source available for
@@ -403,7 +479,10 @@ pub(crate) fn commit(
     ext: &str,
 ) -> Result<PathBuf> {
     if temp.as_file().metadata()?.len() == 0 {
-        bail!("Il convertitore ha prodotto un file vuoto");
+        bail!(crate::trf!(
+            "Il convertitore ha prodotto un file vuoto",
+            "The converter produced an empty file"
+        ));
     }
     temp.as_file_mut().flush()?;
     for n in 0..10000u32 {
@@ -416,10 +495,18 @@ pub(crate) fn commit(
         match temp.persist_noclobber(&dest) {
             Ok(_) => return Ok(dest),
             Err(e) if e.error.kind() == std::io::ErrorKind::AlreadyExists => temp = e.file,
-            Err(e) => return Err(e.error).context("Impossibile salvare il risultato"),
+            Err(e) => {
+                return Err(e.error).context(crate::i18n::tr(
+                    "Impossibile salvare il risultato",
+                    "Unable to save the output",
+                ));
+            }
         }
     }
-    bail!("Troppi file con lo stesso nome nella destinazione")
+    bail!(crate::trf!(
+        "Troppi file con lo stesso nome nella destinazione",
+        "Too many files with the same name in the output folder"
+    ))
 }
 
 pub(crate) fn stem(input: &Path) -> String {
@@ -482,30 +569,42 @@ fn convert_image(
     let mut decoder = image::ImageReader::open(&decoded)?
         .with_guessed_format()?
         .into_decoder()
-        .context("Immagine non leggibile o codec non supportato")?;
+        .context(crate::i18n::tr(
+            "Immagine non leggibile o codec non supportato",
+            "Unreadable image or unsupported codec",
+        ))?;
     // into_decoder does not reserve the decoded pixel allocation as ImageReader::decode does.
     if let Some(limit) = image::Limits::default().max_alloc
         && decoder.total_bytes() > limit
     {
-        bail!("L'immagine supera il limite di memoria per la decodifica");
+        bail!(crate::trf!(
+            "L'immagine supera il limite di memoria per la decodifica",
+            "The image exceeds the decoding memory limit"
+        ));
     }
-    let orientation = decoder
-        .orientation()
-        .context("Orientamento immagine non leggibile")?;
-    let mut image = DynamicImage::from_decoder(decoder)
-        .context("Immagine non leggibile o codec non supportato")?;
+    let orientation = decoder.orientation().context(crate::i18n::tr(
+        "Orientamento immagine non leggibile",
+        "Unable to read image orientation",
+    ))?;
+    let mut image = DynamicImage::from_decoder(decoder).context(crate::i18n::tr(
+        "Immagine non leggibile o codec non supportato",
+        "Unreadable image or unsupported codec",
+    ))?;
     // Bake camera/smartphone EXIF rotation into pixels before resizing or embedding in PDF.
     image.apply_orientation(orientation);
     cancelled(cancel)?;
     progress(Progress {
         fraction: 0.25,
-        message: "Elaborazione immagine…".into(),
+        message: crate::i18n::tr("Elaborazione immagine…", "Processing image…").into(),
     });
     if let Some(width) = s.image.width {
         let height =
             ((image.height() as f64 * width as f64 / image.width() as f64).round() as u32).max(1);
         if (width as u64) * (height as u64) > 150_000_000 {
-            bail!("L'immagine ridimensionata supera 150 megapixel");
+            bail!(crate::trf!(
+                "L'immagine ridimensionata supera 150 megapixel",
+                "The resized image exceeds 150 megapixels"
+            ));
         }
         image = image.resize_exact(width, height, image::imageops::FilterType::Lanczos3);
     }
@@ -536,7 +635,10 @@ fn convert_image(
                 OutputFormat::OpenExr => ImageFormat::OpenExr,
                 OutputFormat::Hdr => ImageFormat::Hdr,
                 OutputFormat::Pnm => ImageFormat::Pnm,
-                _ => bail!("Format image non supportato"),
+                _ => bail!(crate::trf!(
+                    "Format image non supportato",
+                    "Unsupported image format"
+                )),
             };
             if s.format == OutputFormat::Farbfeld {
                 DynamicImage::ImageRgba16(image.to_rgba16())
@@ -586,7 +688,7 @@ fn convert_image(
     cancelled(cancel)?;
     progress(Progress {
         fraction: 0.9,
-        message: "Salvataggio…".into(),
+        message: crate::i18n::tr("Salvataggio…", "Saving…").into(),
     });
     commit(temp, dir, &stem(input), s.format.extension())
 }
@@ -618,7 +720,7 @@ fn convert_edited_image(
     let pixels = crate::image_edit::render(&loaded.pixels, &edit, cancel)?;
     progress(Progress {
         fraction: 0.25,
-        message: "Geometria immagine pronta".into(),
+        message: tr("Geometria immagine pronta", "Image geometry ready").into(),
     });
     let mut output_progress = |update: Progress| {
         progress(Progress {
@@ -641,9 +743,10 @@ fn convert_edited_image(
             .max_bytes
             .is_some_and(|cap| prepared.exact_bytes() > cap)
         {
-            bail!(
-                "Il PDF supera il peso massimo: modifica qualità o dimensioni; nessun file è stato salvato"
-            );
+            bail!(tr(
+                "Il PDF supera il peso massimo: modifica qualità o dimensioni; nessun file è stato salvato",
+                "The PDF exceeds the size limit: change quality or dimensions; no file was saved"
+            ));
         }
         prepared.bytes().to_vec()
     } else {
@@ -656,9 +759,10 @@ fn convert_edited_image(
             &mut output_progress,
         )?;
         if !encoded.target_met {
-            bail!(
-                "Il peso massimo non è stato raggiunto: riduci qualità o dimensioni; nessun file è stato salvato"
-            );
+            bail!(tr(
+                "Il peso massimo non è stato raggiunto: riduci qualità o dimensioni; nessun file è stato salvato",
+                "The size limit could not be met: reduce quality or dimensions; no file was saved"
+            ));
         }
         encoded.bytes
     };
@@ -773,13 +877,26 @@ const PDF_PROBE_STDERR_LIMIT: usize = 8 * 1024;
 const PDF_OPEN_PASSWORD_ERROR: &str =
     "Il PDF richiede una password di apertura: sbloccalo prima della conversione";
 
+fn pdf_open_password_error() -> &'static str {
+    crate::i18n::tr(
+        PDF_OPEN_PASSWORD_ERROR,
+        "The PDF requires an opening password: unlock it before converting",
+    )
+}
+
 /// Count pages with the renderer's companion tool before reserving output names.
 /// Native parsing is a fallback only when pdfinfo is unavailable.
 pub fn pdf_page_count(input: &Path, tools: &ToolPaths, cancel: &AtomicBool) -> Result<usize> {
     cancelled(cancel)?;
-    let input = fs::canonicalize(input).context("Impossibile leggere le pagine del PDF")?;
+    let input = fs::canonicalize(input).context(crate::i18n::tr(
+        "Impossibile leggere le pagine del PDF",
+        "Unable to read PDF pages",
+    ))?;
     if !input.is_file() {
-        bail!("Impossibile leggere le pagine del PDF: seleziona un file");
+        bail!(crate::trf!(
+            "Impossibile leggere le pagine del PDF: seleziona un file",
+            "Unable to read PDF pages: select a file"
+        ));
     }
     let count = if let Some(executable) = tools
         .pdfinfo
@@ -791,30 +908,37 @@ pub fn pdf_page_count(input: &Path, tools: &ToolPaths, cancel: &AtomicBool) -> R
         let output = run_pdf_probe(command, cancel, PDF_PROBE_TIMEOUT)?;
         if !output.status.success() {
             let diagnostic = String::from_utf8_lossy(&output.stderr);
-            return Err(pdf_error(anyhow::anyhow!(
+            return Err(pdf_error(anyhow::anyhow!(crate::trf!(
                 "Impossibile leggere le pagine del PDF: {}",
+                "Unable to read PDF pages: {}",
                 if diagnostic.trim().is_empty() {
                     "pdfinfo si è interrotto"
                 } else {
                     diagnostic.trim()
                 }
-            )));
+            ))));
         }
         parse_pdf_page_count(&output.stdout)?
     } else {
-        let document = Document::load(&input).context("Impossibile leggere le pagine del PDF")?;
+        let document = Document::load(&input).context(crate::i18n::tr(
+            "Impossibile leggere le pagine del PDF",
+            "Unable to read PDF pages",
+        ))?;
         cancelled(cancel)?;
         let count = document.get_pages().len();
         // lopdf 0.38 retains Encrypt even after authenticating an empty user
         // password. Such owner-protected documents still have readable pages.
         if document.is_encrypted() && count == 0 {
-            bail!("{PDF_OPEN_PASSWORD_ERROR}");
+            bail!(pdf_open_password_error());
         }
         count
     };
     cancelled(cancel)?;
     if count == 0 || count > 10_000 {
-        bail!("Il PDF deve contenere da 1 a 10000 pagine");
+        bail!(crate::trf!(
+            "Il PDF deve contenere da 1 a 10000 pagine",
+            "The PDF must contain between 1 and 10000 pages"
+        ));
     }
     Ok(count)
 }
@@ -825,7 +949,7 @@ pub(crate) fn pdf_error(error: anyhow::Error) -> anyhow::Error {
         .to_ascii_lowercase()
         .contains("incorrect password")
     {
-        anyhow::anyhow!(PDF_OPEN_PASSWORD_ERROR)
+        anyhow::anyhow!(pdf_open_password_error())
     } else {
         error
     }
@@ -839,7 +963,10 @@ fn parse_pdf_page_count(stdout: &[u8]) -> Result<usize> {
         .rev()
         .find_map(|line| line.strip_prefix("Pages:"))
         .and_then(|value| value.trim().parse::<usize>().ok())
-        .context("Impossibile leggere le pagine del PDF: risposta pdfinfo non valida")
+        .context(crate::i18n::tr(
+            "Impossibile leggere le pagine del PDF: risposta pdfinfo non valida",
+            "Unable to read PDF pages: invalid pdfinfo response",
+        ))
 }
 
 #[derive(Debug)]
@@ -879,15 +1006,19 @@ fn run_pdf_probe(
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    let mut child = command
-        .spawn()
-        .context("Impossibile avviare il conteggio PDF")?;
+    let mut child = command.spawn().context(crate::i18n::tr(
+        "Impossibile avviare il conteggio PDF",
+        "Unable to start PDF page counting",
+    ))?;
     let job = match ProcessJob::attach(&child) {
         Ok(job) => job,
         Err(error) => {
             let _ = child.kill();
             let _ = child.wait();
-            return Err(error).context("Impossibile isolare il processo di conteggio PDF");
+            return Err(error).context(crate::i18n::tr(
+                "Impossibile isolare il processo di conteggio PDF",
+                "Unable to isolate the PDF page-counting process",
+            ));
         }
     };
     let stdout = child.stdout.take().unwrap();
@@ -905,9 +1036,10 @@ fn run_pdf_probe(
             Err(error) => break Err(error.into()),
         }
         if started.elapsed() >= timeout {
-            break Err(anyhow::anyhow!(
-                "Il conteggio delle pagine PDF ha superato il tempo massimo"
-            ));
+            break Err(anyhow::anyhow!(crate::trf!(
+                "Il conteggio delle pagine PDF ha superato il tempo massimo",
+                "PDF page counting timed out"
+            )));
         }
         thread::sleep(Duration::from_millis(30));
     };
@@ -922,11 +1054,27 @@ fn run_pdf_probe(
     let stderr = stderr_reader.join();
     let status = result?;
     let stdout = stdout
-        .map_err(|_| anyhow::anyhow!("Lettura del conteggio PDF interrotta"))?
-        .context("Impossibile leggere il conteggio PDF")?;
+        .map_err(|_| {
+            anyhow::anyhow!(crate::trf!(
+                "Lettura del conteggio PDF interrotta",
+                "PDF page-count reading was interrupted"
+            ))
+        })?
+        .context(crate::i18n::tr(
+            "Impossibile leggere il conteggio PDF",
+            "Unable to read the PDF page count",
+        ))?;
     let stderr = stderr
-        .map_err(|_| anyhow::anyhow!("Lettura della diagnostica PDF interrotta"))?
-        .context("Impossibile leggere la diagnostica PDF")?;
+        .map_err(|_| {
+            anyhow::anyhow!(crate::trf!(
+                "Lettura della diagnostica PDF interrotta",
+                "PDF diagnostic reading was interrupted"
+            ))
+        })?
+        .context(crate::i18n::tr(
+            "Impossibile leggere la diagnostica PDF",
+            "Unable to read PDF diagnostics",
+        ))?;
     Ok(PdfProbeOutput {
         status,
         stdout,
@@ -944,6 +1092,13 @@ fn vp9_policy(stored_quality: u8) -> (u8, u8) {
 }
 
 const VIDEO_WITHOUT_AUDIO_ERROR: &str = "Il video non contiene una traccia audio da estrarre";
+
+fn video_without_audio_error() -> &'static str {
+    crate::i18n::tr(
+        VIDEO_WITHOUT_AUDIO_ERROR,
+        "The video does not contain an audio track to extract",
+    )
+}
 
 fn audio_stream_presence(success: bool, stdout: &[u8]) -> Option<bool> {
     if !success {
@@ -1006,7 +1161,7 @@ fn convert_media(
         None
     };
     if audio_stream == Some(false) {
-        bail!("{VIDEO_WITHOUT_AUDIO_ERROR}");
+        bail!(video_without_audio_error());
     }
     let (_stage, temp) = external_temporary(dir, s.format.extension())?;
     // Do not launch the same failing/timed-out optional probe a second time.
@@ -1022,7 +1177,10 @@ fn convert_media(
     } else {
         duration = duration.map(|d| (d - start).max(0.));
     }
-    let mut cmd = Command::new(tools.ffmpeg.as_ref().context("FFmpeg non trovato")?);
+    let mut cmd = Command::new(tools.ffmpeg.as_ref().context(crate::i18n::tr(
+        "FFmpeg non trovato",
+        "FFmpeg was not found",
+    ))?);
     hidden(&mut cmd).args([
         "-hide_banner",
         "-nostdin",
@@ -1209,7 +1367,7 @@ fn convert_media(
                 .to_ascii_lowercase()
                 .contains("matches no streams")
         {
-            anyhow::anyhow!(VIDEO_WITHOUT_AUDIO_ERROR)
+            anyhow::anyhow!(video_without_audio_error())
         } else {
             error
         }
@@ -1230,8 +1388,9 @@ pub(crate) fn run_process(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     let mut child = cmd.spawn().with_context(|| {
-        format!(
+        crate::trf!(
             "Impossibile avviare {}",
+            "Unable to start {}",
             cmd.get_program().to_string_lossy()
         )
     })?;
@@ -1240,7 +1399,10 @@ pub(crate) fn run_process(
         Err(e) => {
             let _ = child.kill();
             let _ = child.wait();
-            return Err(e).context("Impossibile isolare il processo di conversione");
+            return Err(e).context(crate::i18n::tr(
+                "Impossibile isolare il processo di conversione",
+                "Unable to isolate the conversion process",
+            ));
         }
     };
     let stdout = child.stdout.take().unwrap();
@@ -1283,14 +1445,15 @@ pub(crate) fn run_process(
     let diagnostic = errors.join().unwrap_or_default();
     match result {
         Ok(status) if status.success() => Ok(()),
-        Ok(_) => bail!(
+        Ok(_) => bail!(crate::trf!(
             "Conversione non riuscita: {}",
+            "Conversion failed: {}",
             if diagnostic.trim().is_empty() {
                 "il convertitore si è interrotto"
             } else {
                 diagnostic.trim()
             }
-        ),
+        )),
         Err(e) => Err(e),
     }
 }
@@ -1316,11 +1479,12 @@ fn formatted_media_time(seconds: f64) -> String {
 fn conversion_progress_message(processed: f64, duration: Option<f64>) -> String {
     let processed = formatted_media_time(processed);
     match duration.filter(|duration| duration.is_finite() && *duration >= 0.0) {
-        Some(duration) => format!(
+        Some(duration) => crate::trf!(
             "Conversione… {processed} di {}",
+            "Converting… {processed} of {}",
             formatted_media_time(duration)
         ),
-        None => format!("Conversione… {processed}"),
+        None => crate::trf!("Conversione… {processed}", "Converting… {processed}"),
     }
 }
 
@@ -1337,7 +1501,7 @@ fn wait_child(
             job.terminate();
             let _ = child.kill();
             let _ = child.wait();
-            bail!("Conversione annullata");
+            bail!(crate::trf!("Conversione annullata", "Conversion cancelled"));
         }
         for time in recv.try_iter() {
             progress(Progress {
@@ -1374,7 +1538,10 @@ fn convert_pdf(
         return match s.pdf.action {
             PdfAction::Compress => crate::pdf_ops::compress(input, Some(dir), cancel, progress),
             PdfAction::Split => crate::pdf_ops::split(input, Some(dir), cancel, progress),
-            PdfAction::Merge => bail!("L'unione richiede una selezione di PDF"),
+            PdfAction::Merge => bail!(crate::trf!(
+                "L'unione richiede una selezione di PDF",
+                "Merging requires a selection of PDF files"
+            )),
         };
     }
     if matches!(
@@ -1393,12 +1560,18 @@ fn convert_pdf(
     set_hidden(stage.path())?;
     progress(Progress {
         fraction: 0.05,
-        message: format!("Rendering di {page_count} pagine PDF…"),
+        message: crate::trf!(
+            "Rendering di {page_count} pagine PDF…",
+            "Rendering {page_count} PDF pages…"
+        ),
     });
     for first in (1..=page_count).step_by(PAGES_PER_BLOCK) {
         cancelled(cancel)?;
         let last = (first + PAGES_PER_BLOCK - 1).min(page_count);
-        let mut cmd = Command::new(tools.pdftoppm.as_ref().context("pdftoppm non trovato")?);
+        let mut cmd = Command::new(tools.pdftoppm.as_ref().context(crate::i18n::tr(
+            "pdftoppm non trovato",
+            "pdftoppm was not found",
+        ))?);
         cmd.arg(if s.format == OutputFormat::Jpg {
             "-jpeg"
         } else {
@@ -1420,7 +1593,10 @@ fn convert_pdf(
         cancelled(cancel)?;
         progress(Progress {
             fraction: 0.05 + 0.45 * last as f32 / page_count as f32,
-            message: format!("Renderizzate pagine {first}–{last} di {page_count}"),
+            message: crate::trf!(
+                "Renderizzate pagine {first}–{last} di {page_count}",
+                "Rendered pages {first}–{last} of {page_count}"
+            ),
         });
     }
     cancelled(cancel)?;
@@ -1441,9 +1617,10 @@ fn convert_pdf(
             .enumerate()
             .any(|(index, path)| page_number(path) != Some(index + 1))
     {
-        bail!(
-            "Il numero o l'ordine delle pagine esportate da Poppler non corrisponde al PDF: nessun file è stato pubblicato"
-        );
+        bail!(crate::trf!(
+            "Il numero o l'ordine delle pagine esportate da Poppler non corrisponde al PDF: nessun file è stato pubblicato",
+            "The number or order of pages exported by Poppler does not match the PDF: no output was published"
+        ));
     }
     let mut outputs = Vec::new();
     let result = (|| -> Result<()> {
@@ -1460,7 +1637,7 @@ fn convert_pdf(
             outputs.push((path, retained));
             progress(Progress {
                 fraction: 0.5 + (i + 1) as f32 / pages.len() as f32 * 0.49,
-                message: format!("Pagina {} di {}", i + 1, pages.len()),
+                message: crate::trf!("Pagina {} di {}", "Page {} of {}", i + 1, pages.len()),
             });
         }
         Ok(())

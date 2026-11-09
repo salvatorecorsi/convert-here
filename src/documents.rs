@@ -2,6 +2,7 @@
 //!
 //! PDF reconstruction deliberately uses embedded text only: it does not infer
 //! tables, retain images or reproduce the source typography.
+use crate::i18n::tr;
 use crate::{
     engine::{
         Progress, cancelled, commit, copy_commit, external_temporary, run_process, stem, temporary,
@@ -57,7 +58,13 @@ pub(crate) fn convert_office(
         OutputFormat::Pdf => "pdf".to_owned(),
         OutputFormat::Csv => csv_filter(settings.csv.delimiter, true),
         OutputFormat::Xlsx => "xlsx:Calc MS Excel 2007 XML".to_owned(),
-        _ => bail!("Formato Office di destinazione non supportato: {format}"),
+        _ => bail!(
+            "{}",
+            crate::trf!(
+                "Formato Office di destinazione non supportato: {format}",
+                "Unsupported Office output format: {format}"
+            )
+        ),
     };
     let stage = tempfile::Builder::new()
         .prefix(".the-converter-office-")
@@ -66,7 +73,12 @@ pub(crate) fn convert_office(
     let profile = stage.path().join("profile");
     prepare_profile(&profile)?;
     let profile_uri = profile_uri(&profile)?;
-    let mut cmd = Command::new(tools.soffice.as_ref().context("LibreOffice non trovato")?);
+    let mut cmd = Command::new(
+        tools
+            .soffice
+            .as_ref()
+            .context(tr("LibreOffice non trovato", "LibreOffice not found"))?,
+    );
     cmd.arg(format!("-env:UserInstallation={profile_uri}"))
         .args([
             "--headless",
@@ -88,7 +100,11 @@ pub(crate) fn convert_office(
         .arg(input);
     progress(Progress {
         fraction: 0.1,
-        message: "Conversione documento con LibreOffice…".into(),
+        message: tr(
+            "Conversione documento con LibreOffice…",
+            "Converting document with LibreOffice…",
+        )
+        .into(),
     });
     run_process(cmd, cancel, None, progress)?;
     cancelled(cancel)?;
@@ -98,8 +114,12 @@ pub(crate) fn convert_office(
     // LibreOffice can report success even when its filter rejects the input.
     if !output.is_file() {
         bail!(
-            "LibreOffice non ha prodotto il file {}. Il documento potrebbe essere protetto o non supportato.",
-            format.label()
+            "{}",
+            crate::trf!(
+                "LibreOffice non ha prodotto il file {}. Il documento potrebbe essere protetto o non supportato.",
+                "LibreOffice did not produce a {} file. The document may be protected or unsupported.",
+                format.label()
+            )
         );
     }
     copy_commit(&output, dir, &stem(input), format.extension())
@@ -117,7 +137,15 @@ fn profile_uri(profile: &Path) -> Result<String> {
     };
     url::Url::from_directory_path(path)
         .map(String::from)
-        .map_err(|_| anyhow::anyhow!("Percorso del profilo LibreOffice non valido"))
+        .map_err(|_| {
+            anyhow::anyhow!(
+                "{}",
+                crate::trf!(
+                    "Percorso del profilo LibreOffice non valido",
+                    "Invalid LibreOffice profile path"
+                )
+            )
+        })
 }
 
 fn prepare_profile(profile: &Path) -> Result<()> {
@@ -161,7 +189,13 @@ pub(crate) fn convert_pdf_text(
         format,
         OutputFormat::Txt | OutputFormat::Docx | OutputFormat::Html
     ) {
-        bail!("Formato di ricostruzione PDF non supportato: {format}");
+        bail!(
+            "{}",
+            crate::trf!(
+                "Formato di ricostruzione PDF non supportato: {format}",
+                "Unsupported PDF reconstruction format: {format}"
+            )
+        );
     }
     let text = if settings.ocr.enabled {
         crate::ocr::extract_text(input, dir, settings, tools, cancel, progress)?
@@ -193,7 +227,12 @@ fn embedded_pdf_text(
     progress: &mut impl FnMut(Progress),
 ) -> Result<String> {
     let (_stage, text) = external_temporary(dir, "txt")?;
-    let mut cmd = Command::new(tools.pdftotext.as_ref().context("pdftotext non trovato")?);
+    let mut cmd = Command::new(
+        tools
+            .pdftotext
+            .as_ref()
+            .context(tr("pdftotext non trovato", "pdftotext not found"))?,
+    );
     // The default reading-order extraction avoids baking in column spacing.
     // Keep form feeds so source page boundaries survive reconstruction.
     if format == OutputFormat::Txt {
@@ -202,17 +241,34 @@ fn embedded_pdf_text(
     cmd.args(["-enc", "UTF-8"]).arg(input).arg(text.path());
     progress(Progress {
         fraction: 0.1,
-        message: "Estrazione del testo incorporato nel PDF…".into(),
+        message: tr(
+            "Estrazione del testo incorporato nel PDF…",
+            "Extracting embedded PDF text…",
+        )
+        .into(),
     });
     run_process(cmd, cancel, None, progress).map_err(crate::engine::pdf_error)?;
     cancelled(cancel)?;
     if text.as_file().metadata()?.len() > MAX_EXTRACTED_TEXT_BYTES {
-        bail!("Il testo estratto dal PDF supera il limite di 64 MB");
+        bail!(
+            "{}",
+            crate::trf!(
+                "Il testo estratto dal PDF supera il limite di 64 MB",
+                "The extracted PDF text exceeds the 64 MB limit"
+            )
+        );
     }
-    let text = fs::read_to_string(text.path()).context("Testo PDF non valido in UTF-8")?;
+    let text = fs::read_to_string(text.path()).context(tr(
+        "Testo PDF non valido in UTF-8",
+        "The PDF text is not valid UTF-8",
+    ))?;
     if text.trim().is_empty() {
         bail!(
-            "Il PDF non contiene testo estraibile. Attiva OCR locale per riconoscere il testo delle scansioni."
+            "{}",
+            crate::trf!(
+                "Il PDF non contiene testo estraibile. Attiva OCR locale per riconoscere il testo delle scansioni.",
+                "The PDF contains no extractable text. Enable local OCR to recognize text in scanned pages."
+            )
         );
     }
     Ok(text)
@@ -256,7 +312,8 @@ fn write_html(
         cancelled(cancel)?;
         writeln!(
             output,
-            "<section class=\"page\" aria-label=\"Pagina {}\">",
+            "<section class=\"page\" aria-label=\"{} {}\">",
+            tr("Pagina", "Page"),
             index + 1
         )?;
         for line in page.trim_end_matches('\n').split('\n') {
@@ -307,6 +364,30 @@ fn write_docx(output: &mut (impl Write + Seek), pages: &[&str], cancel: &AtomicB
 mod tests {
     use super::*;
     use std::io::{Cursor, Read};
+
+    #[test]
+    fn html_page_labels_follow_ui_language_without_translating_source_text() {
+        use crate::i18n::{Language, with_language};
+        for (language, label) in [
+            (Language::Italian, "Pagina 1"),
+            (Language::English, "Page 1"),
+        ] {
+            with_language(language, || {
+                let mut output = Vec::new();
+                write_html(
+                    &mut output,
+                    "Titolo originale",
+                    &["Testo originale"],
+                    &AtomicBool::new(false),
+                )
+                .unwrap();
+                let html = String::from_utf8(output).unwrap();
+                assert!(html.contains(&format!("aria-label=\"{label}\"")));
+                assert!(html.contains("<title>Titolo originale</title>"));
+                assert!(html.contains("<p>Testo originale</p>"));
+            });
+        }
+    }
 
     #[test]
     fn docx_has_resolvable_parts_escaped_text_and_source_page_breaks() {

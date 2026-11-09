@@ -1,4 +1,5 @@
 //! Image recipes and exact, reusable encoded previews. No operation changes an input file.
+use crate::i18n::tr;
 use crate::{engine::Progress, model::OutputFormat, tools::ToolPaths};
 use anyhow::{Context, Result, bail, ensure};
 use image::{DynamicImage, ImageDecoder, ImageFormat, Rgba, RgbaImage, imageops::FilterType};
@@ -121,7 +122,10 @@ pub struct EncodedImage {
 fn cancelled(cancel: &AtomicBool) -> Result<()> {
     ensure!(
         !cancel.load(Ordering::Relaxed),
-        "Elaborazione immagine annullata"
+        tr(
+            "Elaborazione immagine annullata",
+            "Image processing cancelled"
+        )
     );
     Ok(())
 }
@@ -129,11 +133,17 @@ fn cancelled(cancel: &AtomicBool) -> Result<()> {
 fn dimensions(width: u32, height: u32) -> Result<()> {
     ensure!(
         width > 0 && height > 0 && width <= MAX_SIDE && height <= MAX_SIDE,
-        "Dimensioni immagine non valide (1–{MAX_SIDE} pixel per lato)"
+        crate::trf!(
+            "Dimensioni immagine non valide (1–{MAX_SIDE} pixel per lato)",
+            "Invalid image dimensions (1–{MAX_SIDE} pixels per side)"
+        )
     );
     ensure!(
         u64::from(width) * u64::from(height) <= MAX_PIXELS,
-        "L’editor supporta al massimo {MAX_PIXELS} pixel"
+        crate::trf!(
+            "L’editor supporta al massimo {MAX_PIXELS} pixel",
+            "The editor supports up to {MAX_PIXELS} pixels"
+        )
     );
     Ok(())
 }
@@ -146,18 +156,27 @@ pub fn validate(settings: &ImageEditSettings) -> Result<()> {
                 .all(|edge| edge.is_finite() && (0.0..=1.0).contains(&edge))
                 && crop.left < crop.right
                 && crop.top < crop.bottom,
-            "Ritaglio non valido: seleziona un’area interna all’immagine"
+            tr(
+                "Ritaglio non valido: seleziona un’area interna all’immagine",
+                "Invalid crop: select an area within the image"
+            )
         );
     }
     if let Some(resize) = &settings.resize {
         ensure!(
             resize.width.is_some() || resize.height.is_some(),
-            "Indica una dimensione per la scala"
+            tr(
+                "Indica una dimensione per la scala",
+                "Enter a dimension for resizing"
+            )
         );
         for value in [resize.width, resize.height].into_iter().flatten() {
             ensure!(
                 (1..=MAX_SIDE).contains(&value),
-                "Dimensione della scala non valida"
+                tr(
+                    "Dimensione della scala non valida",
+                    "Invalid resize dimension"
+                )
             );
         }
         if !resize.keep_aspect
@@ -171,7 +190,10 @@ pub fn validate(settings: &ImageEditSettings) -> Result<()> {
     }
     ensure!(
         settings.max_bytes != Some(0),
-        "Il peso massimo deve essere maggiore di zero"
+        tr(
+            "Il peso massimo deve essere maggiore di zero",
+            "The maximum file size must be greater than zero"
+        )
     );
     Ok(())
 }
@@ -201,25 +223,32 @@ pub fn load_image(
     let mut decoder = image::ImageReader::open(decoded)?
         .with_guessed_format()?
         .into_decoder()
-        .context("Immagine non leggibile o codec non supportato")?;
+        .context(tr(
+            "Immagine non leggibile o codec non supportato",
+            "The image cannot be read or its codec is not supported",
+        ))?;
     let (width, height) = decoder.dimensions();
     dimensions(width, height)?;
     if let Some(limit) = image::Limits::default().max_alloc {
         ensure!(
             decoder.total_bytes() <= limit,
-            "L’immagine supera il limite di memoria per la decodifica"
+            tr(
+                "L’immagine supera il limite di memoria per la decodifica",
+                "The image exceeds the decoding memory limit"
+            )
         );
     }
-    let orientation = decoder
-        .orientation()
-        .context("Orientamento immagine non leggibile")?;
+    let orientation = decoder.orientation().context(tr(
+        "Orientamento immagine non leggibile",
+        "The image orientation cannot be read",
+    ))?;
     cancelled(cancel)?;
     let mut image = DynamicImage::from_decoder(decoder)?;
     image.apply_orientation(orientation);
     cancelled(cancel)?;
     progress(Progress {
         fraction: 1.0,
-        message: "Immagine pronta per l’editor".into(),
+        message: tr("Immagine pronta per l’editor", "Image ready for editing").into(),
     });
     Ok(LoadedImage {
         pixels: Arc::new(image.into_rgba8()),
@@ -229,13 +258,16 @@ pub fn load_image(
 fn scaled_size(width: u32, height: u32, scale: f64) -> Result<(u32, u32)> {
     ensure!(
         scale.is_finite() && scale > 0.0,
-        "Scala immagine non valida"
+        tr("Scala immagine non valida", "Invalid image scale")
     );
     let width = (f64::from(width) * scale).round().max(1.0);
     let height = (f64::from(height) * scale).round().max(1.0);
     ensure!(
         width <= f64::from(MAX_SIDE) && height <= f64::from(MAX_SIDE),
-        "Immagine scalata troppo grande"
+        tr(
+            "Immagine scalata troppo grande",
+            "The resized image is too large"
+        )
     );
     dimensions(width as u32, height as u32)?;
     Ok((width as u32, height as u32))
@@ -254,7 +286,10 @@ fn resize_size(width: u32, height: u32, resize: &ResizeSettings) -> Result<(u32,
         ),
         (Some(w), None) => scaled_size(width, height, f64::from(w) / f64::from(width)),
         (None, Some(h)) => scaled_size(width, height, f64::from(h) / f64::from(height)),
-        _ => bail!("Indica una dimensione per la scala"),
+        _ => bail!(tr(
+            "Indica una dimensione per la scala",
+            "Enter a dimension for resizing"
+        )),
     }
 }
 
@@ -341,7 +376,10 @@ pub fn render(
         let bottom = (crop.bottom * f64::from(source.height())).round() as u32;
         ensure!(
             left < right && top < bottom,
-            "Il ritaglio è più piccolo di un pixel"
+            tr(
+                "Il ritaglio è più piccolo di un pixel",
+                "The crop is smaller than one pixel"
+            )
         );
         image::imageops::crop_imm(source, left, top, right - left, bottom - top).to_image()
     } else {
@@ -405,7 +443,10 @@ fn flattened(pixels: &RgbaImage) -> image::RgbImage {
 fn webp(pixels: &RgbaImage, quality: u8) -> Result<Vec<u8>> {
     ensure!(
         pixels.width() <= MAX_WEBP_SIDE && pixels.height() <= MAX_WEBP_SIDE,
-        "WebP supporta al massimo {MAX_WEBP_SIDE} pixel per lato"
+        crate::trf!(
+            "WebP supporta al massimo {MAX_WEBP_SIDE} pixel per lato",
+            "WebP supports up to {MAX_WEBP_SIDE} pixels per side"
+        )
     );
     // The C encoder reads exactly width*height*4 bytes from a validated image buffer.
     struct Memory(*mut u8);
@@ -429,7 +470,10 @@ fn webp(pixels: &RgbaImage, quality: u8) -> Result<Vec<u8>> {
     };
     ensure!(
         size > 0 && !output.0.is_null(),
-        "L’encoder WebP non ha prodotto un’immagine valida"
+        tr(
+            "L’encoder WebP non ha prodotto un’immagine valida",
+            "The WebP encoder did not produce a valid image"
+        )
     );
     // Memory is allocated by libwebp and remains owned until the copied bytes are complete.
     Ok(unsafe { std::slice::from_raw_parts(output.0, size) }.to_vec())
@@ -455,9 +499,10 @@ fn encode_once(
             DynamicImage::ImageRgba8(pixels.clone()).write_to(&mut bytes, ImageFormat::Png)?;
             bytes.into_inner()
         }
-        _ => bail!(
-            "L’editor esporta immagini PNG, JPEG e WebP; l’impaginazione PDF usa le opzioni pagina"
-        ),
+        _ => bail!(tr(
+            "L’editor esporta immagini PNG, JPEG e WebP; l’impaginazione PDF usa le opzioni pagina",
+            "The editor exports PNG, JPEG and WebP images; PDF layout uses the page options"
+        )),
     };
     cancelled(cancel)?;
     Ok(bytes)
@@ -479,7 +524,10 @@ fn budget_encode(
     let mut probe = |quality: u8| -> Result<Candidate> {
         progress(Progress {
             fraction: 0.5,
-            message: format!("Verifica del peso, qualità {quality}…"),
+            message: crate::trf!(
+                "Verifica del peso, qualità {quality}…",
+                "Checking file size, quality {quality}…"
+            ),
         });
         Ok(Candidate {
             bytes: encode_once(pixels, format, quality, cancel)?,
@@ -528,7 +576,10 @@ pub fn encode(
     dimensions(pixels.width(), pixels.height())?;
     ensure!(
         (1..=100).contains(&quality),
-        "Qualità immagine non valida (1–100)"
+        tr(
+            "Qualità immagine non valida (1–100)",
+            "Invalid image quality (1–100)"
+        )
     );
     let mut working = pixels.clone();
     let mut candidate = budget_encode(
@@ -569,9 +620,15 @@ pub fn encode(
     progress(Progress {
         fraction: 1.0,
         message: if target_met {
-            "Anteprima e peso verificati"
+            tr(
+                "Anteprima e peso verificati",
+                "Preview and file size verified",
+            )
         } else {
-            "Peso massimo non raggiunto: riduci le dimensioni o cambia formato"
+            tr(
+                "Peso massimo non raggiunto: riduci le dimensioni o cambia formato",
+                "The file size limit was not met: reduce dimensions or change format",
+            )
         }
         .into(),
     });
@@ -595,21 +652,36 @@ pub fn save_bytes(
     cancel: &AtomicBool,
 ) -> Result<PathBuf> {
     cancelled(cancel)?;
-    ensure!(!bytes.is_empty(), "Nessun contenuto da salvare");
+    ensure!(
+        !bytes.is_empty(),
+        tr("Nessun contenuto da salvare", "There is no content to save")
+    );
     if let (Some(input), Ok(output)) = (input, output_path.canonicalize()) {
         ensure!(
             input.canonicalize().ok().as_ref() != Some(&output),
-            "Scegli un nome diverso dall’immagine originale"
+            tr(
+                "Scegli un nome diverso dall’immagine originale",
+                "Choose a name different from the original image"
+            )
         );
     }
     let parent = output_path
         .parent()
         .filter(|parent| !parent.as_os_str().is_empty())
         .unwrap_or_else(|| Path::new("."));
-    ensure!(parent.is_dir(), "La cartella di destinazione non esiste");
+    ensure!(
+        parent.is_dir(),
+        tr(
+            "La cartella di destinazione non esiste",
+            "The destination folder does not exist"
+        )
+    );
     ensure!(
         !output_path.try_exists()?,
-        "Il file di destinazione esiste già: scegli un altro nome"
+        tr(
+            "Il file di destinazione esiste già: scegli un altro nome",
+            "The destination file already exists: choose another name"
+        )
     );
     let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
     crate::platform::set_hidden(temporary.path())?;
@@ -622,7 +694,10 @@ pub fn save_bytes(
     temporary
         .persist_noclobber(output_path)
         .map_err(|error| error.error)
-        .context("Salvataggio non riuscito: nessun file esistente è stato sovrascritto")?;
+        .context(tr(
+            "Salvataggio non riuscito: nessun file esistente è stato sovrascritto",
+            "Could not save: no existing file was overwritten",
+        ))?;
     // tempfile clears Hidden/Temporary on Windows before its atomic publication.
     Ok(output_path.to_owned())
 }
@@ -635,7 +710,44 @@ pub fn save_encoded(
 ) -> Result<PathBuf> {
     ensure!(
         encoded.target_met,
-        "Il file supera il peso massimo: modifica qualità o dimensioni prima di salvarlo"
+        tr(
+            "Il file supera il peso massimo: modifica qualità o dimensioni prima di salvarlo",
+            "The file exceeds the size limit: change quality or dimensions before saving"
+        )
     );
     save_bytes(Some(input), output_path, &encoded.bytes, cancel)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::i18n::{Language, with_language};
+
+    #[test]
+    fn image_localization_changes_messages_without_changing_recipe_or_encoded_bytes() {
+        let pixels = RgbaImage::from_pixel(4, 3, Rgba([30, 90, 170, 120]));
+        let recipe = ImageEditSettings::default();
+        let original_recipe = serde_json::to_vec(&recipe).unwrap();
+        let cancel = AtomicBool::new(false);
+        let italian = with_language(Language::Italian, || {
+            encode(&pixels, OutputFormat::Png, 90, &recipe, &cancel, |_| {}).unwrap()
+        });
+        let english = with_language(Language::English, || {
+            let error = dimensions(0, 1).unwrap_err().to_string();
+            assert!(error.contains("Invalid image dimensions"));
+            assert!(error.contains(&MAX_SIDE.to_string()));
+            encode(&pixels, OutputFormat::Png, 90, &recipe, &cancel, |_| {}).unwrap()
+        });
+        assert_eq!(italian.bytes, english.bytes);
+        assert_eq!(italian.decoded_preview, english.decoded_preview);
+        assert_eq!(serde_json::to_vec(&recipe).unwrap(), original_recipe);
+        with_language(Language::Italian, || {
+            assert!(
+                dimensions(0, 1)
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Dimensioni immagine")
+            );
+        });
+    }
 }

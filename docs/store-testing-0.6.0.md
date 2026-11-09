@@ -5,7 +5,7 @@ Bozza locale pronta per la preparazione della release e della submission. Non at
 ## Additional Testing Information — English
 
 ```text
-Convert Here 0.6.0 / full MSIX 1.0.5.0, Windows 11 x64. Publisher: Salvatore Corsi. The application UI is Italian; the English Store listing describes the same application. No in-app account or login is needed. The app is free, with no subscriptions, in-app purchases or usage charges; no payment is required to keep using it.
+Convert Here 0.6.0 / full MSIX 1.0.5.0, Windows 11 x64. Publisher: Salvatore Corsi. The application and Explorer menu support Italian and English. Settings > Language selects System, Italiano or English independently from OCR language. The instructions below use Italian control names. No in-app account or login is needed. The app is free, with no subscriptions, in-app purchases or usage charges; no payment is required to keep using it.
 
 Native tests need no external engine: add PNG/JPEG images, choose JPG or PNG and convert to a new file. Open Modifica… in an image row. Try crop, resize and custom pixel canvas/background/anchor, then PNG, JPEG, WebP or PDF output. Adatta fits the preview; Dettaglio 1:1 shows image pixels. JPEG/WebP quality is adjustable. Peso massimo uses decimal kB: 300 kB is 300000 bytes. Extra downsizing is opt-in. If the cap cannot be met, save is disabled; quick conversion fails without publishing an oversized output. Salva con nome… writes the prepared bytes and refuses an existing output name.
 
@@ -25,23 +25,27 @@ License: https://github.com/salvatorecorsi/convert-here/blob/v0.6.0/LICENSE
 Support: salvo@salvatorecorsi.com
 ```
 
-## Prove locali eseguite sui sorgenti 0.6.0
+## Prove locali del ramo editor, prima dell'integrazione bilingue
+
+Questi esiti sono stati osservati prima del merge con la 0.5.0 bilingue pubblicata dall'altra sessione. La build 0.6.0 integrata richiede controlli propri: non si trasferisce automaticamente l'esito di una suite al nuovo commit.
 
 - [x] Formattazione e Clippy superati; **265 test app** e **12 test DLL** superati. Un test degli archivi upstream in cache, già separato dalla suite ordinaria, resta ignorato.
 - [x] CLI: un lavoro mantiene lo snapshot del profilo anche dopo aggiornamento ed eliminazione del profilo. Risultato di **220068 byte**, **640 × 498 pixel**, SHA-256 dell'originale invariato.
 - [x] GUI nativa: WebP **900 × 700** da **508858 byte** a **297678 byte**, qualità **44**, limite **300000 byte**. Il file salvato è esattamente di **297678 byte**; con limite **100 byte** il salvataggio è disattivato.
-- [x] Editor nativo: ritaglio trascinato **453 × 349**, scala **300 × 231**, tela bianca con dimensione impostata a **1024 pixel**. Creato e persistito il profilo **«Immagine quadrata»**; resta da verificare il suo riuso dopo riavvio.
+- [x] Editor nativo: ritaglio trascinato **453 × 349**, scala **300 × 231**, tela bianca con dimensione impostata a **1024 pixel**. Creato e persistito il profilo **«Immagine quadrata»**, poi rinominato **«Quadrato per il sito»** e scelto come predefinito. Al riavvio è ricaricato con la stessa tela e lo stesso risultato di **47454 byte**.
 - [x] TXT UTF-8 in PDF **A5**, font **18 pt**, **4 pagine**, **176031 byte**. `pdfinfo` riporta **419.528 × 595.276 pt**; `pdftotext` conserva correttamente accenti e simbolo **€**. Il rendering Poppler è stato ispezionato.
+- [x] Sostituzione del testo nell'editor: il testo digitato rigenera correttamente **una pagina A5 di 173633 byte**. Il contenuto non viene conservato nei profili.
+- [x] Correzione overflow dei controlli della tela verificata: nessuna area nera e **Trasparente** passa alla riga successiva.
 
-Queste prove riguardano sorgenti, CLI e GUI locale: non attestano installazione del MSIX 1.0.5.0 o registrazione effettiva del menu Explorer. Restano in corso la verifica del riavvio/profili e il controllo della correzione dell'overflow dei controlli della tela.
+Queste prove riguardano sorgenti, CLI e GUI locale: non attestano installazione del MSIX 1.0.5.0 o registrazione effettiva del menu Explorer.
 
 ## Checklist restante per il candidato finale
 
 - [ ] Verificare manifest, identità, versione 1.0.5.0, hash e licenze del MSIX finale; distinguere l'app dal pacchetto GitHub.
-- [ ] Completare le varianti PNG/JPEG/PDF dall'editor e le combinazioni di tela/sfondo; ricontrollare l'overflow dei controlli dopo la correzione.
+- [ ] Verificare app ed editor integrati nelle due lingue; completare le varianti PNG/JPEG/PDF e le combinazioni di tela/sfondo sul commit finale.
 - [ ] Verificare esplicitamente riduzione delle dimensioni solo se autorizzata e assenza di risultati oltre il limite nelle ulteriori varianti.
 - [ ] A4/A5 verticale e orizzontale da immagine, testo digitato e TXT UTF-8; verificare pagine, testo estraibile e errore per caratteri non disponibili.
-- [ ] Salvare un profilo, riavviare l'app e verificare parametri/menu; provare un input compatibile e uno incompatibile, un formato disabilitato e un limite di peso nella coda rapida.
+- [ ] Provare profili con input compatibile e incompatibile, formato disabilitato e limite di peso nella coda rapida sul commit integrato; verificare il menu effettivamente registrato.
 - [ ] Riordinare pagine di almeno un PDF multipagina e un'immagine in PDF Merge; controllare il risultato senza modificare gli originali.
 - [ ] Verificare nome già esistente, originale/collegamento fisico, annullamento e chiusura durante la preparazione.
 - [ ] Confermare che anteprime, immagini di prova e testo digitato non compaiano in preferenze o profili; controllare separatamente i record della coda.

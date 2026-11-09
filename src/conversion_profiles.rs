@@ -1,4 +1,5 @@
 //! Durable user recipes. A queued job receives the complete settings snapshot.
+use crate::i18n::tr;
 use crate::{
     engine,
     model::{ConversionSettings, MediaKind, OutputFormat, PdfAction},
@@ -63,16 +64,28 @@ impl ConversionProfile {
         let mut count = 0;
         for input in inputs {
             count += 1;
-            ensure!(input.is_file(), "Il profilo richiede file esistenti");
+            ensure!(
+                input.is_file(),
+                tr(
+                    "Il profilo richiede file esistenti",
+                    "The profile requires existing files"
+                )
+            );
             let kind = MediaKind::from_path(input);
             ensure!(
                 crate::model::supported_formats(kind).contains(&self.settings.format),
-                "Il profilo non è compatibile con tutti i file selezionati"
+                tr(
+                    "Il profilo non è compatibile con tutti i file selezionati",
+                    "The profile is not compatible with all selected files"
+                )
             );
             match self.input_policy() {
                 ProfileInputPolicy::Images => ensure!(
                     kind == MediaKind::Image,
-                    "Il profilo di modifica richiede immagini"
+                    tr(
+                        "Il profilo di modifica richiede immagini",
+                        "The editing profile requires images"
+                    )
                 ),
                 ProfileInputPolicy::ImagesOrText => ensure!(
                     kind == MediaKind::Image
@@ -80,18 +93,27 @@ impl ConversionProfile {
                             .extension()
                             .and_then(|e| e.to_str())
                             .is_some_and(|e| e.eq_ignore_ascii_case("txt")),
-                    "Il profilo pagina richiede immagini o file TXT"
+                    tr(
+                        "Il profilo pagina richiede immagini o file TXT",
+                        "The page profile requires images or TXT files"
+                    )
                 ),
                 ProfileInputPolicy::Compatible => {}
                 ProfileInputPolicy::Pdf => ensure!(
                     kind == MediaKind::Pdf,
-                    "Il profilo PDF Split richiede file PDF"
+                    tr(
+                        "Il profilo PDF Split richiede file PDF",
+                        "The PDF Split profile requires PDF files"
+                    )
                 ),
             }
         }
         ensure!(
             count > 0 && count <= 10_000,
-            "Seleziona da 1 a 10000 file per il profilo"
+            tr(
+                "Seleziona da 1 a 10000 file per il profilo",
+                "Select 1 to 10000 files for the profile"
+            )
         );
         Ok(())
     }
@@ -100,26 +122,47 @@ impl ConversionProfile {
 fn validate_profile(profile: &ConversionProfile) -> Result<()> {
     ensure!(
         profile_menu_shared::profile_guid_bytes(&profile.id).is_some(),
-        "Identificatore del profilo non valido"
+        tr(
+            "Identificatore del profilo non valido",
+            "Invalid profile identifier"
+        )
     );
-    ensure!(profile.revision > 0, "Revisione del profilo non valida");
+    ensure!(
+        profile.revision > 0,
+        tr(
+            "Revisione del profilo non valida",
+            "Invalid profile revision"
+        )
+    );
     ensure!(
         profile.revision == revision_for(profile)?,
-        "Il contenuto del profilo non corrisponde alla revisione salvata"
+        tr(
+            "Il contenuto del profilo non corrisponde alla revisione salvata",
+            "The profile content does not match the saved revision"
+        )
     );
     let materialized: ConversionSettings = serde_json::from_value(profile.settings_wire.clone())?;
     ensure!(
         settings_equal(&materialized, &profile.settings)?,
-        "Le impostazioni del profilo non corrispondono al contenuto salvato"
+        tr(
+            "Le impostazioni del profilo non corrispondono al contenuto salvato",
+            "The profile settings do not match the saved content"
+        )
     );
     ensure!(
         profile_menu_shared::valid_name(&profile.name),
-        "Il nome del profilo deve contenere da 1 a 40 caratteri, senza caratteri di controllo"
+        tr(
+            "Il nome del profilo deve contenere da 1 a 40 caratteri, senza caratteri di controllo",
+            "The profile name must contain 1 to 40 characters, without control characters"
+        )
     );
     ensure!(
         profile.settings.format != OutputFormat::Pdf
             || profile.settings.pdf.action != PdfAction::Merge,
-        "PDF Merge richiede la finestra per ordinare le pagine"
+        tr(
+            "PDF Merge richiede la finestra per ordinare le pagine",
+            "PDF Merge requires the page ordering window"
+        )
     );
     engine::validate(&profile.settings)?;
     if let Some(edit) = &profile.settings.image.edit {
@@ -129,14 +172,17 @@ fn validate_profile(profile: &ConversionProfile) -> Result<()> {
                 profile.settings.format,
                 OutputFormat::Png | OutputFormat::Jpg | OutputFormat::Webp | OutputFormat::Pdf
             ),
-            "Le modifiche immagini richiedono PNG, JPEG, WebP o PDF"
+            tr(
+                "Le modifiche immagini richiedono PNG, JPEG, WebP o PDF",
+                "Image edits require PNG, JPEG, WebP or PDF"
+            )
         );
     }
     if let Some(page) = &profile.settings.image.page {
         page.validate()?;
         ensure!(
             profile.settings.format == OutputFormat::Pdf,
-            "Il formato pagina richiede PDF"
+            tr("Il formato pagina richiede PDF", "Page layout requires PDF")
         );
     }
     Ok(())
@@ -280,14 +326,23 @@ impl ConversionProfiles {
     pub fn resolve(&self, id: &str, revision: Option<u64>) -> Result<&ConversionProfile> {
         ensure!(
             profile_menu_shared::profile_guid_bytes(id).is_some(),
-            "Identificatore del profilo non valido"
+            tr(
+                "Identificatore del profilo non valido",
+                "Invalid profile identifier"
+            )
         );
         let profile = self.get(id).ok_or_else(|| {
-            anyhow::anyhow!("Il profilo non esiste più. Riapri il menu Converti in.")
+            anyhow::anyhow!(tr(
+                "Il profilo non esiste più. Riapri il menu Converti in.",
+                "The profile no longer exists. Reopen the Convert to menu."
+            ))
         })?;
         ensure!(
             revision.is_none_or(|value| value == profile.revision),
-            "Il profilo è stato modificato. Riapri il menu Converti in."
+            tr(
+                "Il profilo è stato modificato. Riapri il menu Converti in.",
+                "The profile has changed. Reopen the Convert to menu."
+            )
         );
         validate_profile(profile)?;
         Ok(profile)
@@ -300,17 +355,26 @@ impl ConversionProfiles {
     ) -> Result<String> {
         ensure!(
             !name.chars().any(char::is_control),
-            "Il nome del profilo non può contenere caratteri di controllo"
+            tr(
+                "Il nome del profilo non può contenere caratteri di controllo",
+                "The profile name cannot contain control characters"
+            )
         );
         ensure!(
             self.len() < MAX_SAVED_PROFILES,
-            "Puoi salvare al massimo 32 profili"
+            tr(
+                "Puoi salvare al massimo 32 profili",
+                "You can save up to 32 profiles"
+            )
         );
         self.check_menu_limit(None, show_in_menu)?;
         let id = new_id()?;
         ensure!(
             self.get(&id).is_none(),
-            "Identificatore del profilo già presente; riprova"
+            tr(
+                "Identificatore del profilo già presente; riprova",
+                "The profile identifier already exists; try again"
+            )
         );
         let settings = canonical_settings(settings);
         let settings_wire = serde_json::to_value(&settings)?;
@@ -336,7 +400,10 @@ impl ConversionProfiles {
     ) -> Result<()> {
         ensure!(
             !name.chars().any(char::is_control),
-            "Il nome del profilo non può contenere caratteri di controllo"
+            tr(
+                "Il nome del profilo non può contenere caratteri di controllo",
+                "The profile name cannot contain control characters"
+            )
         );
         self.check_menu_limit(Some(id), show_in_menu)?;
         let previous = self.resolve(id, None)?;
@@ -376,7 +443,10 @@ impl ConversionProfiles {
                     .filter(|p| p.show_in_menu && Some(p.id.as_str()) != except)
                     .count()
                     < MAX_MENU_PROFILES,
-            "Puoi mostrare al massimo 8 profili nel menu"
+            tr(
+                "Puoi mostrare al massimo 8 profili nel menu",
+                "You can show up to 8 profiles in the menu"
+            )
         );
         Ok(())
     }
@@ -447,7 +517,10 @@ fn new_id() -> Result<String> {
         };
         ensure!(
             unsafe { CoCreateGuid(&mut uuid) } >= 0,
-            "Impossible creare l’identificatore del profilo"
+            tr(
+                "Impossible creare l’identificatore del profilo",
+                "Could not create the profile identifier"
+            )
         );
         let id = format!(
             "{:08x}{:04x}{:04x}{}",
@@ -458,7 +531,10 @@ fn new_id() -> Result<String> {
         );
         ensure!(
             profile_menu_shared::profile_guid_bytes(&id).is_some(),
-            "Identificatore riservato; riprova"
+            tr(
+                "Identificatore riservato; riprova",
+                "Reserved identifier; try again"
+            )
         );
         Ok(id)
     }

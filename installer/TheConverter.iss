@@ -91,6 +91,7 @@ Source: "{#SourceDir}\the-converter.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\the-converter-cli.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\the_converter_shell.dll"; DestDir: "{app}"; Flags: ignoreversion uninsneveruninstall
 Source: "{#SourceDir}\README.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceDir}\README.en.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\docs\*"; DestDir: "{app}\docs"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -113,7 +114,7 @@ Name: "{autodesktop}\Convert Here"; Filename: "{app}\the-converter.exe"; Tasks: 
 Root: HKCU; Subkey: "Software\Classes\CLSID\{{#ConverterClass}"; ValueType: string; ValueData: "Convert Here Explorer Command"; Tasks: contextmenu
 Root: HKCU; Subkey: "Software\Classes\CLSID\{{#ConverterClass}\InprocServer32"; ValueType: string; ValueData: "{app}\the_converter_shell.dll"; Tasks: contextmenu
 Root: HKCU; Subkey: "Software\Classes\CLSID\{{#ConverterClass}\InprocServer32"; ValueType: string; ValueName: "ThreadingModel"; ValueData: "Apartment"; Tasks: contextmenu
-Root: HKCU; Subkey: "Software\Classes\*\shell\TheConverter"; ValueType: string; ValueName: "MUIVerb"; ValueData: "Converti in"; Tasks: contextmenu
+Root: HKCU; Subkey: "Software\Classes\*\shell\TheConverter"; ValueType: string; ValueName: "MUIVerb"; ValueData: "{code:GetContextMenuTitle}"; Tasks: contextmenu
 Root: HKCU; Subkey: "Software\Classes\*\shell\TheConverter"; ValueType: string; ValueName: "Icon"; ValueData: """{app}\the-converter.exe"",0"; Tasks: contextmenu
 Root: HKCU; Subkey: "Software\Classes\*\shell\TheConverter"; ValueType: string; ValueName: "ExplorerCommandHandler"; ValueData: "{{#ConverterClass}"; Tasks: contextmenu
 Root: HKCU; Subkey: "Software\Classes\*\shell\TheConverter"; ValueType: string; ValueName: "MultiSelectModel"; ValueData: "Player"; Tasks: contextmenu
@@ -135,6 +136,32 @@ const
 
 procedure SHChangeNotify(EventID: Integer; Flags: Cardinal; Item1, Item2: Integer);
   external 'SHChangeNotify@shell32.dll stdcall';
+
+function GetUserDefaultUILanguage: Integer;
+  external 'GetUserDefaultUILanguage@kernel32.dll stdcall';
+
+function GetContextMenuTitle(Param: String): String;
+var
+  Preferences: AnsiString;
+  Compact: String;
+begin
+  { Preserve an existing app language choice during upgrades. This field has
+    ASCII values; whitespace is ignored without interpreting other settings. }
+  Result := '';
+  if LoadStringFromFile(ExpandConstant('{userappdata}\SalvatoreCorsi\TheConverter\config\preferences.json'), Preferences) then begin
+    Compact := String(Preferences);
+    StringChangeEx(Compact, ' ', '', True);
+    StringChangeEx(Compact, #9, '', True);
+    StringChangeEx(Compact, #13, '', True);
+    StringChangeEx(Compact, #10, '', True);
+    if Pos('"ui_language":"it"', Compact) > 0 then Result := 'Converti in'
+    else if Pos('"ui_language":"en"', Compact) > 0 then Result := 'Convert to';
+  end;
+  if Result = '' then begin
+    if (GetUserDefaultUILanguage and $3FF) = $10 then Result := 'Converti in'
+    else Result := 'Convert to';
+  end;
+end;
 
 function IsWindows11: Boolean;
 var

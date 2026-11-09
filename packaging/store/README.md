@@ -16,7 +16,7 @@ Application **0.3.2** is [published on GitHub](https://github.com/salvatorecorsi
 
 All six sections were Complete before Submission 1, ID **1152921505702314630** for product **9NPKPPCBNBM8**. Application 0.3.2 / Store 1.0.2.0 is **In Microsoft Store**, and installation of the full 1.0.2.0 package with **SignatureKind: Store** was observed. The earlier certification timeline is historical. The 0.3.2 privacy URL and 1977-character testing notes were saved and reloaded; that version reused the three native 0.3.1 screenshots.
 
-The previously submitted 0.3.1 identity was verified in Partner Center on 4 November 2026: `Name` **SalvatoreCorsi.ConvertHere**, `Publisher` **CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17**, `PublisherDisplayName` **Corsivo**, reserved name **Convert Here**, Store ID **9NPKPPCBNBM8**. The developer is **Salvatore Corsi**. Align the Git-ignored local `identity.partner-center.json` with the new display name only after it is confirmed in Partner Center; do not change the assigned `Name` or `Publisher` subject arbitrarily.
+The previously submitted 0.3.1 identity was verified in Partner Center on 4 November 2026: `Name` **SalvatoreCorsi.ConvertHere**, `Publisher` **CN=B44BD46A-0514-4ADA-8B88-C6CD28C16E17**, reserved name **Convert Here**, Store ID **9NPKPPCBNBM8**. The developer is **Salvatore Corsi**. Align the Git-ignored local `identity.partner-center.json` with the new display name only after it is confirmed in Partner Center; do not change the assigned `Name` or `Publisher` subject arbitrarily.
 
 The previous application **0.3.1**, Store package **1.0.1.0**, is a free local file converter with no subscriptions, in-app purchases or usage-based charges. No payment is required to keep using it. The [GitHub release](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.3.1) is published from commit `884cb2c610a9197d8b4853f0fa741dbe9035b5ed`, with [Windows checks](https://github.com/salvatorecorsi/convert-here/actions/runs/41852511198) successful.
 
@@ -40,7 +40,7 @@ The script does not sign, install, register or trust the preview. Local installa
 Copy `identity.partner-center.example.json` to a local config file, then replace **Name** and **Publisher** with the exact Package/Identity values from Partner Center. **DisplayName** must match the reserved app name; **PublisherDisplayName** must match the account's publisher display name. Keep the account's actual spelling and punctuation.
 
 ```powershell
-.\scripts\build-store-package.ps1 -ForSubmission -IdentityConfig C:\Build\corsivo-partner-center.json
+.\scripts\build-store-package.ps1 -ForSubmission -IdentityConfig C:\Build\convert-here-partner-center.json
 ```
 
 `-ForSubmission` rejects missing fields, placeholder values and the preview identity before creating build output. The Store package version comes from the JSON config, independently of `Cargo.toml`: it must have a positive first component and the final component must be zero, for example `1.0.0.0`. Increase it for each subsequent submission. The Cargo application version is recorded separately in the report.

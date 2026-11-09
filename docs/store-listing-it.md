@@ -40,7 +40,7 @@ Convert Here e gratuito, senza abbonamenti, acquisti in-app o costi a consumo. N
 
 Il codice originale e software libero con licenza GPL-3.0-only; i sorgenti sono disponibili su https://github.com/salvatorecorsi/convert-here. Dipendenze, font e motori mantengono le rispettive licenze. La conversione non cambia i diritti sui contenuti dei tuoi file.
 
-Limiti: non e disponibile la modifica libera del contenuto delle pagine PDF. OCR riconosce il testo senza ricostruire la grafica o l'impaginazione. Da GIF animate, TIFF multipagina e contenitori HEIC/AVIF viene convertito il primo fotogramma o la prima immagine. PDF (Bulk) mantiene risultati separati; PDF (Merge) include tutte le pagine preparate una volta, fino a 10.000. L'impaginazione dei documenti Office dipende da LibreOffice e dai font disponibili. L'interfaccia e attualmente in italiano. Il menu moderno richiede Windows 11 x64.
+Limiti: non e disponibile la modifica libera del contenuto delle pagine PDF. OCR riconosce il testo senza ricostruire la grafica o l'impaginazione. Da GIF animate, TIFF multipagina e contenitori HEIC/AVIF viene convertito il primo fotogramma o la prima immagine. PDF (Bulk) mantiene risultati separati; PDF (Merge) include tutte le pagine preparate una volta, fino a 10.000. L'impaginazione dei documenti Office dipende da LibreOffice e dai font disponibili. Interfaccia e menu sono disponibili in italiano e inglese; la lingua OCR si sceglie separatamente. Il menu moderno richiede Windows 11 x64.
 
 ## Funzionalita
 

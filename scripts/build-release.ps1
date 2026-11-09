@@ -112,12 +112,13 @@ if (Test-Path -LiteralPath $mediaTools -PathType Container) {
     New-Item -ItemType Directory -Path $mediaOutput -Force | Out-Null
     Copy-Item -Path (Join-Path $mediaTools '*') -Destination $mediaOutput -Recurse -Force
 }
-if (Test-Path -LiteralPath (Join-Path $root 'README.md')) { Copy-Item -LiteralPath (Join-Path $root 'README.md') -Destination $output -Force }
+foreach ($readme in @('README.md', 'README.en.md')) { Copy-Item -LiteralPath (Join-Path $root $readme) -Destination $output -Force }
 Copy-Item -LiteralPath (Join-Path $root 'LICENSE') -Destination $output -Force
 if (Test-Path -LiteralPath (Join-Path $root 'THIRD-PARTY-NOTICES.md')) { Copy-Item -LiteralPath (Join-Path $root 'THIRD-PARTY-NOTICES.md') -Destination $output -Force }
 $docsOutput = Join-Path $output 'docs'
 New-Item -ItemType Directory -Path $docsOutput -Force | Out-Null
-Copy-Item -LiteralPath (Join-Path $root 'docs\windows-integration.md'), (Join-Path $root 'docs\queued-conversions.md') -Destination $docsOutput -Force
+# Preserve linked user guides in both languages, screenshots and license data.
+Copy-Item -Path (Join-Path $root 'docs\*') -Destination $docsOutput -Recurse -Force
 
 # Render simple native assets for MSIX. No external graphics tools are needed.
 Add-Type -AssemblyName System.Drawing

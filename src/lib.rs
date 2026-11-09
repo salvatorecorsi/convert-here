@@ -1,7 +1,10 @@
+pub(crate) mod classic_menu_language;
 pub mod conversion_profiles;
 pub mod documents;
 pub mod engine;
+pub mod i18n;
 pub mod image_edit;
+pub(crate) mod language_shared;
 pub mod model;
 pub mod modern_images;
 pub mod ocr;

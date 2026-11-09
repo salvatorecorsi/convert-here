@@ -79,16 +79,21 @@ fn exists(path: &Path) -> Result<bool> {
     match fs::symlink_metadata(path) {
         Ok(_) => Ok(true),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
-        Err(error) => {
-            Err(error).with_context(|| format!("Impossibile controllare {}", path.display()))
-        }
+        Err(error) => Err(error).with_context(|| {
+            crate::trf!(
+                "Impossibile controllare {}",
+                "Unable to inspect {}",
+                path.display()
+            )
+        }),
     }
 }
 
 fn marker_path(output: &Path) -> Result<PathBuf> {
-    let name = output
-        .file_name()
-        .context("Nome di destinazione non valido")?;
+    let name = output.file_name().context(crate::i18n::tr(
+        "Nome di destinazione non valido",
+        "Invalid output name",
+    ))?;
     let key = if cfg!(windows) {
         name.to_string_lossy().to_lowercase()
     } else {
@@ -101,7 +106,10 @@ fn marker_path(output: &Path) -> Result<PathBuf> {
         .collect::<String>();
     Ok(output
         .parent()
-        .context("Cartella di destinazione non valida")?
+        .context(crate::i18n::tr(
+            "Cartella di destinazione non valida",
+            "Invalid output folder",
+        ))?
         .join(RESERVATION_DIRECTORY)
         .join(format!("{name}.json")))
 }
@@ -136,9 +144,10 @@ fn ensure_reservation_directory(output_dir: &Path, retry: &mut NamespaceRetry) -
             if fs::symlink_metadata(&directory)?.file_type().is_symlink()
                 || fs::canonicalize(&directory)?.parent() != Some(output_dir)
             {
-                bail!(
-                    "La cartella delle prenotazioni deve essere una sottocartella locale della destinazione"
-                );
+                bail!(crate::trf!(
+                    "La cartella delle prenotazioni deve essere una sottocartella locale della destinazione",
+                    "The reservation folder must be a local subfolder of the output folder"
+                ));
             }
             set_hidden(&directory)
         })();
@@ -173,7 +182,10 @@ fn create_marker(output_dir: &Path, marker: &Path) -> Result<Option<File>> {
                 if retry.pause(&error) {
                     continue;
                 }
-                return Err(error).context("Impossibile prenotare il nome del risultato");
+                return Err(error).context(crate::i18n::tr(
+                    "Impossibile prenotare il nome del risultato",
+                    "Unable to reserve the output name",
+                ));
             }
         }
     }
@@ -185,10 +197,16 @@ fn remove_empty_reservation_directory(output_dir: &Path) -> Result<()> {
         if fs::symlink_metadata(&directory)?.file_type().is_symlink()
             || fs::canonicalize(&directory)?.parent() != Some(output_dir)
         {
-            bail!("La cartella delle prenotazioni non appartiene alla destinazione");
+            bail!(crate::trf!(
+                "La cartella delle prenotazioni non appartiene alla destinazione",
+                "The reservation folder does not belong to the output folder"
+            ));
         }
         // remove_dir is atomic and never deletes markers belonging to queued/concurrent jobs.
-        fs::remove_dir(&directory).context("Impossibile pulire la cartella delle prenotazioni")
+        fs::remove_dir(&directory).context(crate::i18n::tr(
+            "Impossibile pulire la cartella delle prenotazioni",
+            "Unable to clean up the reservation folder",
+        ))
     })();
     match result {
         Err(error)
@@ -211,25 +229,37 @@ pub fn prepare(
     settings: &ConversionSettings,
     tools: &ToolPaths,
 ) -> Result<PreparedConversion> {
-    let input = fs::canonicalize(input)
-        .with_context(|| format!("File non accessibile: {}", input.display()))?;
+    let input = fs::canonicalize(input).with_context(|| {
+        crate::trf!(
+            "File non accessibile: {}",
+            "File cannot be accessed: {}",
+            input.display()
+        )
+    })?;
     if !input.is_file() {
-        bail!("La selezione deve contenere file, non cartelle");
+        bail!(crate::trf!(
+            "La selezione deve contenere file, non cartelle",
+            "Select files, not folders"
+        ));
     }
     let kind = MediaKind::from_path(&input);
     if !supported_formats(kind).contains(&settings.format) {
-        bail!(
+        bail!(crate::trf!(
             "Conversione non supportata: {:?} → {}",
+            "Unsupported conversion: {:?} → {}",
             kind,
             settings.format
-        );
+        ));
     }
     validate_for_input(&input, settings)?;
     if kind == MediaKind::Pdf
         && settings.format == OutputFormat::Pdf
         && settings.pdf.action == PdfAction::Merge
     {
-        bail!("L'unione PDF si avvia dalla selezione di gruppo nell'app o nella CLI");
+        bail!(crate::trf!(
+            "L'unione PDF si avvia dalla selezione di gruppo nell'app o nella CLI",
+            "Start PDF merging from a batch selection in the app or CLI"
+        ));
     }
     if let Some(message) = tools.missing_for_input(&input, settings) {
         bail!("{message}");
@@ -238,7 +268,10 @@ pub fn prepare(
         .output_dir
         .clone()
         .unwrap_or_else(|| input.parent().unwrap().to_owned());
-    fs::create_dir_all(&destination).context("Impossibile creare la cartella di destinazione")?;
+    fs::create_dir_all(&destination).context(crate::i18n::tr(
+        "Impossibile creare la cartella di destinazione",
+        "Unable to create the output folder",
+    ))?;
     let output_dir = fs::canonicalize(destination)?;
     let id = next_id();
     let mut settings = settings.clone();
@@ -262,15 +295,23 @@ pub fn prepare(
             } else {
                 // Splitting has a stricter document-operation policy; it still
                 // rejects all encrypted PDFs, including owner-only protection.
-                let document = lopdf::Document::load(&plan.input)
-                    .context("Impossibile leggere le pagine del PDF")?;
+                let document = lopdf::Document::load(&plan.input).context(crate::i18n::tr(
+                    "Impossibile leggere le pagine del PDF",
+                    "Unable to read PDF pages",
+                ))?;
                 if document.is_encrypted() {
-                    bail!("Il PDF è protetto: sbloccalo prima della conversione");
+                    bail!(crate::trf!(
+                        "Il PDF è protetto: sbloccalo prima della conversione",
+                        "The PDF is protected: unlock it before converting"
+                    ));
                 }
                 document.get_pages().len()
             };
             if count == 0 || count > MAX_OUTPUTS {
-                bail!("Il PDF deve contenere da 1 a {MAX_OUTPUTS} pagine");
+                bail!(crate::trf!(
+                    "Il PDF deve contenere da 1 a {MAX_OUTPUTS} pagine",
+                    "The PDF must contain between 1 and {MAX_OUTPUTS} pages"
+                ));
             }
             (1..=count)
                 .map(|page| format!("{}-pagina-{page:03}", stem(&plan.input)))
@@ -344,15 +385,27 @@ fn reserve(plan: &PreparedConversion, stem: &str) -> Result<ReservedOutput> {
             }
         }
     }
-    bail!("Troppi file o conversioni in coda con lo stesso nome")
+    bail!(crate::trf!(
+        "Troppi file o conversioni in coda con lo stesso nome",
+        "Too many files or queued conversions with the same name"
+    ))
 }
 
 fn read_record(path: &Path) -> Result<Reservation> {
-    let file = File::open(path).context("La prenotazione del risultato non è più disponibile")?;
+    let file = File::open(path).context(crate::i18n::tr(
+        "La prenotazione del risultato non è più disponibile",
+        "The output reservation is no longer available",
+    ))?;
     if file.metadata()?.len() > 32 * 1024 {
-        bail!("Prenotazione non valida");
+        bail!(crate::trf!(
+            "Prenotazione non valida",
+            "Invalid reservation"
+        ));
     }
-    serde_json::from_reader(file.take(32 * 1024 + 1)).context("Prenotazione non valida")
+    serde_json::from_reader(file.take(32 * 1024 + 1)).context(crate::i18n::tr(
+        "Prenotazione non valida",
+        "Invalid reservation",
+    ))
 }
 
 fn verify_output(plan: &PreparedConversion, output: &ReservedOutput) -> Result<()> {
@@ -360,7 +413,10 @@ fn verify_output(plan: &PreparedConversion, output: &ReservedOutput) -> Result<(
         || output.marker != marker_path(&output.path)?
         || output.token != plan.id
     {
-        bail!("Il percorso prenotato non corrisponde alla conversione");
+        bail!(crate::trf!(
+            "Il percorso prenotato non corrisponde alla conversione",
+            "The reserved path does not match the conversion"
+        ));
     }
     let record = read_record(&output.marker)?;
     if record.version != 1
@@ -368,7 +424,10 @@ fn verify_output(plan: &PreparedConversion, output: &ReservedOutput) -> Result<(
         || record.input != plan.input
         || record.output != output.path
     {
-        bail!("Il nome del risultato è prenotato da un'altra conversione");
+        bail!(crate::trf!(
+            "Il nome del risultato è prenotato da un'altra conversione",
+            "The output name is reserved by another conversion"
+        ));
     }
     Ok(())
 }
@@ -384,7 +443,10 @@ pub fn validate_prepared(plan: &PreparedConversion) -> Result<()> {
                 .output_dir
                 .join(format!(".the-converter-work-{}", plan.id))
     {
-        bail!("Piano di conversione non valido");
+        bail!(crate::trf!(
+            "Piano di conversione non valido",
+            "Invalid conversion plan"
+        ));
     }
     validate_for_input(&plan.input, &plan.settings)?;
     let mut paths = std::collections::HashSet::new();
@@ -393,7 +455,10 @@ pub fn validate_prepared(plan: &PreparedConversion) -> Result<()> {
             != Some(plan.settings.format.extension())
             || !paths.insert(&output.path)
         {
-            bail!("Nomi di destinazione non validi nel piano");
+            bail!(crate::trf!(
+                "Nomi di destinazione non validi nel piano",
+                "The plan contains invalid output names"
+            ));
         }
         verify_output(plan, output)?;
     }
@@ -405,7 +470,10 @@ fn remove_marker(plan: &PreparedConversion, output: &ReservedOutput) -> Result<(
         return Ok(());
     }
     verify_output(plan, output)?;
-    fs::remove_file(&output.marker).context("Impossibile liberare il nome prenotato")
+    fs::remove_file(&output.marker).context(crate::i18n::tr(
+        "Impossibile liberare il nome prenotato",
+        "Unable to release the reserved name",
+    ))
 }
 
 fn work_owner(plan: &PreparedConversion) -> PathBuf {
@@ -427,9 +495,15 @@ fn remove_work(plan: &PreparedConversion) -> Result<()> {
         || fs::canonicalize(&plan.work_dir)?.parent() != Some(plan.output_dir.as_path())
         || fs::read_to_string(work_owner(plan))? != plan.id
     {
-        bail!("La cartella di lavoro non appartiene a questa conversione");
+        bail!(crate::trf!(
+            "La cartella di lavoro non appartiene a questa conversione",
+            "The working folder does not belong to this conversion"
+        ));
     }
-    fs::remove_dir_all(&plan.work_dir).context("Impossibile pulire la cartella di lavoro")
+    fs::remove_dir_all(&plan.work_dir).context(crate::i18n::tr(
+        "Impossibile pulire la cartella di lavoro",
+        "Unable to clean up the working folder",
+    ))
 }
 
 /// Never removes media outputs or unrelated links/files. Safe to call more than once.
@@ -524,14 +598,18 @@ pub fn convert_prepared(
     validate_prepared(plan)?;
     for output in &plan.outputs {
         if exists(&output.path)? {
-            bail!(
+            bail!(crate::trf!(
                 "La destinazione è stata creata da un altro programma: {}",
+                "Another program created the destination: {}",
                 output.path.display()
-            );
+            ));
         }
     }
     remove_work(plan)?;
-    fs::create_dir(&plan.work_dir).context("Impossibile creare la cartella di lavoro")?;
+    fs::create_dir(&plan.work_dir).context(crate::i18n::tr(
+        "Impossibile creare la cartella di lavoro",
+        "Unable to create the working folder",
+    ))?;
     let owner_result = fs::write(work_owner(plan), &plan.id);
     if let Err(error) = owner_result {
         let _ = fs::remove_dir(&plan.work_dir);
@@ -544,14 +622,15 @@ pub fn convert_prepared(
     let generated = convert(&plan.input, &settings, tools, cancel, |mut value| {
         value.fraction *= 0.97;
         if value.fraction >= 0.97 {
-            value.message = "Salvataggio del risultato…".into();
+            value.message = crate::i18n::tr("Salvataggio del risultato…", "Saving output…").into();
         }
         progress(value);
     })?;
     if generated.len() != plan.outputs.len() {
-        bail!(
-            "Il numero di risultati è cambiato dopo l'inserimento in coda; nessun file è stato pubblicato"
-        );
+        bail!(crate::trf!(
+            "Il numero di risultati è cambiato dopo l'inserimento in coda; nessun file è stato pubblicato",
+            "The number of outputs changed after queue submission; no output was published"
+        ));
     }
     let mut published = Vec::new();
     let result = (|| -> Result<()> {
@@ -565,8 +644,9 @@ pub fn convert_prepared(
                 .persist_noclobber(&output.path)
                 .map_err(|error| error.error)
                 .with_context(|| {
-                    format!(
+                    crate::trf!(
                         "Impossibile salvare senza sovrascrivere {}",
+                        "Unable to save without overwriting {}",
                         output.path.display()
                     )
                 })?;
@@ -576,7 +656,12 @@ pub fn convert_prepared(
             });
             progress(Progress {
                 fraction: 0.97 + 0.03 * (index + 1) as f32 / plan.outputs.len() as f32,
-                message: format!("Salvato {} di {}", index + 1, plan.outputs.len()),
+                message: crate::trf!(
+                    "Salvato {} di {}",
+                    "Saved {} of {}",
+                    index + 1,
+                    plan.outputs.len()
+                ),
             });
         }
         cancelled(cancel)?;

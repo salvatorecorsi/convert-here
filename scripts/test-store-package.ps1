@@ -104,7 +104,7 @@ try {
     Change-Manifest { param($doc) $doc.Package.Dependencies.TargetDeviceFamily.SetAttribute('MinVersion', '10.0.19041.0') }
     Assert-Fails { Assert-StorePackageLayout -StageDirectory $layout -Identity $preview } 'Store manifest silently targeted Windows 10.'
     Reset-Manifest
-    Change-Manifest { param($doc) $resource = $doc.CreateElement('Resource', 'http://schemas.microsoft.com/appx/manifest/foundation/windows10'); $resource.SetAttribute('Language', 'en-us'); [void]$doc.Package.Resources.AppendChild($resource) }
+    Change-Manifest { param($doc) $resource = $doc.CreateElement('Resource', 'http://schemas.microsoft.com/appx/manifest/foundation/windows10'); $resource.SetAttribute('Language', 'fr-fr'); [void]$doc.Package.Resources.AppendChild($resource) }
     Assert-Fails { Assert-StorePackageLayout -StageDirectory $layout -Identity $preview } 'Unimplemented UI language advertised.'
     Reset-Manifest
     Change-Manifest { param($doc) $alias = $doc.SelectSingleNode('//*[local-name()="Extension" and @Executable="the-converter.exe"]'); [void]$alias.ParentNode.RemoveChild($alias) }

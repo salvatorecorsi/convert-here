@@ -7,6 +7,8 @@ $required = @(
     'the-converter.exe',
     'the-converter-cli.exe',
     'the_converter_shell.dll',
+    'README.md',
+    'README.en.md',
     'LICENSE',
     'THIRD-PARTY-NOTICES.md',
     'docs\release-licenses\README.md',

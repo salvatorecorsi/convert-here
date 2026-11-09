@@ -1,8 +1,12 @@
 # Integrazione con Esplora file
 
+**Italiano** · [English](windows-integration.en.md)
+
 Convert Here usa una DLL COM Rust con `IExplorerCommand`, lo stesso contratto di Windows per i comandi di Esplora file. Il sottomenu **Converti in** offre i formati compatibili con tutti i file selezionati e abilitati nelle Impostazioni: scegliere MP3, WAV, PDF o un altro formato avvia direttamente la conversione con le impostazioni salvate. L'ultima voce **Impostazioni personalizzate…** apre la finestra per modificare qualita e destinazione. La conversione viene eseguita in un processo separato da Esplora file.
 
-Nella 0.4.0 le uscite visibili per default sono MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4. Le Impostazioni permettono di sceglierle per categoria; il menu rilegge le preferenze a ogni apertura senza riavviare Explorer. Anche con tutte le uscite nascoste resta accessibile la voce personalizzata. Il filtro non cambia le 93 estensioni riconosciute, le 44 destinazioni del motore o il formato di richieste rapide esplicite e lavori gia accodati.
+Dalla 0.5.0 il menu supporta italiano e inglese: **Converti in** / **Convert to**. La lingua si sceglie in **Impostazioni → Lingua** con **Sistema**, **Italiano** o **English**; Sistema usa italiano per Windows in italiano, inglese altrimenti. La scelta non cambia identificativi dei formati, opzioni CLI o nomi dei risultati.
+
+Le uscite visibili per default sono MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4. Le Impostazioni permettono di sceglierle per categoria; il menu rilegge le preferenze a ogni apertura senza riavviare Explorer. Anche con tutte le uscite nascoste resta accessibile la voce personalizzata. Il filtro non cambia le 93 estensioni riconosciute, le 44 destinazioni del motore o il formato di richieste rapide esplicite e lavori gia accodati.
 
 Per un PDF singolo la voce rapida **PDF · comprimi** applica sempre la compressione senza perdita, anche se nelle preferenze e rimasta selezionata un'altra operazione PDF. Nelle selezioni multiple **PDF (Bulk)** mantiene i risultati individuali e **PDF (Merge)** apre esplicitamente l'ordine delle singole pagine per un risultato unico. **Dividi** si sceglie nella finestra principale o nella CLI. L'unione CLI segue i percorsi degli argomenti; l'editor grafico permette di intercalare le pagine prima del salvataggio.
 

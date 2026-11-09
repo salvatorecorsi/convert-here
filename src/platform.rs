@@ -26,8 +26,10 @@ pub fn set_hidden(path: &Path) -> Result<()> {
     unsafe {
         let attributes = GetFileAttributesW(wide.as_ptr());
         if attributes == u32::MAX || SetFileAttributesW(wide.as_ptr(), attributes | 0x2) == 0 {
-            return Err(std::io::Error::last_os_error())
-                .context("Impossibile nascondere i file di lavoro");
+            return Err(std::io::Error::last_os_error()).context(crate::i18n::tr(
+                "Impossibile nascondere i file di lavoro",
+                "Unable to hide working files",
+            ));
         }
     }
     Ok(())
@@ -46,7 +48,10 @@ pub fn open_folder(path: &Path) -> Result<()> {
     }
     #[cfg(not(windows))]
     {
-        open::that(folder).context("Impossibile aprire la cartella")
+        open::that(folder).context(crate::i18n::tr(
+            "Impossibile aprire la cartella",
+            "Unable to open the folder",
+        ))
     }
 }
 
@@ -58,22 +63,37 @@ pub fn open_website(address: &str) -> Result<()> {
     }
     #[cfg(not(windows))]
     {
-        open::that(address.as_str()).context("Impossibile aprire il sito nel browser")
+        open::that(address.as_str()).context(crate::i18n::tr(
+            "Impossibile aprire il sito nel browser",
+            "Unable to open the website in the browser",
+        ))
     }
 }
 
 fn validated_folder(path: &Path) -> Result<PathBuf> {
     if !path.is_dir() {
-        bail!("La cartella non è disponibile: {}", path.display());
+        bail!(crate::trf!(
+            "La cartella non è disponibile: {}",
+            "The folder is unavailable: {}",
+            path.display()
+        ));
     }
-    path.canonicalize()
-        .context("Impossibile leggere il percorso della cartella")
+    path.canonicalize().context(crate::i18n::tr(
+        "Impossibile leggere il percorso della cartella",
+        "Unable to read the folder path",
+    ))
 }
 
 fn validated_website(address: &str) -> Result<url::Url> {
-    let address = url::Url::parse(address).context("Indirizzo del sito non valido")?;
+    let address = url::Url::parse(address).context(crate::i18n::tr(
+        "Indirizzo del sito non valido",
+        "Invalid website address",
+    ))?;
     if !matches!(address.scheme(), "http" | "https") || address.host_str().is_none() {
-        bail!("Il sito deve usare un indirizzo HTTP o HTTPS valido");
+        bail!(crate::trf!(
+            "Il sito deve usare un indirizzo HTTP o HTTPS valido",
+            "The website must use a valid HTTP or HTTPS address"
+        ));
     }
     Ok(address)
 }
@@ -134,10 +154,11 @@ mod windows {
         fn enter() -> Result<Self> {
             let status = unsafe { CoInitializeEx(ptr::null_mut(), 2 | 4) };
             if status < 0 && status != RPC_E_CHANGED_MODE {
-                bail!(
+                bail!(crate::trf!(
                     "Apertura tramite Windows non disponibile (0x{:08X})",
+                    "Opening through Windows is unavailable (0x{:08X})",
                     status as u32
-                );
+                ));
             }
             Ok(Self(status >= 0))
         }
@@ -169,10 +190,11 @@ mod windows {
         };
         let item = ItemIdList(raw);
         if status < 0 || item.0.is_null() {
-            bail!(
+            bail!(crate::trf!(
                 "Impossibile aprire la cartella in Esplora file (0x{:08X})",
+                "Unable to open the folder in File Explorer (0x{:08X})",
                 status as u32
-            );
+            ));
         }
         let verb = wide(OsStr::new("open"))?;
         let mut info: ShellExecuteInfo = unsafe { std::mem::zeroed() };
@@ -182,7 +204,10 @@ mod windows {
         info.id_list = item.0;
         info.show = 1;
         // PIDLs keep long and UNC folder paths out of command-line parsing.
-        execute(&mut info).context("Impossibile aprire la cartella in Esplora file")
+        execute(&mut info).context(crate::i18n::tr(
+            "Impossibile aprire la cartella in Esplora file",
+            "Unable to open the folder in File Explorer",
+        ))
     }
 
     pub(super) fn open_website(address: &str) -> Result<()> {
@@ -195,13 +220,18 @@ mod windows {
         info.verb = verb.as_ptr();
         info.file = address.as_ptr();
         info.show = 1;
-        execute(&mut info).context("Impossibile aprire il sito nel browser predefinito")
+        execute(&mut info).context(crate::i18n::tr(
+            "Impossibile aprire il sito nel browser predefinito",
+            "Unable to open the website in the default browser",
+        ))
     }
 
     fn execute(info: &mut ShellExecuteInfo) -> Result<()> {
         if unsafe { ShellExecuteExW(info) } == 0 {
-            return Err(std::io::Error::last_os_error())
-                .context("Windows non ha aperto la destinazione");
+            return Err(std::io::Error::last_os_error()).context(crate::i18n::tr(
+                "Windows non ha aperto la destinazione",
+                "Windows did not open the destination",
+            ));
         }
         Ok(())
     }

@@ -26,6 +26,10 @@ use the_converter::{
     runtime_install::{self, InstallPhase, InstallProgress, RuntimeEngine},
     tools::{ToolPaths, executable_available},
 };
+use the_converter::{
+    i18n::{self, Language, tr},
+    trf,
+};
 
 const PREFERENCES_SAVE_INTERVAL: std::time::Duration = std::time::Duration::from_millis(500);
 
@@ -87,7 +91,10 @@ fn launch_mode(
 pub fn launch_queue_status(job_id: String, startup_warning: Option<String>) -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("Convert Here · Stato conversione")
+            .with_title(tr(
+                "Convert Here · Stato conversione",
+                "Convert Here · Conversion status",
+            ))
             .with_icon(app_icon())
             .with_inner_size([650.0, 470.0])
             .with_min_inner_size([500.0, 360.0]),
@@ -95,7 +102,10 @@ pub fn launch_queue_status(job_id: String, startup_warning: Option<String>) -> e
         ..Default::default()
     };
     eframe::run_native(
-        "Convert Here · Stato conversione",
+        tr(
+            "Convert Here · Stato conversione",
+            "Convert Here · Conversion status",
+        ),
         options,
         Box::new(move |cc| {
             configure_style(&cc.egui_ctx);
@@ -125,6 +135,7 @@ fn configure_style(ctx: &egui::Context) {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 struct SavedState {
+    ui_language: Language,
     settings: ConversionSettings,
     overrides: BTreeMap<String, PathBuf>,
     enabled_output_formats: OutputPreferences,
@@ -171,16 +182,20 @@ fn persist_preferences(
     }
     // Failed writes are throttled too, while the dirty state remains pending.
     *last_persist = Some(now);
-    let parent = path
-        .parent()
-        .ok_or_else(|| std::io::Error::other("Cartella delle preferenze non disponibile"))?;
+    let parent = path.parent().ok_or_else(|| {
+        std::io::Error::other(tr(
+            "Cartella delle preferenze non disponibile",
+            "Preferences folder is unavailable",
+        ))
+    })?;
     std::fs::create_dir_all(parent)?;
     use std::io::Write;
     let bytes = serde_json::to_vec_pretty(saved).map_err(std::io::Error::other)?;
     if bytes.len() as u64 > MAX_PREFERENCES_BYTES {
-        return Err(std::io::Error::other(
+        return Err(std::io::Error::other(tr(
             "Le preferenze superano il limite di 256 KiB. Riduci il numero o la dimensione dei profili.",
-        ));
+            "Preferences exceed the 256 KiB limit. Reduce the number or size of your profiles.",
+        )));
     }
     let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
     temporary.write_all(&bytes)?;
@@ -210,13 +225,19 @@ fn profile_configuration(
     let profile = saved.conversion_profiles.resolve(id, revision)?;
     anyhow::ensure!(
         profile.show_in_menu,
-        "Il profilo non è attivo nel menu Converti in. Riapri il menu dopo averlo abilitato."
+        tr(
+            "Il profilo non è attivo nel menu Converti in. Riapri il menu dopo averlo abilitato.",
+            "This profile is hidden from Convert to. Enable it, then reopen the menu."
+        )
     );
     anyhow::ensure!(
         saved
             .enabled_output_formats
             .contains(profile.settings.format),
-        "Il formato di uscita del profilo è disattivato. Abilitalo nelle Impostazioni."
+        tr(
+            "Il formato di uscita del profilo è disattivato. Abilitalo nelle Impostazioni.",
+            "This profile's output format is disabled. Enable it in Settings."
+        )
     );
     Ok((profile.clone(), ToolPaths::configured(&saved.overrides)))
 }
@@ -234,6 +255,7 @@ fn load_report() -> Option<SavedReport> {
 impl Default for SavedState {
     fn default() -> Self {
         Self {
+            ui_language: Language::System,
             settings: ConversionSettings::default(),
             overrides: BTreeMap::new(),
             enabled_output_formats: OutputPreferences::default(),
@@ -317,6 +339,7 @@ pub struct ConverterApp {
     advanced: bool,
     notice: Option<String>,
     settings_dirty: bool,
+    language_dirty: bool,
     last_persist: Option<std::time::Instant>,
     quick_report: Option<SavedReport>,
     quick_queue: QuickQueueView,
@@ -366,6 +389,7 @@ impl ConverterApp {
             advanced: false,
             notice: None,
             settings_dirty: false,
+            language_dirty: false,
             last_persist: None,
             quick_report: load_report(),
             quick_queue: QuickQueueView::default(),
@@ -387,10 +411,19 @@ impl ConverterApp {
                 std::time::Instant::now(),
                 force,
             ) {
-                Ok(true) => self.settings_dirty = false,
+                Ok(true) => {
+                    self.settings_dirty = false;
+                    if self.language_dirty {
+                        i18n::refresh_explorer_language();
+                        self.language_dirty = false;
+                    }
+                }
                 Ok(false) => {}
                 Err(err) => {
-                    self.notice = Some(format!("Impossibile salvare le preferenze: {err}"));
+                    self.notice = Some(trf!(
+                        "Impossibile salvare le preferenze: {err}",
+                        "Unable to save preferences: {err}"
+                    ));
                 }
             }
         }
@@ -407,7 +440,7 @@ impl ConverterApp {
                 .enabled_output_formats
                 .contains(profile.settings.format)
         }) {
-            self.notice=Some("Il formato di questo profilo è disattivato. Riabilitalo in Formati di uscita prima di modificarne le opzioni.".into());
+            self.notice=Some(tr("Il formato di questo profilo è disattivato. Riabilitalo in Formati di uscita prima di modificarne le opzioni.", "This profile's output format is disabled. Enable it in Output formats before editing its options.").into());
             return;
         }
         let profile = profile.or_else(|| {
@@ -461,8 +494,13 @@ impl ConverterApp {
             .enabled_output_formats
             .contains(profile.settings.format)
         {
-            self.notice =
-                Some("Abilita il formato di uscita del profilo nelle Impostazioni.".into());
+            self.notice = Some(
+                tr(
+                    "Abilita il formato di uscita del profilo nelle Impostazioni.",
+                    "Enable this profile's output format in Settings.",
+                )
+                .into(),
+            );
             return;
         }
         self.saved.settings = profile.settings.clone();
@@ -484,11 +522,19 @@ impl ConverterApp {
                 self.persist_with_force(true);
                 let error = self.settings_dirty;
                 let message = if error {
-                    self.notice
-                        .clone()
-                        .unwrap_or_else(|| "Impossibile salvare le impostazioni.".into())
+                    self.notice.clone().unwrap_or_else(|| {
+                        tr(
+                            "Impossibile salvare le impostazioni.",
+                            "Could not save the settings.",
+                        )
+                        .into()
+                    })
                 } else {
-                    "Impostazioni predefinite salvate. Gli originali restano invariati.".into()
+                    tr(
+                        "Impostazioni predefinite salvate. Gli originali restano invariati.",
+                        "Default settings saved. Original files are preserved.",
+                    )
+                    .into()
                 };
                 if let Some(editor) = &mut self.image_editor {
                     editor.notify(message, error);
@@ -516,12 +562,17 @@ impl ConverterApp {
                         self.persist_with_force(true);
                         let error = self.settings_dirty;
                         let message = if error {
-                            self.notice
-                                .clone()
-                                .unwrap_or_else(|| "Impossibile salvare il profilo.".into())
+                            self.notice.clone().unwrap_or_else(|| {
+                                tr(
+                                    "Impossibile salvare il profilo.",
+                                    "Could not save the profile.",
+                                )
+                                .into()
+                            })
                         } else {
-                            format!(
+                            trf!(
                                 "Profilo «{}» salvato. Il menu Converti in si aggiorna alla prossima apertura.",
+                                "Profile ‘{}’ saved. Convert to refreshes the next time you open it.",
                                 name.trim()
                             )
                         };
@@ -551,18 +602,28 @@ impl ConverterApp {
         let mut make_default = None;
         let mut create_web = false;
         theme::show_card(ui, |ui| {
-            ui.label(theme::heading("I miei profili", theme::SUBTITLE));
-            ui.label("Salva formato, qualità e opzioni. I profili visibili compaiono in «Converti in» ed eseguono subito la conversione.");
-            ui.label(format!(
+            ui.label(theme::heading(
+                tr("I miei profili", "My profiles"),
+                theme::SUBTITLE,
+            ));
+            ui.label(tr("Salva formato, qualità e opzioni. I profili visibili compaiono in «Converti in» ed eseguono subito la conversione.", "Save the format, quality and options. Visible profiles appear in Convert to and run the conversion immediately."));
+            ui.label(trf!(
                 "{} di 32 salvati · massimo 8 nel menu",
+                "{} of 32 saved · up to 8 in the menu",
                 profiles.len()
             ));
-            if ui.button("Crea «Salva per web»").clicked() {
+            if ui
+                .button(tr("Crea «Salva per web»", "Create ‘Save for web’"))
+                .clicked()
+            {
                 create_web = true;
             }
-            ui.label(RichText::new("WebP, massimo 300 kB: adatta qualità e, se necessario, riduce le dimensioni. Potrai modificarlo nell’editor.").small().weak());
+            ui.label(RichText::new(tr("WebP, massimo 300 kB: adatta qualità e, se necessario, riduce le dimensioni. Potrai modificarlo nell’editor.", "WebP, up to 300 kB: adjusts quality and, if needed, reduces dimensions. You can change it in the editor.")).small().weak());
             if profiles.is_empty() {
-                ui.label("Puoi creare altri profili dalle opzioni di conversione o dall’editor.");
+                ui.label(tr(
+                    "Puoi creare altri profili dalle opzioni di conversione o dall’editor.",
+                    "Create more profiles from the conversion options or the editor.",
+                ));
             }
             for profile in &profiles {
                 ui.separator();
@@ -570,11 +631,17 @@ impl ConverterApp {
                     ui.label(theme::heading(&profile.name, theme::BODY));
                     ui.label(profile_summary(profile));
                     if self.saved.default_profile_id.as_deref() == Some(profile.id.as_str()) {
-                        ui.label("Predefinito");
+                        ui.label(tr("Predefinito", "Default"));
                     }
                 });
                 let mut visible = profile.show_in_menu;
-                if ui.checkbox(&mut visible, "Mostra in Converti in").changed() {
+                if ui
+                    .checkbox(
+                        &mut visible,
+                        tr("Mostra in Converti in", "Show in Convert to"),
+                    )
+                    .changed()
+                {
                     visibility = Some((profile.id.clone(), visible));
                 }
                 if !self
@@ -582,25 +649,37 @@ impl ConverterApp {
                     .enabled_output_formats
                     .contains(profile.settings.format)
                 {
-                    ui.label(RichText::new("Il formato è disattivato: riabilitalo in Formati di uscita per vedere questo profilo nel menu.").color(theme::palette(ui.ctx()).secondary));
+                    ui.label(RichText::new(tr("Il formato è disattivato: riabilitalo in Formati di uscita per vedere questo profilo nel menu.", "This format is disabled: enable it in Output formats to show this profile in the menu.")).color(theme::palette(ui.ctx()).secondary));
                 }
                 ui.horizontal_wrapped(|ui| {
-                    if ui.button("Applica").clicked() {
+                    if ui.button(tr("Applica", "Apply")).clicked() {
                         apply = Some(profile.clone());
                     }
-                    if ui.button("Modifica opzioni…").clicked() {
+                    if ui
+                        .button(tr("Modifica opzioni…", "Edit options…"))
+                        .clicked()
+                    {
                         edit = Some(profile.clone());
                     }
-                    if ui.button("Rinomina…").clicked() {
+                    if ui.button(tr("Rinomina…", "Rename…")).clicked() {
                         rename = Some(profile.clone());
                     }
-                    if ui.button("Aggiorna con le opzioni correnti").clicked() {
+                    if ui
+                        .button(tr(
+                            "Aggiorna con le opzioni correnti",
+                            "Update with current options",
+                        ))
+                        .clicked()
+                    {
                         update = Some(profile.clone());
                     }
-                    if ui.button("Usa come predefinito").clicked() {
+                    if ui
+                        .button(tr("Usa come predefinito", "Set as default"))
+                        .clicked()
+                    {
                         make_default = Some(profile.clone());
                     }
-                    if ui.button("Elimina").clicked() {
+                    if ui.button(tr("Elimina", "Delete")).clicked() {
                         remove = Some(profile.id.clone());
                     }
                 });
@@ -618,11 +697,11 @@ impl ConverterApp {
                 allow_downsize: true,
                 ..Default::default()
             });
-            match self
-                .saved
-                .conversion_profiles
-                .create("Salva per web".into(), true, settings)
-            {
+            match self.saved.conversion_profiles.create(
+                tr("Salva per web", "Save for web").into(),
+                true,
+                settings,
+            ) {
                 Ok(id) => {
                     self.settings_dirty = true;
                     self.persist_with_force(true);
@@ -700,8 +779,13 @@ impl ConverterApp {
                 self.apply_profile(&profile);
                 self.advanced = true;
                 self.show_tools = false;
-                self.notice =
-                    Some("Modifica le opzioni, poi aggiorna il profilo nelle Impostazioni.".into());
+                self.notice = Some(
+                    tr(
+                        "Modifica le opzioni, poi aggiorna il profilo nelle Impostazioni.",
+                        "Edit the options, then update the profile in Settings.",
+                    )
+                    .into(),
+                );
             }
         }
         if self.settings_dirty {
@@ -717,13 +801,13 @@ impl ConverterApp {
         let mut close = false;
         egui::Modal::new(egui::Id::new("save_conversion_profile")).show(ctx,|ui| {
             ui.set_width(430.0);
-            ui.label(theme::heading(if dialog.id.is_some(){"Aggiorna profilo"}else{"Salva profilo"},theme::SUBTITLE));
-            ui.label(format!("Formato: {}. Le opzioni correnti saranno riutilizzate per ogni conversione del profilo.",dialog.settings.format.label()));
-            ui.add(egui::TextEdit::singleline(&mut dialog.name).hint_text("Nome profilo").char_limit(40));
-            ui.checkbox(&mut dialog.show_in_menu,"Mostra in Converti in");
+            ui.label(theme::heading(if dialog.id.is_some(){tr("Aggiorna profilo", "Update profile")}else{tr("Salva profilo", "Save profile")},theme::SUBTITLE));
+            ui.label(trf!("Formato: {}. Le opzioni correnti saranno riutilizzate per ogni conversione del profilo.", "Format: {}. These options will be reused for every conversion with this profile.",dialog.settings.format.label()));
+            ui.add(egui::TextEdit::singleline(&mut dialog.name).hint_text(tr("Nome profilo", "Profile name")).char_limit(40));
+            ui.checkbox(&mut dialog.show_in_menu,tr("Mostra in Converti in", "Show in Convert to"));
             ui.horizontal(|ui|{
-                save=ui.add_enabled(!dialog.name.trim().is_empty(),egui::Button::new("Salva")).clicked();
-                close=ui.button("Annulla").clicked();
+                save=ui.add_enabled(!dialog.name.trim().is_empty(),egui::Button::new(tr("Salva", "Save"))).clicked();
+                close=ui.button(tr("Annulla", "Cancel")).clicked();
             });
         });
         if save {
@@ -777,8 +861,9 @@ impl ConverterApp {
             }
         }
         if rejected > 0 {
-            self.notice = Some(format!(
-                "{rejected} elementi ignorati: cartelle o formati non supportati."
+            self.notice = Some(trf!(
+                "{rejected} elementi ignorati: cartelle o formati non supportati.",
+                "Ignored items: {rejected} (folders or unsupported formats)."
             ));
         }
         let common = self.common_formats();
@@ -840,7 +925,11 @@ impl ConverterApp {
                 fraction: 0.0,
                 downloaded_bytes: 0,
                 total_bytes: engine.manifest().download_bytes,
-                message: "Connessione al distributore…".into(),
+                message: tr(
+                    "Connessione al distributore…",
+                    "Connecting to the distributor…",
+                )
+                .into(),
             },
             cancel: cancel.clone(),
             receiver,
@@ -878,9 +967,11 @@ impl ConverterApp {
                     Err(mpsc::TryRecvError::Empty) => break,
                     Err(mpsc::TryRecvError::Disconnected) => {
                         if finished.is_none() {
-                            finished = Some(Err(
-                                "L’installazione si è interrotta. Puoi riprovare.".into(),
-                            ));
+                            finished = Some(Err(tr(
+                                "L’installazione si è interrotta. Puoi riprovare.",
+                                "Installation was interrupted. You can try again.",
+                            )
+                            .into()));
                         }
                         break;
                     }
@@ -903,8 +994,11 @@ impl ConverterApp {
             self.runtime_install = None;
             self.runtime_notice = Some(match result {
                 Ok(()) => (
-                    "Installazione completata. I motori sono pronti per le conversioni locali."
-                        .into(),
+                    tr(
+                        "Installazione completata. I motori sono pronti per le conversioni locali.",
+                        "Installation complete. The engines are ready for local conversions.",
+                    )
+                    .into(),
                     false,
                 ),
                 Err(error) => (error, true),
@@ -915,28 +1009,40 @@ impl ConverterApp {
     fn output_format_settings(&mut self, ui: &mut egui::Ui) {
         let before = self.saved.enabled_output_formats.clone();
         theme::show_card(ui, |ui| {
-            ui.label(theme::heading("Formati di uscita", theme::SUBTITLE));
-            ui.label("Scegli i formati da mostrare nell’app e in «Converti in». Tutti i formati in ingresso restano supportati.");
+            ui.label(theme::heading(
+                tr("Formati di uscita", "Output formats"),
+                theme::SUBTITLE,
+            ));
+            ui.label(tr("Scegli i formati da mostrare nell’app e in «Converti in». Tutti i formati in ingresso restano supportati.", "Choose the formats to show in the app and in “Convert to”. All input formats remain supported."));
             ui.horizontal_wrapped(|ui| {
                 let count = self
                     .saved
                     .enabled_output_formats
                     .filter(OutputFormat::ALL)
                     .count();
-                ui.label(format!("{count} di {} attivi", OutputFormat::ALL.len()));
-                if ui.button("Più comuni").clicked() {
+                ui.label(trf!(
+                    "{count} di {} attivi",
+                    "{count} of {} enabled",
+                    OutputFormat::ALL.len()
+                ));
+                if ui.button(tr("Più comuni", "Most common")).clicked() {
                     self.saved.enabled_output_formats.reset_common();
                 }
-                if ui.button("Attiva tutti").clicked() {
+                if ui.button(tr("Attiva tutti", "Enable all")).clicked() {
                     self.saved.enabled_output_formats.enable_all();
                 }
-                if ui.button("Disattiva tutti").clicked() {
+                if ui.button(tr("Disattiva tutti", "Disable all")).clicked() {
                     self.saved.enabled_output_formats.disable_all();
                 }
             });
-            for (index, title) in ["Audio", "Video", "Immagini", "Documenti e PDF"]
-                .into_iter()
-                .enumerate()
+            for (index, title) in [
+                "Audio",
+                "Video",
+                tr("Immagini", "Images"),
+                tr("Documenti e PDF", "Documents and PDF"),
+            ]
+            .into_iter()
+            .enumerate()
             {
                 let formats: Vec<_> = OutputFormat::ALL
                     .into_iter()
@@ -963,12 +1069,12 @@ impl ConverterApp {
                     .default_open(index == 0)
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {
-                            if ui.small_button("Tutti").clicked() {
+                            if ui.small_button(tr("Tutti", "All")).clicked() {
                                 for format in &formats {
                                     self.saved.enabled_output_formats.set_enabled(*format, true);
                                 }
                             }
-                            if ui.small_button("Nessuno").clicked() {
+                            if ui.small_button(tr("Nessuno", "None")).clicked() {
                                 for format in &formats {
                                     self.saved
                                         .enabled_output_formats
@@ -998,11 +1104,14 @@ impl ConverterApp {
             if self.saved.enabled_output_formats.is_empty() {
                 info_bar(
                     ui,
-                    "Non ci sono uscite attive. Abilita almeno un formato per convertire; puoi comunque aggiungere i file.",
+                    tr(
+                        "Non ci sono uscite attive. Abilita almeno un formato per convertire; puoi comunque aggiungere i file.",
+                        "No output formats are enabled. Enable at least one format to convert; you can still add files.",
+                    ),
                     InfoKind::Info,
                 );
             }
-            ui.label(RichText::new("Per esempio: un FLAC resta selezionabile e offre MP3 e WAV con le impostazioni iniziali.").small().weak());
+            ui.label(RichText::new(tr("Per esempio: un FLAC resta selezionabile e offre MP3 e WAV con le impostazioni iniziali.", "For example, you can still select a FLAC file and convert it to MP3 or WAV with the default settings.")).small().weak());
         });
         if self.saved.enabled_output_formats != before {
             self.sync_output_choice();
@@ -1022,7 +1131,10 @@ impl ConverterApp {
                     InfoKind::Info
                 },
             );
-            if ui.small_button("Chiudi messaggio").clicked() {
+            if ui
+                .small_button(tr("Chiudi messaggio", "Dismiss message"))
+                .clicked()
+            {
                 self.runtime_notice = None;
             }
         }
@@ -1049,9 +1161,9 @@ impl ConverterApp {
                     .add_enabled(
                         !cancelling,
                         egui::Button::new(if cancelling {
-                            "Annullamento…"
+                            tr("Annullamento…", "Cancelling…")
                         } else {
-                            "Annulla installazione"
+                            tr("Annulla installazione", "Cancel installation")
                         }),
                     )
                     .clicked()
@@ -1070,18 +1182,18 @@ impl ConverterApp {
         let mut dismissed = false;
         egui::Modal::new(egui::Id::new("confirm_runtime_install")).show(ctx, |ui| {
             ui.set_width(490.0);
-            ui.label(theme::heading("Installa motori opzionali", theme::SUBTITLE));
-            ui.label("Scarica i motori dalle distribuzioni indicate e li verifica prima di estrarli. Il download richiede Internet; i tuoi file da convertire restano sul PC.");
+            ui.label(theme::heading(tr("Installa motori opzionali", "Install optional engines"), theme::SUBTITLE));
+            ui.label(tr("Scarica i motori dalle distribuzioni indicate e li verifica prima di estrarli. Il download richiede Internet; i tuoi file da convertire restano sul PC.", "Downloads engines from the listed distributions and verifies them before extraction. The download requires Internet; the files you convert stay on your PC."));
             ui.add_space(8.0);
             for engine in &engines {
                 let manifest = engine.manifest();
-                ui.label(format!("{} {} · {:.1} MB · {}", manifest.name, manifest.version, manifest.download_bytes as f64 / 1_000_000.0, manifest.license));
-                ui.label(format!("Spazio dopo l’estrazione: {:.1} MB", manifest.expanded_bytes as f64 / 1_000_000.0));
+                ui.label(format!("{} {} · {:.1} MB · {}", manifest.name, manifest.version, manifest.download_bytes as f64 / 1_000_000.0, manifest.license_label()));
+                ui.label(trf!("Spazio dopo l’estrazione: {:.1} MB", "Space after extraction: {:.1} MB", manifest.expanded_bytes as f64 / 1_000_000.0));
                 let source = match engine {
                     RuntimeEngine::Ffmpeg => "https://www.gyan.dev/ffmpeg/builds/",
                     RuntimeEngine::Poppler => "https://github.com/oschwartz10612/poppler-windows/releases/tag/v26.09.0-0",
                 };
-                if ui.link("Distribuzione e licenze").on_hover_text(source).clicked()
+                if ui.link(tr("Distribuzione e licenze", "Distribution and licenses")).on_hover_text(source).clicked()
                     && let Err(error) = platform::open_website(source)
                 {
                     self.notice = Some(format!("{error:#}"));
@@ -1089,14 +1201,14 @@ impl ConverterApp {
             }
             if let Some(directory) = the_converter::tools::user_tools_dir() {
                 ui.add_space(8.0);
-                ui.label("Cartella di installazione:");
+                ui.label(tr("Cartella di installazione:", "Installation folder:"));
                 ui.add(egui::Label::new(display_path(&directory)).wrap());
             }
-            ui.label(RichText::new("Le licenze dei motori restano incluse. Non occorrono abbonamenti o pagamenti.").small().weak());
+            ui.label(RichText::new(tr("Le licenze dei motori restano incluse. Non occorrono abbonamenti o pagamenti.", "Engine licenses remain included. No subscription or payment is required.")).small().weak());
             ui.add_space(12.0);
             ui.horizontal(|ui| {
-                confirmed = ui.button("Scarica e installa").clicked();
-                dismissed = ui.button("Annulla").clicked();
+                confirmed = ui.button(tr("Scarica e installa", "Download and install")).clicked();
+                dismissed = ui.button(tr("Annulla", "Cancel")).clicked();
             });
         });
         if confirmed {
@@ -1114,7 +1226,10 @@ impl ConverterApp {
         let mut close = false;
         egui::Modal::new(egui::Id::new("application_license")).show(ctx, |ui| {
             ui.set_width(600.0_f32.min((ctx.content_rect().width() - 70.0).max(300.0)));
-            ui.label(theme::heading("GNU GPL versione 3", theme::SUBTITLE));
+            ui.label(theme::heading(
+                tr("GNU GPL versione 3", "GNU GPL version 3"),
+                theme::SUBTITLE,
+            ));
             ui.label("Convert Here · Copyright © 2026 Salvatore Corsi · GPL-3.0-only");
             egui::ScrollArea::vertical()
                 .id_salt("application_license_scroll")
@@ -1130,10 +1245,10 @@ impl ConverterApp {
                     );
                 });
             ui.horizontal(|ui| {
-                if ui.button("Copia testo").clicked() {
+                if ui.button(tr("Copia testo", "Copy text")).clicked() {
                     ctx.copy_text(include_str!("../LICENSE").into());
                 }
-                close = ui.button("Chiudi").clicked();
+                close = ui.button(tr("Chiudi", "Close")).clicked();
             });
         });
         if close || ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
@@ -1152,7 +1267,13 @@ impl ConverterApp {
             .trim_end
             .is_some_and(|end| end <= self.saved.settings.video.trim_start.unwrap_or(0.0))
         {
-            return Some("La fine dell’intervallo deve essere successiva all’inizio.".into());
+            return Some(
+                tr(
+                    "La fine dell’intervallo deve essere successiva all’inizio.",
+                    "The end of the range must be after its start.",
+                )
+                .into(),
+            );
         }
         if self.common_formats().is_empty() {
             if !the_converter::model::common_formats(
@@ -1160,13 +1281,14 @@ impl ConverterApp {
             )
             .is_empty()
             {
-                return Some("Per questi file non ci sono formati di uscita attivi. Abilitali nelle Impostazioni; i formati dei file in ingresso restano supportati.".into());
+                return Some(tr("Per questi file non ci sono formati di uscita attivi. Abilitali nelle Impostazioni; i formati dei file in ingresso restano supportati.", "No output formats are enabled for these files. Enable them in Settings; all input file formats remain supported.").into());
             }
-            return Some("Questi file richiedono formati di uscita diversi. Crea una coda con file compatibili.".into());
+            return Some(tr("Questi file richiedono formati di uscita diversi. Crea una coda con file compatibili.", "These files require different output formats. Create a queue with compatible files.").into());
         }
         if !self.common_formats().contains(&self.saved.settings.format) {
-            return Some(format!(
+            return Some(trf!(
                 "Il formato {} non è compatibile con tutti i file. Scegli un altro formato di uscita.",
+                "The {} format is not compatible with every file. Choose another output format.",
                 self.saved.settings.format.label()
             ));
         }
@@ -1174,7 +1296,7 @@ impl ConverterApp {
             && self.saved.settings.pdf.action == PdfAction::Merge
             && (self.items.len() < 2 || !self.common_formats().contains(&OutputFormat::Pdf))
         {
-            return Some("Per PDF (Merge) aggiungi almeno due file convertibili in PDF. Potrai ordinare le singole pagine prima di creare il PDF unico.".into());
+            return Some(tr("Per PDF (Merge) aggiungi almeno due file convertibili in PDF. Potrai ordinare le singole pagine prima di creare il PDF unico.", "For PDF (Merge), add at least two files that can be converted to PDF. You can arrange individual pages before creating the merged PDF.").into());
         }
         for item in &self.items {
             if let Some(missing) = self
@@ -1191,7 +1313,7 @@ impl ConverterApp {
             .audio_sample_rates()
             .is_some_and(|rates| !rates.contains(&self.saved.settings.audio.sample_rate))
         {
-            return Some("Il formato scelto richiede una frequenza audio diversa. Scegli una frequenza compatibile nelle impostazioni.".into());
+            return Some(tr("Il formato scelto richiede una frequenza audio diversa. Scegli una frequenza compatibile nelle impostazioni.", "The selected format requires a different audio sample rate. Choose a compatible rate in the settings.").into());
         }
         None
     }
@@ -1266,7 +1388,8 @@ impl ConverterApp {
         for event in events {
             match event {
                 Event::Started(index) => {
-                    self.items[index].state = JobState::Running(0.0, "Preparazione…".into())
+                    self.items[index].state =
+                        JobState::Running(0.0, tr("Preparazione…", "Preparing…").into())
                 }
                 Event::Progress(index, fraction, message) => {
                     self.items[index].state = JobState::Running(fraction.clamp(0.0, 1.0), message)
@@ -1315,7 +1438,7 @@ impl ConverterApp {
                     .add(
                         egui::Button::new(theme::button_text(
                             FluentIcon::Back,
-                            "Indietro",
+                            tr("Indietro", "Back"),
                             colors.text,
                         ))
                         .frame(false),
@@ -1324,7 +1447,10 @@ impl ConverterApp {
                 {
                     self.show_tools = false;
                 }
-                ui.label(theme::heading("Impostazioni", theme::SUBTITLE));
+                ui.label(theme::heading(
+                    tr("Impostazioni", "Settings"),
+                    theme::SUBTITLE,
+                ));
             } else {
                 navigation_tabs(ui, &mut self.view);
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -1332,7 +1458,7 @@ impl ConverterApp {
                         .add(
                             egui::Button::new(theme::button_text(
                                 FluentIcon::Settings,
-                                "Impostazioni",
+                                tr("Impostazioni", "Settings"),
                                 colors.text,
                             ))
                             .frame(false),
@@ -1348,7 +1474,7 @@ impl ConverterApp {
 
     fn settings_panel(&mut self, ui: &mut egui::Ui) {
         let colors = theme::palette(ui.ctx());
-        ui.label(theme::heading("Opzioni", theme::SUBTITLE));
+        ui.label(theme::heading(tr("Opzioni", "Options"), theme::SUBTITLE));
         ui.add_space(8.0);
         let profiles: Vec<_> = self
             .saved
@@ -1368,7 +1494,7 @@ impl ConverterApp {
         let mut selected_profile = None;
         if !profiles.is_empty() {
             egui::ComboBox::from_id_salt("conversion_profile_choice")
-                .selected_text("Applica un profilo…")
+                .selected_text(tr("Applica un profilo…", "Apply a profile…"))
                 .show_ui(ui, |ui| {
                     for profile in profiles {
                         if ui.selectable_label(false, &profile.name).clicked() {
@@ -1381,7 +1507,10 @@ impl ConverterApp {
             self.apply_profile(&profile);
         }
         if ui
-            .small_button("Salva queste opzioni come profilo…")
+            .small_button(tr(
+                "Salva queste opzioni come profilo…",
+                "Save these options as a profile…",
+            ))
             .clicked()
         {
             self.profile_dialog = Some(ProfileDialog {
@@ -1398,9 +1527,9 @@ impl ConverterApp {
             .map(|item| item.path.clone())
             && ui
                 .button(if MediaKind::from_path(&path) == MediaKind::Image {
-                    "Modifica immagine…"
+                    tr("Modifica immagine…", "Edit image…")
                 } else {
-                    "Impagina testo…"
+                    tr("Impagina testo…", "Lay out text…")
                 })
                 .clicked()
         {
@@ -1409,40 +1538,47 @@ impl ConverterApp {
         ui.add_space(8.0);
         let formats = self.common_formats();
         let before = self.saved.settings.format;
-        setting_card(ui, "Formato", "Scegli il file da creare", |ui| {
-            ui.add_enabled_ui(!formats.is_empty(), |ui| {
-                egui::ComboBox::from_id_salt("target_format")
-                    .width(142.0)
-                    .selected_text(if self.items.is_empty() {
-                        "Aggiungi un file"
-                    } else if formats.is_empty() {
-                        "Nessuna uscita attiva"
-                    } else {
-                        self.saved.settings.format.label()
-                    })
-                    .show_ui(ui, |ui| {
-                        for format in formats {
-                            let label = if format == OutputFormat::Txt
-                                && self.items.iter().any(|item| {
-                                    MediaKind::from_path(&item.path) == MediaKind::Image
-                                }) {
-                                "TXT · OCR locale"
-                            } else if format == OutputFormat::Pdf
-                                && self
-                                    .items
-                                    .iter()
-                                    .all(|item| MediaKind::from_path(&item.path) == MediaKind::Pdf)
-                            {
-                                "PDF · operazioni"
-                            } else {
-                                format.label()
-                            };
-                            ui.selectable_value(&mut self.saved.settings.format, format, label);
-                        }
-                    });
-            });
-        });
-        if ui.link("Scegli i formati di uscita…").clicked() {
+        setting_card(
+            ui,
+            tr("Formato", "Format"),
+            tr("Scegli il file da creare", "Choose the file to create"),
+            |ui| {
+                ui.add_enabled_ui(!formats.is_empty(), |ui| {
+                    egui::ComboBox::from_id_salt("target_format")
+                        .width(142.0)
+                        .selected_text(if self.items.is_empty() {
+                            tr("Aggiungi un file", "Add a file")
+                        } else if formats.is_empty() {
+                            tr("Nessuna uscita attiva", "No output formats enabled")
+                        } else {
+                            self.saved.settings.format.label()
+                        })
+                        .show_ui(ui, |ui| {
+                            for format in formats {
+                                let label = if format == OutputFormat::Txt
+                                    && self.items.iter().any(|item| {
+                                        MediaKind::from_path(&item.path) == MediaKind::Image
+                                    }) {
+                                    tr("TXT · OCR locale", "TXT · Local OCR")
+                                } else if format == OutputFormat::Pdf
+                                    && self.items.iter().all(|item| {
+                                        MediaKind::from_path(&item.path) == MediaKind::Pdf
+                                    })
+                                {
+                                    tr("PDF · operazioni", "PDF · operations")
+                                } else {
+                                    format.label()
+                                };
+                                ui.selectable_value(&mut self.saved.settings.format, format, label);
+                            }
+                        });
+                });
+            },
+        );
+        if ui
+            .link(tr("Scegli i formati di uscita…", "Choose output formats…"))
+            .clicked()
+        {
             self.show_tools = true;
         }
         if before != self.saved.settings.format {
@@ -1470,15 +1606,21 @@ impl ConverterApp {
                     .all(|item| MediaKind::from_path(&item.path) == MediaKind::Pdf));
         if quality {
             let detail = match self.saved.preset {
-                0 => "File più piccoli",
-                2 => "Più dettaglio",
-                3 => "Valori personalizzati",
-                _ => "Qualità e dimensioni bilanciate",
+                0 => tr("File più piccoli", "Smaller files"),
+                2 => tr("Più dettaglio", "More detail"),
+                3 => tr("Valori personalizzati", "Custom values"),
+                _ => tr(
+                    "Qualità e dimensioni bilanciate",
+                    "Balanced quality and size",
+                ),
             };
-            setting_card(ui, "Qualità", detail, |ui| {
+            setting_card(ui, tr("Qualità", "Quality"), detail, |ui| {
                 ui.vertical(|ui| {
-                    for (index, title) in [(0, "Leggero"), (1, "Bilanciato"), (2, "Alta qualità")]
-                    {
+                    for (index, title) in [
+                        (0, tr("Leggero", "Compact")),
+                        (1, tr("Bilanciato", "Balanced")),
+                        (2, tr("Alta qualità", "High quality")),
+                    ] {
                         if ui.radio(self.saved.preset == index, title).clicked() {
                             self.apply_preset(index);
                         }
@@ -1488,21 +1630,28 @@ impl ConverterApp {
             ui.add_space(6.0);
         }
         theme::show_card(ui, |ui| {
-            ui.label(theme::heading("Destinazione", theme::BODY));
+            ui.label(theme::heading(
+                tr("Destinazione", "Destination"),
+                theme::BODY,
+            ));
             let mut beside = self.saved.settings.output_dir.is_none();
             if ui
-                .radio_value(&mut beside, true, "Accanto all’originale")
+                .radio_value(
+                    &mut beside,
+                    true,
+                    tr("Accanto all’originale", "Next to the original"),
+                )
                 .changed()
             {
                 self.saved.settings.output_dir = None;
                 self.settings_dirty = true;
             }
             if ui
-                .radio_value(&mut beside, false, "Cartella a scelta")
+                .radio_value(&mut beside, false, tr("Cartella a scelta", "Custom folder"))
                 .clicked()
                 && self.saved.settings.output_dir.is_none()
                 && let Some(path) = rfd::FileDialog::new()
-                    .set_title("Cartella di destinazione")
+                    .set_title(tr("Cartella di destinazione", "Output folder"))
                     .pick_folder()
             {
                 self.saved.settings.output_dir = Some(path);
@@ -1521,7 +1670,7 @@ impl ConverterApp {
                 if ui
                     .add(egui::Button::new(theme::button_text(
                         FluentIcon::Folder,
-                        "Cambia cartella…",
+                        tr("Cambia cartella…", "Change folder…"),
                         colors.text,
                     )))
                     .clicked()
@@ -1532,23 +1681,30 @@ impl ConverterApp {
                 }
             }
             ui.label(
-                RichText::new("Gli originali e i risultati già presenti restano al sicuro.")
-                    .size(theme::CAPTION)
-                    .color(colors.secondary),
+                RichText::new(tr(
+                    "Gli originali e i risultati già presenti restano al sicuro.",
+                    "Originals and existing results are preserved.",
+                ))
+                .size(theme::CAPTION)
+                .color(colors.secondary),
             );
         });
         ui.add_space(6.0);
         theme::show_card(ui, |ui| {
-            egui::CollapsingHeader::new(theme::heading("Impostazioni personalizzate", theme::BODY))
-                .default_open(self.advanced)
-                .show(ui, |ui| {
-                    let before = serde_json::to_vec(&self.saved.settings).unwrap_or_default();
-                    self.advanced_settings(ui);
-                    if serde_json::to_vec(&self.saved.settings).unwrap_or_default() != before {
-                        self.saved.preset = 3;
-                        self.settings_dirty = true;
-                    }
-                });
+            egui::CollapsingHeader::new(theme::heading(
+                tr("Impostazioni personalizzate", "Custom settings"),
+                theme::BODY,
+            ))
+            .id_salt("advanced_conversion_settings")
+            .default_open(self.advanced)
+            .show(ui, |ui| {
+                let before = serde_json::to_vec(&self.saved.settings).unwrap_or_default();
+                self.advanced_settings(ui);
+                if serde_json::to_vec(&self.saved.settings).unwrap_or_default() != before {
+                    self.saved.preset = 3;
+                    self.settings_dirty = true;
+                }
+            });
         });
         if self.items.iter().any(|item| {
             item.path.extension().is_some_and(|ext| {
@@ -1560,14 +1716,20 @@ impl ConverterApp {
             ui.add_space(6.0);
             info_bar(
                 ui,
-                "GIF: primo fotogramma. TIFF: prima pagina.",
+                tr(
+                    "GIF: primo fotogramma. TIFF: prima pagina.",
+                    "GIF: first frame. TIFF: first page.",
+                ),
                 InfoKind::Info,
             );
         }
         if let Some(message) = self.prerequisite() {
             ui.add_space(6.0);
             info_bar(ui, &message, InfoKind::Warning);
-            if ui.button("Configura strumenti…").clicked() {
+            if ui
+                .button(tr("Configura strumenti…", "Configure tools…"))
+                .clicked()
+            {
                 self.show_tools = true;
             }
         }
@@ -1580,26 +1742,32 @@ impl ConverterApp {
                 .is_some_and(|ext| ext.eq_ignore_ascii_case("csv"))
         }) || self.saved.settings.format == OutputFormat::Csv
         {
-            ui.label("Separatore CSV in ingresso e uscita");
+            ui.label(tr(
+                "Separatore CSV in ingresso e uscita",
+                "CSV separator for input and output",
+            ));
             let delimiter = &mut self.saved.settings.csv.delimiter;
             egui::ComboBox::from_id_salt("csv_delimiter")
                 .selected_text(match delimiter {
-                    CsvDelimiter::Comma => "Virgola (,)",
-                    CsvDelimiter::Semicolon => "Punto e virgola (;)",
-                    CsvDelimiter::Tab => "Tabulazione",
-                    CsvDelimiter::Pipe => "Barra verticale (|)",
+                    CsvDelimiter::Comma => tr("Virgola (,)", "Comma (,)"),
+                    CsvDelimiter::Semicolon => tr("Punto e virgola (;)", "Semicolon (;)"),
+                    CsvDelimiter::Tab => tr("Tabulazione", "Tab"),
+                    CsvDelimiter::Pipe => tr("Barra verticale (|)", "Pipe (|)"),
                 })
                 .show_ui(ui, |ui| {
                     for (value, label) in [
-                        (CsvDelimiter::Comma, "Virgola (,)"),
-                        (CsvDelimiter::Semicolon, "Punto e virgola (;)"),
-                        (CsvDelimiter::Tab, "Tabulazione"),
-                        (CsvDelimiter::Pipe, "Barra verticale (|)"),
+                        (CsvDelimiter::Comma, tr("Virgola (,)", "Comma (,)")),
+                        (
+                            CsvDelimiter::Semicolon,
+                            tr("Punto e virgola (;)", "Semicolon (;)"),
+                        ),
+                        (CsvDelimiter::Tab, tr("Tabulazione", "Tab")),
+                        (CsvDelimiter::Pipe, tr("Barra verticale (|)", "Pipe (|)")),
                     ] {
                         ui.selectable_value(delimiter, value, label);
                     }
                 });
-            ui.label(RichText::new("UTF-8 con virgolette. Il separatore scelto viene usato anche per leggere i CSV.").small().weak());
+            ui.label(RichText::new(tr("UTF-8 con virgolette. Il separatore scelto viene usato anche per leggere i CSV.", "UTF-8 with quoted fields. The selected separator is also used when reading CSV files.")).small().weak());
             ui.add_space(7.0);
         }
         let image_ocr = self.saved.settings.format == OutputFormat::Txt
@@ -1618,7 +1786,10 @@ impl ConverterApp {
             && ui
                 .checkbox(
                     &mut self.saved.settings.ocr.enabled,
-                    "Riconosci le scansioni con OCR locale",
+                    tr(
+                        "Riconosci le scansioni con OCR locale",
+                        "Recognize scanned pages with local OCR",
+                    ),
                 )
                 .changed()
             && self.saved.settings.ocr.enabled
@@ -1626,17 +1797,17 @@ impl ConverterApp {
             self.saved.settings.pdf.dpi = self.saved.settings.pdf.dpi.max(300);
         }
         if image_ocr || pdf_text && self.saved.settings.ocr.enabled {
-            ui.label("Lingue OCR installate");
+            ui.label(tr("Lingue OCR installate", "Installed OCR languages"));
             egui::ComboBox::from_id_salt("ocr_languages")
                 .selected_text(&self.saved.settings.ocr.language)
                 .show_ui(ui, |ui| {
                     for (code, name) in [
-                        ("ita+eng", "Italiano e inglese"),
-                        ("ita", "Italiano"),
-                        ("eng", "Inglese"),
-                        ("fra", "Francese"),
-                        ("deu", "Tedesco"),
-                        ("spa", "Spagnolo"),
+                        ("ita+eng", tr("Italiano e inglese", "Italian and English")),
+                        ("ita", tr("Italiano", "Italian")),
+                        ("eng", tr("Inglese", "English")),
+                        ("fra", tr("Francese", "French")),
+                        ("deu", tr("Tedesco", "German")),
+                        ("spa", tr("Spagnolo", "Spanish")),
                     ] {
                         ui.selectable_value(
                             &mut self.saved.settings.ocr.language,
@@ -1646,7 +1817,7 @@ impl ConverterApp {
                     }
                 });
             ui.text_edit_singleline(&mut self.saved.settings.ocr.language);
-            ui.label(RichText::new("Tesseract riconosce il testo sul PC. Occorrono i dati delle lingue indicate; rileggi il risultato.").small().weak());
+            ui.label(RichText::new(tr("Tesseract riconosce il testo sul PC. Occorrono i dati delle lingue indicate; rileggi il risultato.", "Tesseract recognizes text on your PC. The selected language data is required; review the result.")).small().weak());
             if pdf_text {
                 ui.add(
                     egui::Slider::new(&mut self.saved.settings.pdf.dpi, 150..=600)
@@ -1670,7 +1841,7 @@ impl ConverterApp {
         match kind {
             MediaKind::Audio => {
                 if quality_applicable(self.saved.settings.format) {
-                    ui.label("Bitrate audio");
+                    ui.label(tr("Bitrate audio", "Audio bitrate"));
                     ui.add(
                         egui::Slider::new(&mut self.saved.settings.audio.bitrate_kbps, 48..=320)
                             .suffix(" kbps"),
@@ -1685,7 +1856,7 @@ impl ConverterApp {
                 let rate = &mut self.saved.settings.audio.sample_rate;
                 egui::ComboBox::from_id_salt("sample_rate")
                     .selected_text(if *rate == 0 {
-                        "Frequenza originale".into()
+                        tr("Frequenza originale", "Original sample rate").into()
                     } else {
                         format!("{rate} Hz")
                     })
@@ -1695,7 +1866,7 @@ impl ConverterApp {
                                 rate,
                                 value,
                                 if value == 0 {
-                                    "Originale".into()
+                                    tr("Originale", "Original").into()
                                 } else {
                                     format!("{value} Hz")
                                 },
@@ -1707,16 +1878,16 @@ impl ConverterApp {
                     .selected_text(match channels {
                         1 => "Mono",
                         2 => "Stereo",
-                        _ => "Canali originali",
+                        _ => tr("Canali originali", "Original channels"),
                     })
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(channels, 0, "Originali");
+                        ui.selectable_value(channels, 0, tr("Originali", "Original"));
                         ui.selectable_value(channels, 1, "Mono");
                         ui.selectable_value(channels, 2, "Stereo");
                     });
                 ui.checkbox(
                     &mut self.saved.settings.audio.normalize,
-                    "Normalizza volume",
+                    tr("Normalizza volume", "Normalize volume"),
                 );
                 if matches!(
                     self.saved.settings.format,
@@ -1727,14 +1898,27 @@ impl ConverterApp {
                         | OutputFormat::Caf
                 ) {
                     ui.label(
-                        RichText::new("Formato senza perdita: il bitrate non viene applicato.")
-                            .small()
-                            .weak(),
+                        RichText::new(tr(
+                            "Formato senza perdita: il bitrate non viene applicato.",
+                            "Lossless format: bitrate does not apply.",
+                        ))
+                        .small()
+                        .weak(),
                     );
                 }
-                ui.label("Ritaglia intervallo (secondi)");
-                optional_seconds(ui, "Da", &mut self.saved.settings.video.trim_start);
-                optional_seconds(ui, "A", &mut self.saved.settings.video.trim_end);
+                ui.label(tr("Ritaglia intervallo (secondi)", "Trim range (seconds)"));
+                optional_seconds(
+                    ui,
+                    tr("Da", "From"),
+                    &mut self.saved.settings.video.trim_start,
+                    0.0,
+                );
+                optional_seconds(
+                    ui,
+                    tr("A", "To"),
+                    &mut self.saved.settings.video.trim_end,
+                    1.0,
+                );
             }
             MediaKind::Video => {
                 if matches!(
@@ -1743,24 +1927,31 @@ impl ConverterApp {
                 ) {
                     egui::ComboBox::from_id_salt("codec")
                         .selected_text(match self.saved.settings.video.codec {
-                            VideoCodec::H264 => "H.264 · compatibilità",
-                            VideoCodec::H265 => "H.265 · file più piccoli",
+                            VideoCodec::H264 => {
+                                tr("H.264 · compatibilità", "H.264 · compatibility")
+                            }
+                            VideoCodec::H265 => {
+                                tr("H.265 · file più piccoli", "H.265 · smaller files")
+                            }
                         })
                         .show_ui(ui, |ui| {
                             ui.selectable_value(
                                 &mut self.saved.settings.video.codec,
                                 VideoCodec::H264,
-                                "H.264 · compatibilità",
+                                tr("H.264 · compatibilità", "H.264 · compatibility"),
                             );
                             ui.selectable_value(
                                 &mut self.saved.settings.video.codec,
                                 VideoCodec::H265,
-                                "H.265 · file più piccoli",
+                                tr("H.265 · file più piccoli", "H.265 · smaller files"),
                             );
                         });
                 }
                 if self.saved.settings.format != OutputFormat::Gif {
-                    ui.label("Qualità video · valori minori = più dettaglio");
+                    ui.label(tr(
+                        "Qualità video · valori minori = più dettaglio",
+                        "Video quality · lower values = more detail",
+                    ));
                     let quality_label = if matches!(
                         self.saved.settings.format,
                         OutputFormat::Webm
@@ -1770,7 +1961,7 @@ impl ConverterApp {
                             | OutputFormat::Flv
                             | OutputFormat::ThreeGp
                     ) {
-                        "Qualità "
+                        tr("Qualità ", "Quality ")
                     } else {
                         "CRF "
                     };
@@ -1784,80 +1975,98 @@ impl ConverterApp {
                 egui::ComboBox::from_id_salt("fps")
                     .selected_text(
                         fps.map(|n| format!("{n} fps"))
-                            .unwrap_or("Fotogrammi originali".into()),
+                            .unwrap_or(tr("Fotogrammi originali", "Original frame rate").into()),
                     )
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(fps, None, "Originali");
+                        ui.selectable_value(fps, None, tr("Originali", "Original"));
                         for n in [24, 25, 30, 50, 60] {
                             ui.selectable_value(fps, Some(n), format!("{n} fps"));
                         }
                     });
-                ui.label("Ritaglia intervallo (secondi)");
-                optional_seconds(ui, "Da", &mut self.saved.settings.video.trim_start);
-                optional_seconds(ui, "A", &mut self.saved.settings.video.trim_end);
+                ui.label(tr("Ritaglia intervallo (secondi)", "Trim range (seconds)"));
+                optional_seconds(
+                    ui,
+                    tr("Da", "From"),
+                    &mut self.saved.settings.video.trim_start,
+                    0.0,
+                );
+                optional_seconds(
+                    ui,
+                    tr("A", "To"),
+                    &mut self.saved.settings.video.trim_end,
+                    1.0,
+                );
                 if self.saved.settings.format != OutputFormat::Gif {
                     ui.label(
-                        RichText::new("La traccia audio viene conservata quando disponibile.")
-                            .small()
-                            .weak(),
+                        RichText::new(tr(
+                            "La traccia audio viene conservata quando disponibile.",
+                            "The audio track is preserved when available.",
+                        ))
+                        .small()
+                        .weak(),
                     );
-                    egui::CollapsingHeader::new("Audio del video").show(ui, |ui| {
-                        ui.label("Bitrate audio");
-                        ui.add(
-                            egui::Slider::new(
-                                &mut self.saved.settings.audio.bitrate_kbps,
-                                48..=320,
-                            )
-                            .suffix(" kbps"),
-                        );
-                        let rates: &[u32] = self
-                            .saved
-                            .settings
-                            .format
-                            .audio_sample_rates()
-                            .unwrap_or(&[0, 44100, 48000]);
-                        let rate = &mut self.saved.settings.audio.sample_rate;
-                        egui::ComboBox::from_id_salt("video_sample_rate")
-                            .selected_text(if *rate == 0 {
-                                "Frequenza originale".into()
-                            } else {
-                                format!("{rate} Hz")
-                            })
-                            .show_ui(ui, |ui| {
-                                for &value in rates {
-                                    ui.selectable_value(
-                                        rate,
-                                        value,
-                                        if value == 0 {
-                                            "Originale".into()
-                                        } else {
-                                            format!("{value} Hz")
-                                        },
-                                    );
-                                }
-                            });
-                        let channels = &mut self.saved.settings.audio.channels;
-                        egui::ComboBox::from_id_salt("video_channels")
-                            .selected_text(match channels {
-                                1 => "Mono",
-                                2 => "Stereo",
-                                _ => "Canali originali",
-                            })
-                            .show_ui(ui, |ui| {
-                                ui.selectable_value(channels, 0, "Originali");
-                                ui.selectable_value(channels, 1, "Mono");
-                                ui.selectable_value(channels, 2, "Stereo");
-                            });
-                        ui.checkbox(
-                            &mut self.saved.settings.audio.normalize,
-                            "Normalizza volume",
-                        );
-                    });
+                    egui::CollapsingHeader::new(tr("Audio del video", "Video audio"))
+                        .id_salt("video_audio_settings")
+                        .show(ui, |ui| {
+                            ui.label(tr("Bitrate audio", "Audio bitrate"));
+                            ui.add(
+                                egui::Slider::new(
+                                    &mut self.saved.settings.audio.bitrate_kbps,
+                                    48..=320,
+                                )
+                                .suffix(" kbps"),
+                            );
+                            let rates: &[u32] = self
+                                .saved
+                                .settings
+                                .format
+                                .audio_sample_rates()
+                                .unwrap_or(&[0, 44100, 48000]);
+                            let rate = &mut self.saved.settings.audio.sample_rate;
+                            egui::ComboBox::from_id_salt("video_sample_rate")
+                                .selected_text(if *rate == 0 {
+                                    tr("Frequenza originale", "Original sample rate").into()
+                                } else {
+                                    format!("{rate} Hz")
+                                })
+                                .show_ui(ui, |ui| {
+                                    for &value in rates {
+                                        ui.selectable_value(
+                                            rate,
+                                            value,
+                                            if value == 0 {
+                                                tr("Originale", "Original").into()
+                                            } else {
+                                                format!("{value} Hz")
+                                            },
+                                        );
+                                    }
+                                });
+                            let channels = &mut self.saved.settings.audio.channels;
+                            egui::ComboBox::from_id_salt("video_channels")
+                                .selected_text(match channels {
+                                    1 => "Mono",
+                                    2 => "Stereo",
+                                    _ => tr("Canali originali", "Original channels"),
+                                })
+                                .show_ui(ui, |ui| {
+                                    ui.selectable_value(channels, 0, tr("Originali", "Original"));
+                                    ui.selectable_value(channels, 1, "Mono");
+                                    ui.selectable_value(channels, 2, "Stereo");
+                                });
+                            ui.checkbox(
+                                &mut self.saved.settings.audio.normalize,
+                                tr("Normalizza volume", "Normalize volume"),
+                            );
+                        });
                 } else {
                     ui.label(
-                        RichText::new("Il GIF animato non contiene audio.")
-                            .small()
-                            .weak(),
+                        RichText::new(tr(
+                            "Il GIF animato non contiene audio.",
+                            "Animated GIF does not contain audio.",
+                        ))
+                        .small()
+                        .weak(),
                     );
                 }
             }
@@ -1867,22 +2076,25 @@ impl ConverterApp {
                     .iter()
                     .any(|item| MediaKind::from_path(&item.path) == MediaKind::Pdf)
                 {
-                    ui.label("Risoluzione delle pagine PDF");
+                    ui.label(tr("Risoluzione delle pagine PDF", "PDF page resolution"));
                     ui.add(
                         egui::Slider::new(&mut self.saved.settings.pdf.dpi, 72..=600)
                             .suffix(" DPI"),
                     );
                     ui.label(
-                        RichText::new("Un’immagine per pagina, nella cartella di destinazione.")
-                            .small()
-                            .weak(),
+                        RichText::new(tr(
+                            "Un’immagine per pagina, nella cartella di destinazione.",
+                            "One image per page, saved in the output folder.",
+                        ))
+                        .small()
+                        .weak(),
                     );
                 } else {
                     if matches!(
                         self.saved.settings.format,
                         OutputFormat::Jpg | OutputFormat::Avif | OutputFormat::Heic
                     ) {
-                        ui.label("Qualità dell'immagine");
+                        ui.label(tr("Qualità dell'immagine", "Image quality"));
                         ui.add(
                             egui::Slider::new(&mut self.saved.settings.image.quality, 20..=100)
                                 .suffix("%"),
@@ -1910,17 +2122,23 @@ impl ConverterApp {
                     let action = &mut self.saved.settings.pdf.action;
                     egui::ComboBox::from_id_salt("pdf_action")
                         .selected_text(match action {
-                            PdfAction::Compress if all_pdf => "Comprimi senza perdita",
+                            PdfAction::Compress if all_pdf => {
+                                tr("Comprimi senza perdita", "Lossless compression")
+                            }
                             PdfAction::Compress => "PDF (Bulk)",
-                            PdfAction::Split => "Dividi: una pagina per file",
-                            PdfAction::Merge => "PDF (Merge) · ordina pagine",
+                            PdfAction::Split => {
+                                tr("Dividi: una pagina per file", "Split: one page per file")
+                            }
+                            PdfAction::Merge => {
+                                tr("PDF (Merge) · ordina pagine", "PDF (Merge) · arrange pages")
+                            }
                         })
                         .show_ui(ui, |ui| {
                             ui.selectable_value(
                                 action,
                                 PdfAction::Compress,
                                 if all_pdf {
-                                    "Comprimi senza perdita"
+                                    tr("Comprimi senza perdita", "Lossless compression")
                                 } else {
                                     "PDF (Bulk)"
                                 },
@@ -1929,22 +2147,25 @@ impl ConverterApp {
                                 ui.selectable_value(
                                     action,
                                     PdfAction::Split,
-                                    "Dividi: una pagina per file",
+                                    tr("Dividi: una pagina per file", "Split: one page per file"),
                                 );
                             }
                             ui.add_enabled_ui(can_merge, |ui| {
                                 ui.selectable_value(
                                     action,
                                     PdfAction::Merge,
-                                    "PDF (Merge) · ordina pagine",
+                                    tr(
+                                        "PDF (Merge) · ordina pagine",
+                                        "PDF (Merge) · arrange pages",
+                                    ),
                                 );
                             });
                         });
                     ui.label(RichText::new(match action {
-                        PdfAction::Compress if all_pdf => "Ottimizza ogni PDF senza ridurre la qualità. Un PDF già ottimizzato può mantenere le stesse dimensioni.",
-                        PdfAction::Compress => "Crea un PDF separato per ciascun file della lista.",
-                        PdfAction::Split => "Crea un PDF per pagina. Segnalibri, struttura accessibile e metadati del documento non vengono trasferiti; documenti firmati o con moduli compilabili richiedono una copia statica.",
-                        PdfAction::Merge => "Apre l'ordine delle singole pagine: trascinale prima di creare un unico PDF. Segnalibri, struttura accessibile e metadati non vengono trasferiti; documenti firmati o con moduli compilabili richiedono una copia statica.",
+                        PdfAction::Compress if all_pdf => tr("Ottimizza ogni PDF senza ridurre la qualità. Un PDF già ottimizzato può mantenere le stesse dimensioni.", "Optimizes each PDF without reducing quality. An already optimized PDF may keep the same size."),
+                        PdfAction::Compress => tr("Crea un PDF separato per ciascun file della lista.", "Creates a separate PDF for each file in the list."),
+                        PdfAction::Split => tr("Crea un PDF per pagina. Segnalibri, struttura accessibile e metadati del documento non vengono trasferiti; documenti firmati o con moduli compilabili richiedono una copia statica.", "Creates one PDF per page. Bookmarks, accessibility structure and document metadata are not transferred; signed documents or fillable forms require a static copy."),
+                        PdfAction::Merge => tr("Apre l'ordine delle singole pagine: trascinale prima di creare un unico PDF. Segnalibri, struttura accessibile e metadati non vengono trasferiti; documenti firmati o con moduli compilabili richiedono una copia statica.", "Opens the individual page order: drag pages before creating one PDF. Bookmarks, accessibility structure and metadata are not transferred; signed documents or fillable forms require a static copy."),
                     }).small().weak());
                 }
                 if self
@@ -1952,17 +2173,20 @@ impl ConverterApp {
                     .iter()
                     .any(|item| MediaKind::from_path(&item.path) == MediaKind::Image)
                 {
-                    ui.label("Qualità delle immagini nel PDF");
+                    ui.label(tr(
+                        "Qualità delle immagini nel PDF",
+                        "Image quality in the PDF",
+                    ));
                     ui.add(
                         egui::Slider::new(&mut self.saved.settings.image.quality, 20..=100)
                             .suffix("%"),
                     );
                     width_setting(ui, "pdf_image_width", &mut self.saved.settings.image.width);
-                    ui.label(RichText::new("Una pagina A4 per immagine, con proporzioni mantenute e margine di 24 pt.").small().weak());
+                    ui.label(RichText::new(tr("Una pagina A4 per immagine, con proporzioni mantenute e margine di 24 pt.", "One A4 page per image, preserving proportions with a 24 pt margin.")).small().weak());
                 } else if !all_pdf {
                     ui.label(
                         RichText::new(
-                            "Documenti Office, fogli di calcolo e HTML vengono esportati in PDF con LibreOffice. HTML/CSS complessi possono cambiare impaginazione; JavaScript non viene eseguito. Le risorse collegate nell'HTML possono essere lette dal motore.",
+                            tr("Documenti Office, fogli di calcolo e HTML vengono esportati in PDF con LibreOffice. HTML/CSS complessi possono cambiare impaginazione; JavaScript non viene eseguito. Le risorse collegate nell'HTML possono essere lette dal motore.", "Office documents, spreadsheets and HTML are exported to PDF with LibreOffice. Complex HTML/CSS may change layout; JavaScript is not executed. The engine may read resources linked in HTML."),
                         )
                         .small()
                         .weak(),
@@ -1971,22 +2195,34 @@ impl ConverterApp {
             }
             MediaKind::Spreadsheet => {
                 let text = if self.saved.settings.format == OutputFormat::Csv {
-                    "Esporta il primo foglio in CSV UTF-8 con il separatore scelto e virgolette. Conserva i valori delle celle; formattazione, formule e altri fogli non sono inclusi."
+                    tr(
+                        "Esporta il primo foglio in CSV UTF-8 con il separatore scelto e virgolette. Conserva i valori delle celle; formattazione, formule e altri fogli non sono inclusi.",
+                        "Exports the first sheet as UTF-8 CSV with the selected separator and quoted fields. Preserves cell values; formatting, formulas and other sheets are not included.",
+                    )
                 } else {
-                    "Crea un file Excel XLSX con LibreOffice. I CSV in ingresso devono essere UTF-8 e usare il separatore scelto; il contenuto che inizia con = resta testo."
+                    tr(
+                        "Crea un file Excel XLSX con LibreOffice. I CSV in ingresso devono essere UTF-8 e usare il separatore scelto; il contenuto che inizia con = resta testo.",
+                        "Creates an Excel XLSX file with LibreOffice. Input CSV files must use UTF-8 and the selected separator; content starting with = stays as text.",
+                    )
                 };
                 ui.label(RichText::new(text).small().weak());
             }
             MediaKind::Document | MediaKind::Html => {
                 let text = if self.saved.settings.format == OutputFormat::Txt {
-                    "Estrae il testo incorporato nel PDF; per le scansioni abilita OCR locale qui sopra."
+                    tr(
+                        "Estrae il testo incorporato nel PDF; per le scansioni abilita OCR locale qui sopra.",
+                        "Extracts embedded PDF text; enable local OCR above for scanned pages.",
+                    )
                 } else {
-                    "Ricostruisce il testo del PDF in un file modificabile. Per le scansioni abilita OCR locale qui sopra; immagini, tabelle e impaginazione originali non vengono ricostruite."
+                    tr(
+                        "Ricostruisce il testo del PDF in un file modificabile. Per le scansioni abilita OCR locale qui sopra; immagini, tabelle e impaginazione originali non vengono ricostruite.",
+                        "Reconstructs PDF text in an editable file. Enable local OCR above for scanned pages; original images, tables and layout are not reconstructed.",
+                    )
                 };
                 ui.label(RichText::new(text).small().weak());
             }
             _ => {
-                ui.label(RichText::new("Il testo viene estratto dal PDF. I PDF scansionati richiedono OCR, qui non incluso.").small().weak());
+                ui.label(RichText::new(tr("Il testo viene estratto dal PDF. I PDF scansionati richiedono OCR, qui non incluso.", "Text is extracted from the PDF. Scanned PDFs require OCR, which is not included here.")).small().weak());
             }
         }
     }
@@ -1995,8 +2231,9 @@ impl ConverterApp {
         let colors = theme::palette(ui.ctx());
         ui.horizontal(|ui| {
             ui.label(theme::heading(
-                format!(
+                trf!(
                     "File da convertire{}",
+                    "Files to convert{}",
                     if self.items.is_empty() {
                         String::new()
                     } else {
@@ -2007,7 +2244,10 @@ impl ConverterApp {
             ));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if ui
-                    .add_enabled(!self.running, egui::Button::new("Nuovo foglio…"))
+                    .add_enabled(
+                        !self.running,
+                        egui::Button::new(tr("Nuovo foglio…", "New sheet…")),
+                    )
                     .clicked()
                 {
                     self.open_editor(None, None);
@@ -2017,13 +2257,13 @@ impl ConverterApp {
                         !self.running,
                         egui::Button::new(theme::button_text(
                             FluentIcon::Add,
-                            "Aggiungi file",
+                            tr("Aggiungi file", "Add files"),
                             colors.text,
                         )),
                     )
                     .clicked()
                     && let Some(paths) = rfd::FileDialog::new()
-                        .set_title("Scegli i file da convertire")
+                        .set_title(tr("Scegli i file da convertire", "Choose files to convert"))
                         .pick_files()
                 {
                     self.add_files(paths);
@@ -2038,17 +2278,23 @@ impl ConverterApp {
                     ui.add_space(54.0);
                     ui.label(theme::icon(FluentIcon::Document, 36.0).color(colors.secondary));
                     ui.add_space(12.0);
-                    ui.label(theme::heading("Trascina qui i tuoi file", theme::SUBTITLE));
+                    ui.label(theme::heading(
+                        tr("Trascina qui i tuoi file", "Drop your files here"),
+                        theme::SUBTITLE,
+                    ));
                     ui.label(
-                        RichText::new("Audio, video, immagini e documenti.")
-                            .color(colors.secondary),
+                        RichText::new(tr(
+                            "Audio, video, immagini e documenti.",
+                            "Audio, video, images and documents.",
+                        ))
+                        .color(colors.secondary),
                     );
                     ui.add_space(16.0);
                     if ui
                         .add(
                             egui::Button::new(theme::button_text(
                                 FluentIcon::Add,
-                                "Scegli file…",
+                                tr("Scegli file…", "Choose files…"),
                                 colors.accent_text,
                             ))
                             .fill(colors.accent),
@@ -2060,9 +2306,12 @@ impl ConverterApp {
                     }
                     ui.add_space(18.0);
                     ui.label(
-                        RichText::new("Puoi anche usare il tasto destro in Esplora file.")
-                            .size(theme::CAPTION)
-                            .color(colors.secondary),
+                        RichText::new(tr(
+                            "Puoi anche usare il tasto destro in Esplora file.",
+                            "You can also use the right-click menu in File Explorer.",
+                        ))
+                        .size(theme::CAPTION)
+                        .color(colors.secondary),
                     );
                 });
             });
@@ -2122,7 +2371,7 @@ impl ConverterApp {
                                 && ui
                                     .add_enabled(
                                         !self.running,
-                                        egui::Button::new("Modifica…").small(),
+                                        egui::Button::new(tr("Modifica…", "Edit…")).small(),
                                     )
                                     .clicked()
                             {
@@ -2135,7 +2384,7 @@ impl ConverterApp {
                                         && icon_button(
                                             ui,
                                             FluentIcon::Delete,
-                                            "Rimuovi dalla lista",
+                                            tr("Rimuovi dalla lista", "Remove from list"),
                                         )
                                         .clicked()
                                     {
@@ -2151,7 +2400,10 @@ impl ConverterApp {
                                                 ))
                                                 .frame(false),
                                             )
-                                            .on_hover_text("Sposta dopo nell’unione")
+                                            .on_hover_text(tr(
+                                                "Sposta dopo nell’unione",
+                                                "Move later in the merge",
+                                            ))
                                             .clicked()
                                         {
                                             reorder = Some((index, index + 1));
@@ -2165,7 +2417,10 @@ impl ConverterApp {
                                                 ))
                                                 .frame(false),
                                             )
-                                            .on_hover_text("Sposta prima nell’unione")
+                                            .on_hover_text(tr(
+                                                "Sposta prima nell’unione",
+                                                "Move earlier in the merge",
+                                            ))
                                             .clicked()
                                         {
                                             reorder = Some((index, index - 1));
@@ -2176,7 +2431,10 @@ impl ConverterApp {
                                             if icon_button(
                                                 ui,
                                                 FluentIcon::Folder,
-                                                "Apri cartella di destinazione",
+                                                tr(
+                                                    "Apri cartella di destinazione",
+                                                    "Open output folder",
+                                                ),
                                             )
                                             .clicked()
                                                 && let Some(parent) =
@@ -2191,14 +2449,14 @@ impl ConverterApp {
                                         }
                                         JobState::Waiting => {
                                             ui.label(
-                                                RichText::new("Pronto")
+                                                RichText::new(tr("Pronto", "Ready"))
                                                     .size(theme::CAPTION)
                                                     .color(colors.secondary),
                                             );
                                         }
                                         JobState::Cancelled => {
                                             ui.label(
-                                                RichText::new("Annullato")
+                                                RichText::new(tr("Annullato", "Cancelled"))
                                                     .size(theme::CAPTION)
                                                     .color(colors.secondary),
                                             );
@@ -2220,8 +2478,9 @@ impl ConverterApp {
                             }
                             JobState::Complete(outputs) => {
                                 ui.label(
-                                    RichText::new(format!(
+                                    RichText::new(trf!(
                                         "Completato · {} file creati",
+                                        "Completed · Output files: {}",
                                         outputs.len()
                                     ))
                                     .size(theme::CAPTION)
@@ -2229,27 +2488,34 @@ impl ConverterApp {
                                 );
                             }
                             JobState::Failed(message) => {
-                                info_bar(ui, "Conversione non riuscita", InfoKind::Error);
-                                egui::CollapsingHeader::new("Dettagli e copia errore")
-                                    .id_salt(index)
-                                    .show(ui, |ui| {
-                                        ui.add(
-                                            egui::Label::new(
-                                                RichText::new(message).size(theme::CAPTION),
-                                            )
-                                            .wrap(),
-                                        );
-                                        if ui.button("Copia errore").clicked() {
-                                            ui.ctx().copy_text(message.clone());
-                                        }
-                                    });
+                                info_bar(
+                                    ui,
+                                    tr("Conversione non riuscita", "Conversion failed"),
+                                    InfoKind::Error,
+                                );
+                                egui::CollapsingHeader::new(tr(
+                                    "Dettagli e copia errore",
+                                    "Error details and copy",
+                                ))
+                                .id_salt(index)
+                                .show(ui, |ui| {
+                                    ui.add(
+                                        egui::Label::new(
+                                            RichText::new(message).size(theme::CAPTION),
+                                        )
+                                        .wrap(),
+                                    );
+                                    if ui.button(tr("Copia errore", "Copy error")).clicked() {
+                                        ui.ctx().copy_text(message.clone());
+                                    }
+                                });
                             }
                             _ => {}
                         }
                     });
                     ui.add_space(6.0);
                 }
-                if !self.running && ui.button("Svuota lista").clicked() {
+                if !self.running && ui.button(tr("Svuota lista", "Clear list")).clicked() {
                     remove = Some(usize::MAX);
                 }
             });
@@ -2289,9 +2555,13 @@ impl ConverterApp {
             return;
         }
         egui::CollapsingHeader::new(theme::heading(
-            format!("Questa sessione · {count} file"),
+            trf!(
+                "Questa sessione · {count} file",
+                "This session · Files: {count}"
+            ),
             theme::BODY,
         ))
+        .id_salt("completed_session")
         .default_open(false)
         .show(ui, |ui| {
             egui::ScrollArea::vertical()
@@ -2318,8 +2588,9 @@ impl ConverterApp {
                             match &item.state {
                                 JobState::Complete(outputs) => {
                                     ui.label(
-                                        RichText::new(format!(
+                                        RichText::new(trf!(
                                             "Completato · {} file creati",
+                                            "Completed · Output files: {}",
                                             outputs.len()
                                         ))
                                         .color(theme::palette(ui.ctx()).success),
@@ -2327,7 +2598,7 @@ impl ConverterApp {
                                 }
                                 JobState::Failed(error) => info_bar(ui, error, InfoKind::Error),
                                 JobState::Cancelled => {
-                                    ui.label("Annullato");
+                                    ui.label(tr("Annullato", "Cancelled"));
                                 }
                                 _ => {}
                             }
@@ -2342,8 +2613,9 @@ impl ConverterApp {
         let Some(report) = self.quick_report.clone() else {
             return;
         };
-        egui::CollapsingHeader::new(format!(
+        egui::CollapsingHeader::new(trf!(
             "Ultima conversione rapida · {} file creati",
+            "Last quick conversion · Output files: {}",
             report.successes.len()
         ))
         .id_salt("last_quick_report")
@@ -2369,7 +2641,9 @@ impl ConverterApp {
                                 .truncate(),
                             )
                             .on_hover_text(display_path(path));
-                            if ui.small_button("Apri cartella").clicked()
+                            if ui
+                                .small_button(tr("Apri cartella", "Open folder"))
+                                .clicked()
                                 && let Some(parent) = path.parent()
                                 && let Err(error) = platform::open_folder(parent)
                             {
@@ -2388,7 +2662,10 @@ impl ConverterApp {
                         );
                     }
                 });
-            if ui.small_button("Aggiorna resoconto").clicked() {
+            if ui
+                .small_button(tr("Aggiorna resoconto", "Refresh report"))
+                .clicked()
+            {
                 self.quick_report = load_report();
             }
         });
@@ -2410,26 +2687,34 @@ impl ConverterApp {
         ui.horizontal(|ui| {
             ui.vertical(|ui| {
                 let summary = if self.running {
-                    format!(
+                    trf!(
                         "Conversione in corso · {done}/{} completati",
+                        "Converting · {done}/{} completed",
                         self.items.len()
                     )
                 } else if done > 0 || failed > 0 {
-                    format!("{done} completati · {failed} errori")
+                    trf!(
+                        "{done} completati · {failed} errori",
+                        "Completed: {done} · Errors: {failed}"
+                    )
                 } else if self.items.is_empty() {
-                    "Pronto quando vuoi".into()
+                    tr("Pronto quando vuoi", "Ready when you are").into()
                 } else {
-                    format!(
+                    trf!(
                         "{} file · {}",
+                        "Files: {} · {}",
                         self.items.len(),
                         human_size(self.items.iter().map(|item| item.size).sum())
                     )
                 };
                 ui.label(theme::heading(summary, theme::BODY));
                 ui.label(
-                    RichText::new("Conversioni locali · originali conservati")
-                        .size(theme::CAPTION)
-                        .color(colors.secondary),
+                    RichText::new(tr(
+                        "Conversioni locali · originali conservati",
+                        "Local conversions · originals preserved",
+                    ))
+                    .size(theme::CAPTION)
+                    .color(colors.secondary),
                 );
             });
             if self.running || !self.conversion_elapsed.is_zero() {
@@ -2438,9 +2723,13 @@ impl ConverterApp {
                     .map(|started| started.elapsed())
                     .unwrap_or(self.conversion_elapsed);
                 ui.label(
-                    RichText::new(format!("Tempo trascorso {}", duration_hms(elapsed)))
-                        .size(theme::CAPTION)
-                        .color(colors.secondary),
+                    RichText::new(trf!(
+                        "Tempo trascorso {}",
+                        "Elapsed time {}",
+                        duration_hms(elapsed)
+                    ))
+                    .size(theme::CAPTION)
+                    .color(colors.secondary),
                 );
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -2452,9 +2741,9 @@ impl ConverterApp {
                             egui::Button::new(theme::button_text(
                                 FluentIcon::Cancel,
                                 if cancelling {
-                                    "Annullamento…"
+                                    tr("Annullamento…", "Cancelling…")
                                 } else {
-                                    "Annulla"
+                                    tr("Annulla", "Cancel")
                                 },
                                 colors.text,
                             ))
@@ -2468,7 +2757,7 @@ impl ConverterApp {
                     let label = if self.saved.settings.format == OutputFormat::Pdf
                         && self.saved.settings.pdf.action == PdfAction::Merge
                     {
-                        "Ordina e unisci PDF"
+                        tr("Ordina e unisci PDF", "Arrange and merge PDF")
                     } else if self.saved.settings.format == OutputFormat::Pdf
                         && !self.items.is_empty()
                         && self
@@ -2477,16 +2766,16 @@ impl ConverterApp {
                             .all(|item| MediaKind::from_path(&item.path) == MediaKind::Pdf)
                     {
                         match self.saved.settings.pdf.action {
-                            PdfAction::Compress => "Comprimi PDF",
-                            PdfAction::Split => "Dividi PDF",
-                            PdfAction::Merge => "Unisci PDF",
+                            PdfAction::Compress => tr("Comprimi PDF", "Compress PDF"),
+                            PdfAction::Split => tr("Dividi PDF", "Split PDF"),
+                            PdfAction::Merge => tr("Unisci PDF", "Merge PDF"),
                         }
                     } else if self.items.iter().any(|item| {
                         matches!(item.state, JobState::Complete(_) | JobState::Failed(_))
                     }) {
-                        "Converti di nuovo"
+                        tr("Converti di nuovo", "Convert again")
                     } else {
-                        "Converti file"
+                        tr("Converti file", "Convert files")
                     };
                     if ui
                         .add_enabled(
@@ -2512,13 +2801,13 @@ impl ConverterApp {
         egui::CentralPanel::default().frame(egui::Frame::new().fill(theme::palette(ctx).canvas).inner_margin(24)).show(ctx, |ui| {
             if let Some(notice)=self.notice.clone() {
                 info_bar(ui,&notice,InfoKind::Warning);
-                if ui.small_button("Chiudi avviso").clicked() { self.notice=None; }
+                if ui.small_button(tr("Chiudi avviso", "Dismiss notice")).clicked() { self.notice=None; }
             }
             centered_column(ui, 1000.0, |ui| {
-                ui.label(RichText::new("Immagini e PDF da immagini, subito disponibili.").family(egui::FontFamily::Name(theme::SEMIBOLD_FAMILY.into())));
-                ui.label("Audio, video, pagine PDF e documenti Office usano motori opzionali. Puoi installare FFmpeg e Poppler con un clic oppure selezionare programmi già presenti.");
-                ui.label("Convert Here è gratuito, senza abbonamenti, acquisti in-app o costi a consumo.");
-                ui.label(RichText::new("Le conversioni avvengono sul PC con i motori locali. I documenti HTML possono caricare risorse collegate; i siti ufficiali si aprono nel browser.").small().weak());
+                ui.label(RichText::new(tr("Immagini e PDF da immagini, subito disponibili.", "Images and PDFs from images are ready to use.")).family(egui::FontFamily::Name(theme::SEMIBOLD_FAMILY.into())));
+                ui.label(tr("Audio, video, pagine PDF e documenti Office usano motori opzionali. Puoi installare FFmpeg e Poppler con un clic oppure selezionare programmi già presenti.", "Audio, video, PDF pages and Office documents use optional engines. You can install FFmpeg and Poppler with one click or select existing programs."));
+                ui.label(tr("Convert Here è gratuito, senza abbonamenti, acquisti in-app o costi a consumo.", "Convert Here is free, with no subscriptions, in-app purchases or usage-based charges."));
+                ui.label(RichText::new(tr("Le conversioni avvengono sul PC con i motori locali. I documenti HTML possono caricare risorse collegate; i siti ufficiali si aprono nel browser.", "Conversions run on your PC with local engines. HTML documents may load linked resources; official websites open in your browser.")).small().weak());
                 ui.add_space(5.0);
                 egui::ScrollArea::vertical().id_salt("tools_scroll").max_height((ui.available_height()-60.0).max(120.0)).show(ui, |ui| {
                     ui.add_enabled_ui(!self.running, |ui| self.output_format_settings(ui));
@@ -2526,46 +2815,77 @@ impl ConverterApp {
                     ui.add_enabled_ui(!self.running, |ui| self.profile_settings(ui));
                     ui.add_space(8.0);
                     theme::show_card(ui, |ui| {
-                        ui.label(theme::heading("Aspetto",theme::SUBTITLE));
-                        ui.label(RichText::new("Segui Windows oppure prova un tema.").color(theme::palette(ui.ctx()).secondary));
+                        ui.label(theme::heading(tr("Lingua", "Language"), theme::SUBTITLE));
+                        ui.label(tr(
+                            "Segui la lingua di Windows o scegli la lingua dell’app e del menu di Esplora file.",
+                            "Follow the Windows language or choose the language of the app and File Explorer menu.",
+                        ));
+                        let mut language = if i18n::has_language_override() {
+                            i18n::current_language()
+                        } else {
+                            self.saved.ui_language
+                        };
+                        ui.horizontal(|ui| {
+                            for choice in [Language::System, Language::Italian, Language::English] {
+                                let response = ui.radio_value(&mut language, choice, choice.label());
+                                if response.changed()
+                                    || (response.clicked() && self.saved.ui_language != language)
+                                {
+                                    self.saved.ui_language = language;
+                                    i18n::set_language(language);
+                                    self.settings_dirty = true;
+                                    self.language_dirty = true;
+                                    ui.ctx().request_repaint();
+                                }
+                            }
+                        });
+                        ui.label(RichText::new(tr(
+                            "La lingua OCR si sceglie separatamente nelle opzioni di conversione.",
+                            "Choose the OCR language separately in the conversion options.",
+                        )).small().weak());
+                    });
+                    ui.add_space(8.0);
+                    theme::show_card(ui, |ui| {
+                        ui.label(theme::heading(tr("Aspetto", "Appearance"),theme::SUBTITLE));
+                        ui.label(RichText::new(tr("Segui Windows oppure prova un tema.", "Follow Windows or choose a theme.")).color(theme::palette(ui.ctx()).secondary));
                         let mut preference=ui.ctx().options(|options| options.theme_preference);
                         ui.horizontal(|ui| {
-                            for (value,label) in [(egui::ThemePreference::System,"Sistema"),(egui::ThemePreference::Light,"Chiaro"),(egui::ThemePreference::Dark,"Scuro")] {
+                            for (value,label) in [(egui::ThemePreference::System,tr("Sistema", "System")),(egui::ThemePreference::Light,tr("Chiaro", "Light")),(egui::ThemePreference::Dark,tr("Scuro", "Dark"))] {
                                 if ui.radio_value(&mut preference,value,label).changed() { ui.ctx().set_theme(preference); }
                             }
                         });
                     });
                     ui.add_space(8.0);
-                    ui.label(theme::heading("Motori di conversione", theme::SUBTITLE));
-                    ui.label("FFmpeg include FFprobe; Poppler include gli strumenti per immagini, testo e conteggio pagine PDF.");
-                    if ui.add_enabled(self.runtime_install.is_none(), egui::Button::new("Installa FFmpeg e Poppler…")).clicked() {
+                    ui.label(theme::heading(tr("Motori di conversione", "Conversion engines"), theme::SUBTITLE));
+                    ui.label(tr("FFmpeg include FFprobe; Poppler include gli strumenti per immagini, testo e conteggio pagine PDF.", "FFmpeg includes FFprobe; Poppler includes tools for PDF images, text and page counts."));
+                    if ui.add_enabled(self.runtime_install.is_none(), egui::Button::new(tr("Installa FFmpeg e Poppler…", "Install FFmpeg and Poppler…"))).clicked() {
                         self.pending_runtime_install = Some(vec![RuntimeEngine::Ffmpeg, RuntimeEngine::Poppler]);
                     }
                     self.runtime_install_progress(ui);
                     ui.add_space(8.0);
                     for (key, label, description, website) in [
-                        ("ffmpeg", "FFmpeg", "Necessario per audio, video e GIF da video.", "https://ffmpeg.org/download.html"),
-                        ("ffprobe", "FFprobe", "Opzionale: durata dei media e avanzamento più preciso. Di solito è accanto a ffmpeg.exe.", "https://ffmpeg.org/ffprobe.html"),
-                        ("pdftoppm", "Poppler · immagini", "Necessario per esportare ogni pagina PDF in PNG o JPEG. Seleziona pdftoppm.exe.", "https://poppler.freedesktop.org/"),
-                        ("pdfinfo", "Poppler · conteggio pagine", "Usa lo stesso motore Poppler per contare le pagine prima di accodare le immagini PDF. Di solito è accanto a pdftoppm.exe.", "https://poppler.freedesktop.org/"),
-                        ("pdftotext", "Poppler · testo", "Necessario per PDF in TXT, Word e HTML (solo testo). Seleziona pdftotext.exe. Il riconoscimento OCR non è incluso.", "https://poppler.freedesktop.org/"),
-                        ("soffice", "LibreOffice", "Necessario per Office e HTML in PDF ed Excel ↔ CSV. Seleziona soffice.exe nella cartella program di LibreOffice.", "https://www.libreoffice.org/download/download-libreoffice/"),
-                        ("tesseract", "Tesseract · OCR locale", "Necessario per immagini in TXT e scansioni PDF in TXT, Word e HTML. Mantieni la cartella tessdata con le lingue accanto al programma.", "https://tesseract-ocr.github.io/tessdoc/Installation.html"),
-                        ("heif-enc", "libheif · HEIC/AVIF in uscita", "Crea HEIC e AVIF. Mantieni DLL e plugin accanto agli strumenti; la build deve includere gli encoder HEVC e AV1.", "https://github.com/strukturag/libheif"),
-                        ("heif-dec", "libheif · HEIC/AVIF in ingresso", "Legge HEIC, HEIF e AVIF; viene convertita la prima immagine. Mantieni DLL e plugin accanto agli strumenti.", "https://github.com/strukturag/libheif"),
+                        ("ffmpeg", "FFmpeg", tr("Necessario per audio, video e GIF da video.", "Required for audio, video and GIFs from video."), "https://ffmpeg.org/download.html"),
+                        ("ffprobe", "FFprobe", tr("Opzionale: durata dei media e avanzamento più preciso. Di solito è accanto a ffmpeg.exe.", "Optional: media duration and more accurate progress. Usually located next to ffmpeg.exe."), "https://ffmpeg.org/ffprobe.html"),
+                        ("pdftoppm", tr("Poppler · immagini", "Poppler · images"), tr("Necessario per esportare ogni pagina PDF in PNG o JPEG. Seleziona pdftoppm.exe.", "Required to export PDF pages as PNG or JPEG. Select pdftoppm.exe."), "https://poppler.freedesktop.org/"),
+                        ("pdfinfo", tr("Poppler · conteggio pagine", "Poppler · page count"), tr("Usa lo stesso motore Poppler per contare le pagine prima di accodare le immagini PDF. Di solito è accanto a pdftoppm.exe.", "Uses the same Poppler engine to count pages before queuing PDF images. Usually located next to pdftoppm.exe."), "https://poppler.freedesktop.org/"),
+                        ("pdftotext", tr("Poppler · testo", "Poppler · text"), tr("Necessario per PDF in TXT, Word e HTML (solo testo). Seleziona pdftotext.exe. Il riconoscimento OCR non è incluso.", "Required for PDF to TXT, Word and HTML (text only). Select pdftotext.exe. OCR is not included."), "https://poppler.freedesktop.org/"),
+                        ("soffice", "LibreOffice", tr("Necessario per Office e HTML in PDF ed Excel ↔ CSV. Seleziona soffice.exe nella cartella program di LibreOffice.", "Required for Office and HTML to PDF and Excel ↔ CSV. Select soffice.exe in the LibreOffice program folder."), "https://www.libreoffice.org/download/download-libreoffice/"),
+                        ("tesseract", tr("Tesseract · OCR locale", "Tesseract · local OCR"), tr("Necessario per immagini in TXT e scansioni PDF in TXT, Word e HTML. Mantieni la cartella tessdata con le lingue accanto al programma.", "Required for images to TXT and scanned PDFs to TXT, Word and HTML. Keep the tessdata language folder next to the program."), "https://tesseract-ocr.github.io/tessdoc/Installation.html"),
+                        ("heif-enc", tr("libheif · HEIC/AVIF in uscita", "libheif · HEIC/AVIF output"), tr("Crea HEIC e AVIF. Mantieni DLL e plugin accanto agli strumenti; la build deve includere gli encoder HEVC e AV1.", "Creates HEIC and AVIF. Keep DLLs and plugins next to the tools; the build must include HEVC and AV1 encoders."), "https://github.com/strukturag/libheif"),
+                        ("heif-dec", tr("libheif · HEIC/AVIF in ingresso", "libheif · HEIC/AVIF input"), tr("Legge HEIC, HEIF e AVIF; viene convertita la prima immagine. Mantieni DLL e plugin accanto agli strumenti.", "Reads HEIC, HEIF and AVIF; converts the first image. Keep DLLs and plugins next to the tools."), "https://github.com/strukturag/libheif"),
                     ] {
                         theme::show_card(ui, |ui| {
                             let path = self.saved.overrides.get(key).cloned().or_else(|| get_tool(&self.tools, key));
                             let valid = path.as_ref().is_some_and(|path| executable_available(path));
                             ui.horizontal_wrapped(|ui| {
                                 ui.label(RichText::new(label).family(egui::FontFamily::Name(theme::SEMIBOLD_FAMILY.into())));
-                                ui.label(RichText::new(if valid { "Disponibile" } else { "Non configurato" }).small().color(if valid { theme::palette(ui.ctx()).success } else { ui.visuals().weak_text_color() }));
+                                ui.label(RichText::new(if valid { tr("Disponibile", "Available") } else { tr("Non configurato", "Not configured") }).small().color(if valid { theme::palette(ui.ctx()).success } else { ui.visuals().weak_text_color() }));
                             });
                             ui.add(egui::Label::new(RichText::new(description).small().weak()).wrap());
                             if let Some(path) = path {
-                                egui::CollapsingHeader::new("Percorso del programma").id_salt(("tool_path",key)).default_open(false).show(ui,|ui| { ui.add(egui::Label::new(RichText::new(display_path(&path)).small()).wrap()); });
+                                egui::CollapsingHeader::new(tr("Percorso del programma", "Program path")).id_salt(("tool_path",key)).default_open(false).show(ui,|ui| { ui.add(egui::Label::new(RichText::new(display_path(&path)).small()).wrap()); });
                                 if !valid {
-                                    ui.colored_label(ui.visuals().error_fg_color, "Il percorso salvato non è un programma .exe disponibile. Seleziona di nuovo lo strumento.");
+                                    ui.colored_label(ui.visuals().error_fg_color, tr("Il percorso salvato non è un programma .exe disponibile. Seleziona di nuovo lo strumento.", "The saved path is not an available .exe program. Select the tool again."));
                                 }
                             }
                             ui.horizontal_wrapped(|ui| {
@@ -2575,15 +2895,15 @@ impl ConverterApp {
                                     _ => None,
                                 };
                                 if let Some(engine) = engine
-                                    && ui.add_enabled(self.runtime_install.is_none(), egui::Button::new("Scarica e installa…")).clicked()
+                                    && ui.add_enabled(self.runtime_install.is_none(), egui::Button::new(tr("Scarica e installa…", "Download and install…"))).clicked()
                                 {
                                     self.pending_runtime_install = Some(vec![engine]);
                                 }
-                                if ui.small_button("Seleziona programma…").clicked()
+                                if ui.small_button(tr("Seleziona programma…", "Select program…")).clicked()
                                     && let Some(path) = rfd::FileDialog::new()
-                                        .set_title(format!("Seleziona {key}.exe già installato"))
+                                        .set_title(trf!("Seleziona {key}.exe già installato", "Select an installed {key}.exe"))
                                         .set_file_name(format!("{key}.exe"))
-                                        .add_filter("Programmi Windows", &["exe"])
+                                        .add_filter(tr("Programmi Windows", "Windows programs"), &["exe"])
                                         .pick_file()
                                 {
                                     if executable_available(&path) {
@@ -2591,17 +2911,17 @@ impl ConverterApp {
                                         self.tools = ToolPaths::configured(&self.saved.overrides);
                                         self.settings_dirty = true;
                                     } else {
-                                        self.notice = Some("Seleziona un programma esistente con estensione .exe.".into());
+                                        self.notice = Some(tr("Seleziona un programma esistente con estensione .exe.", "Select an existing program with an .exe extension.").into());
                                     }
                                 }
                                 if self.saved.overrides.contains_key(key)
-                                    && ui.small_button("Usa rilevamento automatico").clicked()
+                                    && ui.small_button(tr("Usa rilevamento automatico", "Use automatic detection")).clicked()
                                 {
                                     self.saved.overrides.remove(key);
                                     self.tools = ToolPaths::configured(&self.saved.overrides);
                                     self.settings_dirty = true;
                                 }
-                                if ui.link("Sito ufficiale").on_hover_text(website).clicked()
+                                if ui.link(tr("Sito ufficiale", "Official website")).on_hover_text(website).clicked()
                                     && let Err(error) = platform::open_website(website)
                                 {
                                     self.notice = Some(format!("{error:#}"));
@@ -2609,25 +2929,25 @@ impl ConverterApp {
                             });
                         });
                     }
-                    egui::CollapsingHeader::new("Cartella personale degli strumenti").show(ui, |ui| {
-                        ui.label(RichText::new("I download vengono installati qui. Puoi anche aggiungere strumenti già presenti, mantenendo le rispettive DLL e licenze. Non occorre modificare la cartella dell’app.").small().weak());
+                    egui::CollapsingHeader::new(tr("Cartella personale degli strumenti", "Personal tools folder")).id_salt("personal_tools_folder").show(ui, |ui| {
+                        ui.label(RichText::new(tr("I download vengono installati qui. Puoi anche aggiungere strumenti già presenti, mantenendo le rispettive DLL e licenze. Non occorre modificare la cartella dell’app.", "Downloads are installed here. You can also add existing tools, keeping their DLLs and licenses. You do not need to modify the app folder.")).small().weak());
                         if let Some(path) = the_converter::tools::user_tools_dir() {
                             ui.add(egui::Label::new(RichText::new(display_path(&path)).small()).wrap());
-                            if ui.small_button("Copia percorso").clicked() { ui.ctx().copy_text(display_path(&path)); }
+                            if ui.small_button(tr("Copia percorso", "Copy path")).clicked() { ui.ctx().copy_text(display_path(&path)); }
                         }
-                        ui.label(RichText::new("Sono riconosciute anche le cartelle bin, ffmpeg/bin e poppler/Library/bin. Le DLL necessarie devono restare insieme ai rispettivi programmi.").small().weak());
+                        ui.label(RichText::new(tr("Sono riconosciute anche le cartelle bin, ffmpeg/bin e poppler/Library/bin. Le DLL necessarie devono restare insieme ai rispettivi programmi.", "The bin, ffmpeg/bin and poppler/Library/bin folders are also recognized. Required DLLs must stay with their programs.")).small().weak());
                     });
                     ui.add_space(8.0);
                     theme::show_card(ui, |ui| {
-                        ui.label(theme::heading("Informazioni e licenze", theme::SUBTITLE));
+                        ui.label(theme::heading(tr("Informazioni e licenze", "About and licenses"), theme::SUBTITLE));
                         ui.label(format!("Convert Here {} · © 2026 Salvatore Corsi", env!("CARGO_PKG_VERSION")));
-                        ui.label("Software libero, GPL-3.0-only. Puoi usare, modificare e redistribuire il programma secondo la licenza. Il software è fornito senza garanzie, nei limiti consentiti dalla legge.");
-                        ui.label("Questa licenza riguarda il programma, non i file convertiti. Dipendenze e motori mantengono le rispettive licenze.");
+                        ui.label(tr("Software libero, GPL-3.0-only. Puoi usare, modificare e redistribuire il programma secondo la licenza. Il software è fornito senza garanzie, nei limiti consentiti dalla legge.", "Free software, GPL-3.0-only. You may use, modify and redistribute the program under the license. The software is provided without warranty, to the extent permitted by law."));
+                        ui.label(tr("Questa licenza riguarda il programma, non i file convertiti. Dipendenze e motori mantengono le rispettive licenze.", "This license applies to the program, not to converted files. Dependencies and engines retain their own licenses."));
                         ui.horizontal_wrapped(|ui| {
-                            if ui.button("Leggi la licenza").clicked() {
+                            if ui.button(tr("Leggi la licenza", "Read the license")).clicked() {
                                 self.show_license = true;
                             }
-                            if ui.link("Codice sorgente").clicked() {
+                            if ui.link(tr("Codice sorgente", "Source code")).clicked() {
                                 let url = format!("https://github.com/salvatorecorsi/convert-here/releases/tag/v{}", env!("CARGO_PKG_VERSION"));
                                 if let Err(error) = platform::open_website(&url) {
                                     self.notice = Some(format!("{error:#}"));
@@ -2637,7 +2957,7 @@ impl ConverterApp {
                     });
                 });
                 ui.separator();
-                if ui.button("Rileva strumenti installati").clicked() {
+                if ui.button(tr("Rileva strumenti installati", "Detect installed tools")).clicked() {
                     self.tools = ToolPaths::configured(&self.saved.overrides);
                 }
             });
@@ -2663,7 +2983,11 @@ impl eframe::App for ConverterApp {
             task.cancel.store(true, Ordering::Relaxed);
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
             self.runtime_notice = Some((
-                "Annullamento dell’installazione. Chiudi la finestra al termine.".into(),
+                tr(
+                    "Annullamento dell’installazione. Chiudi la finestra al termine.",
+                    "Cancelling installation. Close the window when it finishes.",
+                )
+                .into(),
                 false,
             ));
         }
@@ -2683,10 +3007,19 @@ impl eframe::App for ConverterApp {
                     .as_ref()
                     .is_some_and(|task| task.cancel.load(Ordering::Relaxed))
                 {
-                    ui.label("Annullamento dell’installazione. Chiudi la finestra al termine.");
+                    ui.label(tr(
+                        "Annullamento dell’installazione. Chiudi la finestra al termine.",
+                        "Cancelling installation. Close the window when it finishes.",
+                    ));
                 }
                 go_back = ui
-                    .add_enabled(!busy, egui::Button::new("← Torna ai file da convertire"))
+                    .add_enabled(
+                        !busy,
+                        egui::Button::new(tr(
+                            "← Torna ai file da convertire",
+                            "← Back to files to convert",
+                        )),
+                    )
                     .clicked();
             });
             if go_back {
@@ -2758,7 +3091,10 @@ impl eframe::App for ConverterApp {
                 .show(ctx, |ui| {
                     if let Some(notice) = self.notice.clone() {
                         info_bar(ui, &notice, InfoKind::Warning);
-                        if ui.small_button("Chiudi avviso").clicked() {
+                        if ui
+                            .small_button(tr("Chiudi avviso", "Dismiss notice"))
+                            .clicked()
+                        {
                             self.notice = None;
                         }
                         ui.add_space(8.0);
@@ -2769,11 +3105,12 @@ impl eframe::App for ConverterApp {
                             self.quick_queue.show(ui, false, &mut self.file_icons)
                         }
                         MainView::History => {
-                            ui.label(theme::heading("Cronologia", theme::TITLE));
+                            ui.label(theme::heading(tr("Cronologia", "History"), theme::TITLE));
                             ui.label(
-                                RichText::new(
+                                RichText::new(tr(
                                     "Risultati delle conversioni rapide e dell’ultima sessione.",
-                                )
+                                    "Results from quick conversions and the last session.",
+                                ))
                                 .color(colors.secondary),
                             );
                             ui.add_space(12.0);
@@ -2784,8 +3121,8 @@ impl eframe::App for ConverterApp {
                     }
                 });
         }
-        if self.settings_dirty && !self.running {
-            self.persist();
+        if self.settings_dirty && (!self.running || self.language_dirty) {
+            self.persist_with_force(self.language_dirty);
         }
         self.runtime_install_confirmation(ctx);
         self.license_dialog(ctx);
@@ -2805,9 +3142,15 @@ impl eframe::App for ConverterApp {
                 screen.center(),
                 egui::Align2::CENTER_CENTER,
                 if self.running {
-                    "Attendi il termine della conversione"
+                    tr(
+                        "Attendi il termine della conversione",
+                        "Wait for the conversion to finish",
+                    )
                 } else {
-                    "Rilascia per aggiungere alla lista"
+                    tr(
+                        "Rilascia per aggiungere alla lista",
+                        "Drop to add to the list",
+                    )
                 },
                 theme::semibold_font(theme::TITLE),
                 Color32::WHITE,
@@ -2816,8 +3159,13 @@ impl eframe::App for ConverterApp {
         if self.running && ctx.input(|input| input.viewport().close_requested()) {
             self.cancel.store(true, Ordering::Relaxed);
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
-            self.notice =
-                Some("Annullamento della conversione. Chiudi la finestra al termine.".into());
+            self.notice = Some(
+                tr(
+                    "Annullamento della conversione. Chiudi la finestra al termine.",
+                    "Cancelling conversion. Close the window when it finishes.",
+                )
+                .into(),
+            );
         }
     }
 }
@@ -2858,9 +3206,11 @@ fn poll_background<T>(
             Err(mpsc::TryRecvError::Empty) => break,
             Err(mpsc::TryRecvError::Disconnected) => {
                 if latest.is_none() {
-                    latest = Some(Err(
-                        "La lettura in background della coda è stata interrotta".into(),
-                    ));
+                    latest = Some(Err(tr(
+                        "La lettura in background della coda è stata interrotta",
+                        "Background queue reading was interrupted",
+                    )
+                    .into()));
                 }
                 break;
             }
@@ -2914,17 +3264,28 @@ impl QuickQueueView {
                 self.warnings = warnings;
                 self.error = None;
             }
-            Err(error) => self.error = Some(format!("Impossibile leggere la coda: {error:#}")),
+            Err(error) => {
+                self.error = Some(trf!(
+                    "Impossibile leggere la coda: {error:#}",
+                    "Unable to read the queue: {error:#}"
+                ))
+            }
         }
     }
 
     fn show(&mut self, ui: &mut egui::Ui, history: bool, icons: &mut FileIcons) {
         let colors = theme::palette(ui.ctx());
         if !history {
-            ui.label(theme::heading("Coda rapida", theme::TITLE));
+            ui.label(theme::heading(
+                tr("Coda rapida", "Quick queue"),
+                theme::TITLE,
+            ));
             ui.label(
-                RichText::new("I lavori proseguono anche chiudendo questa finestra.")
-                    .color(colors.secondary),
+                RichText::new(tr(
+                    "I lavori proseguono anche chiudendo questa finestra.",
+                    "Jobs keep running when you close this window.",
+                ))
+                .color(colors.secondary),
             );
             ui.add_space(12.0);
         }
@@ -2953,9 +3314,15 @@ impl QuickQueueView {
             info_bar(
                 ui,
                 if history {
-                    "Nessuna conversione rapida conclusa."
+                    tr(
+                        "Nessuna conversione rapida conclusa.",
+                        "No completed quick conversions.",
+                    )
                 } else {
-                    "Nessuna conversione rapida in attesa o in corso."
+                    tr(
+                        "Nessuna conversione rapida in attesa o in corso.",
+                        "No quick conversions are queued or running.",
+                    )
                 },
                 InfoKind::Info,
             );
@@ -3001,7 +3368,7 @@ impl QuickQueueView {
                                         && icon_button(
                                             ui,
                                             FluentIcon::Cancel,
-                                            "Annulla conversione",
+                                            tr("Annulla conversione", "Cancel conversion"),
                                         )
                                         .clicked()
                                     {
@@ -3010,7 +3377,7 @@ impl QuickQueueView {
                                     if icon_button(
                                         ui,
                                         FluentIcon::Folder,
-                                        "Apri cartella di destinazione",
+                                        tr("Apri cartella di destinazione", "Open output folder"),
                                     )
                                     .clicked()
                                     {
@@ -3052,7 +3419,7 @@ impl QuickQueueView {
                         }
                         if let Some(error) = &job.error {
                             info_bar(ui, error, InfoKind::Error);
-                            if ui.small_button("Copia errore").clicked() {
+                            if ui.small_button(tr("Copia errore", "Copy error")).clicked() {
                                 ui.ctx().copy_text(error.clone());
                             }
                         }
@@ -3061,9 +3428,12 @@ impl QuickQueueView {
                 }
             });
         if let Some(id) = cancel {
-            self.action_error = queue::cancel_job(&id)
-                .err()
-                .map(|error| format!("Impossibile annullare: {error:#}"));
+            self.action_error = queue::cancel_job(&id).err().map(|error| {
+                trf!(
+                    "Impossibile annullare: {error:#}",
+                    "Unable to cancel: {error:#}"
+                )
+            });
             self.last_refresh = None;
         }
     }
@@ -3113,7 +3483,12 @@ impl QueueStatusApp {
                 self.job = Some(job);
                 self.error = None;
             }
-            Err(error) => self.error = Some(format!("Stato non disponibile: {error:#}")),
+            Err(error) => {
+                self.error = Some(trf!(
+                    "Stato non disponibile: {error:#}",
+                    "Status unavailable: {error:#}"
+                ))
+            }
         }
     }
 }
@@ -3126,7 +3501,9 @@ impl eframe::App for QueueStatusApp {
             let result = match receiver.try_recv() {
                 Ok(result) => Some(result),
                 Err(mpsc::TryRecvError::Empty) => None,
-                Err(mpsc::TryRecvError::Disconnected) => Some(Err("Rimozione interrotta".into())),
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    Some(Err(tr("Rimozione interrotta", "Removal interrupted").into()))
+                }
             };
             if let Some(result) = result {
                 self.removal_result = None;
@@ -3136,8 +3513,10 @@ impl eframe::App for QueueStatusApp {
                         self.action_error = None;
                     }
                     Err(error) => {
-                        self.action_error =
-                            Some(format!("Impossibile rimuovere i segnaposto: {error}"))
+                        self.action_error = Some(trf!(
+                            "Impossibile rimuovere i segnaposto: {error}",
+                            "Unable to remove placeholders: {error}"
+                        ))
                     }
                 }
             }
@@ -3156,12 +3535,15 @@ impl eframe::App for QueueStatusApp {
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
                     ui.label(
-                        RichText::new("La coda continua anche chiudendo questa finestra.")
-                            .size(theme::CAPTION)
-                            .color(colors.secondary),
+                        RichText::new(tr(
+                            "La coda continua anche chiudendo questa finestra.",
+                            "The queue keeps running when you close this window.",
+                        ))
+                        .size(theme::CAPTION)
+                        .color(colors.secondary),
                     );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.button("Chiudi").clicked() {
+                        if ui.button(tr("Chiudi", "Close")).clicked() {
                             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                         }
 
@@ -3173,11 +3555,11 @@ impl eframe::App for QueueStatusApp {
                                 .add_enabled(
                                     !self.previews_removed && self.removal_result.is_none(),
                                     egui::Button::new(if self.previews_removed {
-                                        "Segnaposto rimossi"
+                                        tr("Segnaposto rimossi", "Placeholders removed")
                                     } else if self.removal_result.is_some() {
-                                        "Rimozione…"
+                                        tr("Rimozione…", "Removing…")
                                     } else {
-                                        "Rimuovi segnaposto"
+                                        tr("Rimuovi segnaposto", "Remove placeholders")
                                     }),
                                 )
                                 .clicked()
@@ -3192,9 +3574,9 @@ impl eframe::App for QueueStatusApp {
                                     egui::Button::new(theme::button_text(
                                         FluentIcon::Cancel,
                                         if self.cancel_sent {
-                                            "Annullamento…"
+                                            tr("Annullamento…", "Cancelling…")
                                         } else {
-                                            "Annulla"
+                                            tr("Annulla", "Cancel")
                                         },
                                         colors.text,
                                     )),
@@ -3208,7 +3590,7 @@ impl eframe::App for QueueStatusApp {
             });
         egui::CentralPanel::default().frame(egui::Frame::new().fill(colors.canvas).inner_margin(24)).show(ctx,|ui| {
             egui::ScrollArea::vertical().id_salt("queue_status_content").show(ui,|ui| {
-                ui.label(theme::heading("Stato della conversione",theme::SUBTITLE));
+                ui.label(theme::heading(tr("Stato della conversione", "Conversion status"),theme::SUBTITLE));
                 ui.add_space(14.0);
                 for error in self.error.iter().chain(self.action_error.iter()) { info_bar(ui,error,InfoKind::Error); }
                 if let Some(job)=&self.job {
@@ -3217,24 +3599,24 @@ impl eframe::App for QueueStatusApp {
                             file_icon(ui,&mut self.file_icons,&job.input);
                             ui.vertical(|ui| {
                                 ui.add(egui::Label::new(theme::heading(job.input.file_name().unwrap_or_default().to_string_lossy(),theme::BODY)).wrap());
-                                ui.label(RichText::new(format!("Destinazione: {}",job.format)).size(theme::CAPTION).color(colors.secondary));
+                                ui.label(RichText::new(trf!("Destinazione: {}", "Target: {}",job.format)).size(theme::CAPTION).color(colors.secondary));
                             });
                         });
                         ui.add_space(12.0);
                         ui.label(theme::heading(quick_state_label(&job.state),theme::BODY).color(quick_state_color(&job.state,ui)));
                         if matches!(job.state,QuickJobState::Running) { progress_display(ui,job.progress,&job.message); }
                         else if !job.message.is_empty() { ui.add(egui::Label::new(RichText::new(&job.message).size(theme::CAPTION).color(colors.secondary)).wrap()); }
-                        if self.cancel_sent && quick_job_active(job) { info_bar(ui,"Annullamento richiesto. Attendi la pulizia dei file temporanei.",InfoKind::Info); }
-                        if let Some(error)=&job.error { info_bar(ui,error,InfoKind::Error); if ui.button("Copia errore").clicked() { ctx.copy_text(error.clone()); } }
+                        if self.cancel_sent && quick_job_active(job) { info_bar(ui,tr("Annullamento richiesto. Attendi la pulizia dei file temporanei.", "Cancellation requested. Wait for temporary files to be cleaned up."),InfoKind::Info); }
+                        if let Some(error)=&job.error { info_bar(ui,error,InfoKind::Error); if ui.button(tr("Copia errore", "Copy error")).clicked() { ctx.copy_text(error.clone()); } }
                     });
                     ui.add_space(10.0);
                     theme::show_card(ui, |ui| {
-                        ui.label(theme::heading("File di destinazione",theme::BODY));
+                        ui.label(theme::heading(tr("File di destinazione", "Output files"),theme::BODY));
                         for output in &job.outputs { ui.add(egui::Label::new(RichText::new(display_path(output)).size(theme::CAPTION).color(colors.secondary)).wrap()); }
-                        if ui.add(egui::Button::new(theme::button_text(FluentIcon::Folder,"Apri cartella",colors.text))).clicked() { self.action_error=open_job_folder(job).err().map(|error|format!("{error:#}")); }
+                        if ui.add(egui::Button::new(theme::button_text(FluentIcon::Folder,tr("Apri cartella", "Open folder"),colors.text))).clicked() { self.action_error=open_job_folder(job).err().map(|error|format!("{error:#}")); }
                     });
-                    if quick_job_active(job) { ui.add_space(8.0); info_bar(ui,"Il segnaposto in Esplora file viene sostituito dal risultato al termine.",InfoKind::Info); }
-                } else if self.error.is_none() { ui.spinner(); ui.label("Lettura della coda…"); }
+                    if quick_job_active(job) { ui.add_space(8.0); info_bar(ui,tr("Il segnaposto in Esplora file viene sostituito dal risultato al termine.", "The placeholder in File Explorer is replaced by the result when complete."),InfoKind::Info); }
+                } else if self.error.is_none() { ui.spinner(); ui.label(tr("Lettura della coda…", "Reading queue…")); }
             });
         });
         if cancel_requested {
@@ -3243,7 +3625,12 @@ impl eframe::App for QueueStatusApp {
                     self.cancel_sent = true;
                     self.action_error = None;
                 }
-                Err(error) => self.action_error = Some(format!("Impossibile annullare: {error:#}")),
+                Err(error) => {
+                    self.action_error = Some(trf!(
+                        "Impossibile annullare: {error:#}",
+                        "Unable to cancel: {error:#}"
+                    ))
+                }
             }
             self.last_refresh = None;
         }
@@ -3259,7 +3646,10 @@ impl eframe::App for QueueStatusApp {
                 }) {
                 Ok(_) => self.removal_result = Some(receiver),
                 Err(error) => {
-                    self.action_error = Some(format!("Impossibile rimuovere i segnaposto: {error}"))
+                    self.action_error = Some(trf!(
+                        "Impossibile rimuovere i segnaposto: {error}",
+                        "Unable to remove placeholders: {error}"
+                    ))
                 }
             }
         }
@@ -3273,11 +3663,11 @@ fn quick_job_active(job: &QueueJob) -> bool {
 
 fn quick_state_label(state: &QuickJobState) -> &'static str {
     match state {
-        QuickJobState::Queued => "In coda",
-        QuickJobState::Running => "Conversione in corso",
-        QuickJobState::Completed => "Completato",
-        QuickJobState::Failed => "Conversione non riuscita",
-        QuickJobState::Cancelled => "Annullato",
+        QuickJobState::Queued => tr("In coda", "Queued"),
+        QuickJobState::Running => tr("Conversione in corso", "Converting"),
+        QuickJobState::Completed => tr("Completato", "Completed"),
+        QuickJobState::Failed => tr("Conversione non riuscita", "Conversion failed"),
+        QuickJobState::Cancelled => tr("Annullato", "Cancelled"),
     }
 }
 
@@ -3304,13 +3694,17 @@ fn open_job_folder(job: &QueueJob) -> anyhow::Result<()> {
         .first()
         .and_then(|path| path.parent())
         .or_else(|| job.input.parent())
-        .ok_or_else(|| anyhow::anyhow!("La cartella della conversione non è disponibile"))?;
+        .ok_or_else(|| {
+            anyhow::anyhow!(tr(
+                "La cartella della conversione non è disponibile",
+                "The conversion folder is unavailable"
+            ))
+        })?;
     platform::open_folder(folder)
 }
 
 fn settings_path() -> Option<PathBuf> {
-    directories::ProjectDirs::from("com", "SalvatoreCorsi", "TheConverter")
-        .map(|dirs| dirs.config_dir().join("preferences.json"))
+    i18n::preferences_path()
 }
 
 fn centered_column<R>(
@@ -3338,9 +3732,12 @@ fn navigation_tabs(ui: &mut egui::Ui, selected: &mut MainView) -> [egui::Rect; 3
     let mut rectangles = [egui::Rect::NOTHING; 3];
     let colors = theme::palette(ui.ctx());
     for (index, (view, label)) in [
-        (MainView::Files, "File da convertire"),
-        (MainView::QuickQueue, "Coda rapida"),
-        (MainView::History, "Cronologia"),
+        (
+            MainView::Files,
+            tr("File da convertire", "Files to convert"),
+        ),
+        (MainView::QuickQueue, tr("Coda rapida", "Quick queue")),
+        (MainView::History, tr("Cronologia", "History")),
     ]
     .into_iter()
     .enumerate()
@@ -3501,11 +3898,11 @@ fn kind_label(kind: MediaKind) -> &'static str {
     match kind {
         MediaKind::Audio => "Audio",
         MediaKind::Video => "Video",
-        MediaKind::Image => "Immagine",
-        MediaKind::Pdf => "Documento PDF",
-        MediaKind::Document => "Documento",
-        MediaKind::Spreadsheet => "Foglio di calcolo",
-        MediaKind::Html => "Pagina HTML",
+        MediaKind::Image => tr("Immagine", "Image"),
+        MediaKind::Pdf => tr("Documento PDF", "PDF document"),
+        MediaKind::Document => tr("Documento", "Document"),
+        MediaKind::Spreadsheet => tr("Foglio di calcolo", "Spreadsheet"),
+        MediaKind::Html => tr("Pagina HTML", "HTML page"),
         MediaKind::Unknown => "File",
     }
 }
@@ -3514,19 +3911,19 @@ fn width_setting(ui: &mut egui::Ui, id: &str, width: &mut Option<u32>) {
     egui::ComboBox::from_id_salt(id)
         .selected_text(
             width
-                .map(|n| format!("Larghezza {n} px"))
-                .unwrap_or("Dimensioni originali".into()),
+                .map(|n| trf!("Larghezza {n} px", "Width {n} px"))
+                .unwrap_or(tr("Dimensioni originali", "Original dimensions").into()),
         )
         .show_ui(ui, |ui| {
-            ui.selectable_value(width, None, "Originali");
+            ui.selectable_value(width, None, tr("Originali", "Original"));
             for n in [320, 640, 1280, 1920, 2560, 3840] {
-                ui.selectable_value(width, Some(n), format!("{n} px di larghezza"));
+                ui.selectable_value(width, Some(n), trf!("{n} px di larghezza", "{n} px wide"));
             }
         });
     if let Some(width) = width {
         let minimum = if id == "video_width" { 16 } else { 1 };
         ui.horizontal(|ui| {
-            ui.label("Larghezza");
+            ui.label(tr("Larghezza", "Width"));
             ui.add(
                 egui::DragValue::new(width)
                     .range(minimum..=16384)
@@ -3535,9 +3932,12 @@ fn width_setting(ui: &mut egui::Ui, id: &str, width: &mut Option<u32>) {
         });
     }
     ui.label(
-        RichText::new("Le proporzioni vengono mantenute.")
-            .small()
-            .weak(),
+        RichText::new(tr(
+            "Le proporzioni vengono mantenute.",
+            "Aspect ratio is preserved.",
+        ))
+        .small()
+        .weak(),
     );
 }
 
@@ -3545,16 +3945,28 @@ fn profile_summary(profile: &ConversionProfile) -> String {
     let mut summary = profile.settings.format.label().to_owned();
     if let Some(edit) = &profile.settings.image.edit {
         if let Some(bytes) = edit.max_bytes {
-            summary.push_str(&format!(" · massimo {:.0} kB", bytes as f64 / 1000.0));
+            summary.push_str(&trf!(
+                " · massimo {:.0} kB",
+                " · up to {:.0} kB",
+                bytes as f64 / 1000.0
+            ));
         }
         if edit.allow_downsize {
-            summary.push_str(" · riduzione dimensioni consentita");
+            summary.push_str(tr(
+                " · riduzione dimensioni consentita",
+                " · resizing allowed",
+            ));
         }
         if edit.crop.is_some() {
-            summary.push_str(" · ritaglio");
+            summary.push_str(tr(" · ritaglio", " · crop"));
         }
         if let Some(canvas) = &edit.canvas {
-            summary.push_str(&format!(" · tela {} × {}", canvas.width, canvas.height));
+            summary.push_str(&trf!(
+                " · tela {} × {}",
+                " · canvas {} × {}",
+                canvas.width,
+                canvas.height
+            ));
         }
     }
     if let Some(page) = &profile.settings.image.page {
@@ -3594,15 +4006,11 @@ fn quality_applicable(format: OutputFormat) -> bool {
     )
 }
 
-fn optional_seconds(ui: &mut egui::Ui, label: &str, value: &mut Option<f64>) {
+fn optional_seconds(ui: &mut egui::Ui, label: &str, value: &mut Option<f64>, default_seconds: f64) {
     ui.horizontal(|ui| {
         let mut enabled = value.is_some();
         if ui.checkbox(&mut enabled, label).changed() {
-            *value = if enabled {
-                Some(if label == "A" { 1.0 } else { 0.0 })
-            } else {
-                None
-            };
+            *value = if enabled { Some(default_seconds) } else { None };
         }
         if let Some(seconds) = value {
             ui.add(
@@ -3695,6 +4103,49 @@ mod queue_reader_tests {
             persist_preferences(&path, &saved, &mut None, std::time::Instant::now(), true).is_err()
         );
         assert_eq!(std::fs::read(&path).unwrap(), previous);
+    }
+
+    #[test]
+    fn language_preferences_migrate_without_resetting_conversion_or_ocr_settings() {
+        let old: SavedState = serde_json::from_str(
+            r#"{"settings":{"format":"Flac","ocr":{"enabled":true,"language":"fra"}},"preset":2}"#,
+        )
+        .unwrap();
+        assert_eq!(old.ui_language, Language::System);
+        assert_eq!(old.settings.format, OutputFormat::Flac);
+        assert_eq!(old.settings.ocr.language, "fra");
+        assert!(old.settings.ocr.enabled);
+        assert_eq!(old.preset, 2);
+
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("preferences.json");
+        let mut saved = old;
+        let mut last = None;
+        for language in [Language::English, Language::Italian, Language::System] {
+            saved.ui_language = language;
+            persist_preferences(&path, &saved, &mut last, std::time::Instant::now(), true).unwrap();
+            let restored: SavedState =
+                serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+            assert_eq!(restored.ui_language, language);
+            assert_eq!(restored.settings.format, OutputFormat::Flac);
+            assert_eq!(restored.settings.ocr.language, "fra");
+            assert!(restored.settings.ocr.enabled);
+            assert_eq!(restored.preset, 2);
+        }
+    }
+
+    #[test]
+    fn queue_and_media_labels_follow_the_ui_language() {
+        for (language, image, queued, complete) in [
+            (Language::Italian, "Immagine", "In coda", "Completato"),
+            (Language::English, "Image", "Queued", "Completed"),
+        ] {
+            i18n::with_language(language, || {
+                assert_eq!(kind_label(MediaKind::Image), image);
+                assert_eq!(quick_state_label(&QuickJobState::Queued), queued);
+                assert_eq!(quick_state_label(&QuickJobState::Completed), complete);
+            });
+        }
     }
 
     #[test]

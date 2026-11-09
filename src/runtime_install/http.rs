@@ -4,7 +4,10 @@ use anyhow::{Context, Result, bail, ensure};
 use std::{path::Path, sync::atomic::AtomicBool};
 
 fn checked_url(value: &str, allow_loopback_http: bool) -> Result<url::Url> {
-    let url = url::Url::parse(value).context("URL del distributore non valido")?;
+    let url = url::Url::parse(value).context(crate::i18n::tr(
+        "URL del distributore non valido",
+        "Invalid distributor URL",
+    ))?;
     let loopback = matches!(url.host_str(), Some("127.0.0.1" | "[::1]" | "localhost"));
     ensure!(
         (url.scheme() == "https" || allow_loopback_http && loopback && url.scheme() == "http")
@@ -12,7 +15,10 @@ fn checked_url(value: &str, allow_loopback_http: bool) -> Result<url::Url> {
             && url.username().is_empty()
             && url.password().is_none()
             && url.fragment().is_none(),
-        "Il download richiede un URL HTTPS senza credenziali"
+        crate::trf!(
+            "Il download richiede un URL HTTPS senza credenziali",
+            "Downloading requires an HTTPS URL without credentials"
+        )
     );
     Ok(url)
 }
@@ -31,7 +37,10 @@ pub(super) fn download(
     #[cfg(not(windows))]
     {
         let _ = (url, destination, expected, cancel, progress);
-        bail!("L’installazione automatica dei motori richiede Windows")
+        bail!(crate::trf!(
+            "L’installazione automatica dei motori richiede Windows",
+            "Automatic engine installation requires Windows"
+        ))
     }
 }
 
@@ -64,8 +73,11 @@ mod native {
         fn new(value: *mut c_void) -> Result<Self> {
             ensure!(
                 !value.is_null(),
-                "Impossibile aprire la connessione: {}",
-                std::io::Error::last_os_error()
+                crate::trf!(
+                    "Impossibile aprire la connessione: {}",
+                    "Unable to open the connection: {}",
+                    std::io::Error::last_os_error()
+                )
             );
             Ok(Self(value))
         }
@@ -114,8 +126,11 @@ mod native {
     fn option(handle: &Handle, name: u32, value: u32) -> Result<()> {
         ensure!(
             unsafe { WinHttpSetOption(handle.0, name, (&value as *const u32).cast(), 4) } != 0,
-            "Opzione HTTPS non disponibile: {}",
-            std::io::Error::last_os_error()
+            crate::trf!(
+                "Opzione HTTPS non disponibile: {}",
+                "HTTPS option unavailable: {}",
+                std::io::Error::last_os_error()
+            )
         );
         Ok(())
     }
@@ -124,7 +139,10 @@ mod native {
             let error = std::io::Error::last_os_error();
             ensure!(
                 error.raw_os_error() == Some(ERROR_IO_PENDING as i32),
-                "Richiesta HTTP non riuscita: {error}"
+                crate::trf!(
+                    "Richiesta HTTP non riuscita: {error}",
+                    "HTTP request failed: {error}"
+                )
             );
         }
         Ok(())
@@ -135,13 +153,22 @@ mod native {
             super::super::cancelled(cancel)?;
             ensure!(
                 start.elapsed() < Duration::from_secs(60),
-                "Il distributore non risponde"
+                crate::trf!(
+                    "Il distributore non risponde",
+                    "The distributor is not responding"
+                )
             );
             match receiver.recv_timeout(Duration::from_millis(50)) {
-                Ok(Event::Error(code)) => bail!("Download interrotto da Windows: errore {code}"),
+                Ok(Event::Error(code)) => bail!(crate::trf!(
+                    "Download interrotto da Windows: errore {code}",
+                    "Windows interrupted the download: error {code}"
+                )),
                 Ok(event) => return Ok(event),
                 Err(mpsc::RecvTimeoutError::Timeout) => {}
-                Err(mpsc::RecvTimeoutError::Disconnected) => bail!("Connessione HTTP interrotta"),
+                Err(mpsc::RecvTimeoutError::Disconnected) => bail!(crate::trf!(
+                    "Connessione HTTP interrotta",
+                    "HTTP connection interrupted"
+                )),
             }
         }
     }
@@ -211,12 +238,18 @@ mod native {
         })?;
         ensure!(
             unsafe { WinHttpSetTimeouts(session.0, 10_000, 10_000, 10_000, 15_000) } != 0,
-            "Timeout HTTP non configurabile"
+            crate::trf!(
+                "Timeout HTTP non configurabile",
+                "Unable to configure the HTTP timeout"
+            )
         );
         let verb = wide("GET");
         for _ in 0..=5 {
             super::super::cancelled(cancel)?;
-            let host = wide(url.host_str().context("Distributore non disponibile")?);
+            let host = wide(url.host_str().context(crate::i18n::tr(
+                "Distributore non disponibile",
+                "Distributor unavailable",
+            ))?);
             let connection = Handle::new(unsafe {
                 WinHttpConnect(
                     session.0,
@@ -268,7 +301,7 @@ mod native {
             let previous = unsafe { WinHttpSetStatusCallback(request.0, Some(callback), flags, 0) };
             ensure!(
                 previous.map(|function| function as usize) != Some(usize::MAX),
-                "Callback HTTP non disponibile"
+                crate::trf!("Callback HTTP non disponibile", "HTTP callback unavailable")
             );
             let context = Arc::into_raw(state.clone()) as usize;
             if unsafe {
@@ -281,34 +314,52 @@ mod native {
             } == 0
             {
                 drop(unsafe { Arc::from_raw(context as *const CallbackState) });
-                bail!("Contesto HTTP non disponibile");
+                bail!(crate::trf!(
+                    "Contesto HTTP non disponibile",
+                    "HTTP context unavailable"
+                ));
             }
             initiated(unsafe {
                 WinHttpSendRequest(request.0, ptr::null(), 0, ptr::null(), 0, 0, context)
             })?;
             ensure!(
                 matches!(wait(&receiver, cancel)?, Event::Sent),
-                "Risposta HTTP inattesa"
+                crate::trf!("Risposta HTTP inattesa", "Unexpected HTTP response")
             );
             initiated(unsafe { WinHttpReceiveResponse(request.0, ptr::null_mut()) })?;
             ensure!(
                 matches!(wait(&receiver, cancel)?, Event::Headers),
-                "Header HTTP non disponibili"
+                crate::trf!("Header HTTP non disponibili", "HTTP headers unavailable")
             );
             let status: u16 = header(&request, WINHTTP_QUERY_STATUS_CODE)
-                .context("Stato HTTP mancante")?
+                .context(crate::i18n::tr(
+                    "Stato HTTP mancante",
+                    "Missing HTTP status",
+                ))?
                 .parse()?;
             if matches!(status, 301 | 302 | 303 | 307 | 308) {
-                let location = header(&request, WINHTTP_QUERY_LOCATION)
-                    .context("Redirect privo di destinazione")?;
+                let location =
+                    header(&request, WINHTTP_QUERY_LOCATION).context(crate::i18n::tr(
+                        "Redirect privo di destinazione",
+                        "Redirect without a destination",
+                    ))?;
                 url = checked_url(url.join(&location)?.as_str(), allow_loopback_http)?;
                 continue;
             }
-            ensure!(status == 200, "Il distributore ha restituito HTTP {status}");
+            ensure!(
+                status == 200,
+                crate::trf!(
+                    "Il distributore ha restituito HTTP {status}",
+                    "The distributor returned HTTP {status}"
+                )
+            );
             if let Some(length) = header(&request, WINHTTP_QUERY_CONTENT_LENGTH) {
                 ensure!(
                     length.parse::<u64>()? == expected,
-                    "Dimensione HTTP diversa dall’archivio previsto"
+                    crate::trf!(
+                        "Dimensione HTTP diversa dall’archivio previsto",
+                        "HTTP response size does not match the expected archive"
+                    )
                 );
             }
             let mut output = OpenOptions::new()
@@ -322,36 +373,55 @@ mod native {
                 let pointer = state
                     .buffer
                     .lock()
-                    .map_err(|_| anyhow::anyhow!("Buffer HTTP non disponibile"))?
+                    .map_err(|_| {
+                        anyhow::anyhow!(crate::trf!(
+                            "Buffer HTTP non disponibile",
+                            "HTTP buffer unavailable"
+                        ))
+                    })?
                     .as_mut_ptr();
                 initiated(unsafe {
                     WinHttpReadData(request.0, pointer.cast(), 65536, ptr::null_mut())
                 })?;
                 let Event::Read(count) = wait(&receiver, cancel)? else {
-                    bail!("Dati HTTP inattesi");
+                    bail!(crate::trf!("Dati HTTP inattesi", "Unexpected HTTP data"));
                 };
                 if count == 0 {
                     break;
                 }
                 downloaded = downloaded
                     .checked_add(count as u64)
-                    .context("Download troppo grande")?;
+                    .context(crate::i18n::tr(
+                        "Download troppo grande",
+                        "Download size limit exceeded",
+                    ))?;
                 ensure!(
                     downloaded <= expected && count <= 65536,
-                    "Download più grande dell’archivio previsto"
+                    crate::trf!(
+                        "Download più grande dell’archivio previsto",
+                        "The download exceeds the expected archive size"
+                    )
                 );
-                let buffer = state
-                    .buffer
-                    .lock()
-                    .map_err(|_| anyhow::anyhow!("Buffer HTTP non disponibile"))?;
+                let buffer = state.buffer.lock().map_err(|_| {
+                    anyhow::anyhow!(crate::trf!(
+                        "Buffer HTTP non disponibile",
+                        "HTTP buffer unavailable"
+                    ))
+                })?;
                 output.write_all(&buffer[..count])?;
                 progress(downloaded);
             }
-            ensure!(downloaded == expected, "Download incompleto");
+            ensure!(
+                downloaded == expected,
+                crate::trf!("Download incompleto", "Incomplete download")
+            );
             output.sync_all()?;
             return Ok(());
         }
-        bail!("Troppi redirect dal distributore")
+        bail!(crate::trf!(
+            "Troppi redirect dal distributore",
+            "Too many redirects from the distributor"
+        ))
     }
 }
 

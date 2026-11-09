@@ -221,17 +221,32 @@ fn cli_rejects_obsolete_audio_text_settings_without_creating_outputs() {
         br#"{"format":"Txt","transcription":{"language":"it"}}"#,
     )
     .unwrap();
-    let result = std::process::Command::new(env!("CARGO_BIN_EXE_the-converter-cli"))
-        .args(["--convert", "--settings"])
-        .arg(settings)
-        .arg("--output-dir")
-        .arg(&output)
-        .arg("--files")
-        .arg(&audio)
-        .output()
-        .unwrap();
-    assert!(!result.status.success());
-    assert!(String::from_utf8_lossy(&result.stderr).contains("Conversione non supportata"));
-    assert!(!output.exists());
-    assert_eq!(std::fs::read(audio).unwrap(), b"original audio");
+    let config = directory.path().join("config");
+    std::fs::create_dir(&config).unwrap();
+    let preferences = br#"{"ui_language":"system","settings":{"format":"Flac"}}"#;
+    std::fs::write(config.join("preferences.json"), preferences).unwrap();
+    for (language, expected) in [
+        ("it", "Conversione non supportata"),
+        ("en", "Unsupported conversion"),
+    ] {
+        let result = std::process::Command::new(env!("CARGO_BIN_EXE_the-converter-cli"))
+            .env("THE_CONVERTER_CONFIG_DIR", &config)
+            .args(["--language", language, "--convert", "--settings"])
+            .arg(&settings)
+            .arg("--output-dir")
+            .arg(&output)
+            .arg("--files")
+            .arg(&audio)
+            .output()
+            .unwrap();
+        assert!(!result.status.success());
+        let diagnostic = String::from_utf8_lossy(&result.stderr);
+        assert!(diagnostic.contains(expected), "{language}: {diagnostic}");
+        assert!(!output.exists());
+        assert_eq!(std::fs::read(&audio).unwrap(), b"original audio");
+        assert_eq!(
+            std::fs::read(config.join("preferences.json")).unwrap(),
+            preferences
+        );
+    }
 }

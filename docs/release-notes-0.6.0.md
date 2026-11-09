@@ -1,6 +1,8 @@
 # Convert Here 0.6.0 — editor locale e profili personali
 
-Editore e sviluppatore: **Salvatore Corsi**. Materiale della candidata **0.6.0**, pacchetto Store previsto **1.0.5.0**: questo documento non attesta la pubblicazione della release o l'invio allo Store. [English release notes](https://github.com/salvatorecorsi/convert-here/blob/v0.6.0/docs/release-notes-0.6.0-en.md).
+Editore e sviluppatore: **Salvatore Corsi**. Materiale della candidata **0.6.0**, pacchetto Store previsto **1.0.5.0**: questo documento non attesta la pubblicazione della release o l'invio allo Store. [English release notes](https://github.com/salvatorecorsi/convert-here/blob/v0.6.0/docs/release-notes-0.6.0.en.md).
+
+La candidata mantiene l'interfaccia e il menu bilingui introdotti nella 0.5.0: italiano o inglese da **Impostazioni → Lingua**, indipendentemente dalla lingua OCR. La [release 0.5.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.5.0) e i suoi artefatti restano invariati.
 
 ## Modifica le immagini prima di convertirle
 

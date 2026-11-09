@@ -20,6 +20,7 @@ use the_converter::{
     platform::{self, display_path},
     tools::ToolPaths,
 };
+use the_converter::{i18n::tr, trf};
 
 pub fn launch(files: Vec<PathBuf>, startup_warning: Option<String>) -> eframe::Result {
     let (settings, tools) = crate::app::quick_configuration();
@@ -102,7 +103,7 @@ impl PdfMergeApp {
             cancel: Arc::new(AtomicBool::new(false)),
             progress: Progress {
                 fraction: 0.0,
-                message: "Preparazione delle pagine…".into(),
+                message: tr("Preparazione delle pagine…", "Preparing pages…").into(),
             },
             startup_warning,
             error: None,
@@ -133,7 +134,10 @@ impl PdfMergeApp {
         {
             self.receiver = None;
             self.work = None;
-            self.error = Some(format!("Impossibile avviare l’operazione: {error}"));
+            self.error = Some(trf!(
+                "Impossibile avviare l’operazione: {error}",
+                "Unable to start the operation: {error}"
+            ));
         }
     }
 
@@ -145,7 +149,7 @@ impl PdfMergeApp {
         self.output = None;
         self.progress = Progress {
             fraction: 0.0,
-            message: "Preparazione delle pagine…".into(),
+            message: tr("Preparazione delle pagine…", "Preparing pages…").into(),
         };
         let files = self.files.clone();
         let settings = self.settings.clone();
@@ -186,7 +190,7 @@ impl PdfMergeApp {
         self.output = None;
         self.progress = Progress {
             fraction: 0.0,
-            message: "Creazione del PDF unico…".into(),
+            message: tr("Creazione del PDF unico…", "Creating merged PDF…").into(),
         };
         self.begin_worker(Work::Merging, move |sender, cancel| {
             let result =
@@ -210,7 +214,7 @@ impl PdfMergeApp {
         let Some(prepared) = self.prepared.take() else {
             return;
         };
-        self.progress.message = "Chiusura…".into();
+        self.progress.message = tr("Chiusura…", "Closing…").into();
         self.begin_worker(Work::Cleaning, move |sender, _| {
             drop(prepared);
             let _ = sender.send(Event::Cleaned);
@@ -240,7 +244,11 @@ impl PdfMergeApp {
                     self.prepared = Some(prepared);
                     self.work = None;
                     self.receiver = None;
-                    self.progress.message = "Pagine pronte: scegli l’ordine finale.".into();
+                    self.progress.message = tr(
+                        "Pagine pronte: scegli l’ordine finale.",
+                        "Pages are ready: choose the final order.",
+                    )
+                    .into();
                 }
                 Event::Finished { prepared, result } => {
                     self.prepared = Some(prepared);
@@ -251,11 +259,17 @@ impl PdfMergeApp {
                             self.output = outputs.pop();
                             self.progress = Progress {
                                 fraction: 1.0,
-                                message: "PDF unico creato".into(),
+                                message: tr("PDF unico creato", "Merged PDF created").into(),
                             };
                         }
                         Ok(_) => {
-                            self.error = Some("Il motore non ha restituito un PDF unico.".into())
+                            self.error = Some(
+                                tr(
+                                    "Il motore non ha restituito un PDF unico.",
+                                    "The engine did not return a merged PDF.",
+                                )
+                                .into(),
+                            )
                         }
                         Err(error) => self.error = Some(error),
                     }
@@ -269,7 +283,8 @@ impl PdfMergeApp {
                     self.work = None;
                     self.receiver = None;
                     self.editor = None;
-                    self.progress.message = "Operazione annullata.".into();
+                    self.progress.message =
+                        tr("Operazione annullata.", "Operation cancelled.").into();
                 }
                 Event::Cleaned => {
                     self.work = None;
@@ -280,7 +295,13 @@ impl PdfMergeApp {
         if disconnected && self.receiver.is_some() {
             self.receiver = None;
             self.work = None;
-            self.error = Some("L’operazione in background è stata interrotta.".into());
+            self.error = Some(
+                tr(
+                    "L’operazione in background è stata interrotta.",
+                    "The background operation was interrupted.",
+                )
+                .into(),
+            );
         }
     }
 
@@ -290,12 +311,15 @@ impl PdfMergeApp {
             .as_deref()
             .or_else(|| self.files.first().and_then(|path| path.parent()))
             .map(display_path)
-            .unwrap_or_else(|| "Accanto al primo file".into())
+            .unwrap_or_else(|| tr("Accanto al primo file", "Next to the first file").into())
     }
 
     fn footer(&mut self, ui: &mut egui::Ui) {
         let colors = theme::palette(ui.ctx());
-        ui.label(theme::heading("Destinazione del PDF unico", theme::BODY));
+        ui.label(theme::heading(
+            tr("Destinazione del PDF unico", "Merged PDF destination"),
+            theme::BODY,
+        ));
         ui.add(
             egui::Label::new(
                 RichText::new(self.destination())
@@ -311,13 +335,14 @@ impl PdfMergeApp {
                     !self.is_busy(),
                     egui::Button::new(theme::button_text(
                         FluentIcon::Folder,
-                        "Cambia cartella…",
+                        tr("Cambia cartella…", "Change folder…"),
                         colors.text,
                     )),
                 )
                 .clicked()
             {
-                let mut dialog = rfd::FileDialog::new().set_title("Destinazione del PDF unico");
+                let mut dialog = rfd::FileDialog::new()
+                    .set_title(tr("Destinazione del PDF unico", "Merged PDF destination"));
                 if let Some(path) = self.settings.output_dir.as_ref() {
                     dialog = dialog.set_directory(path);
                 }
@@ -329,19 +354,19 @@ impl PdfMergeApp {
                 if ui
                     .add_enabled(
                         self.work != Some(Work::Cleaning) && !self.cancel.load(Ordering::Relaxed),
-                        egui::Button::new("Annulla"),
+                        egui::Button::new(tr("Annulla", "Cancel")),
                     )
                     .clicked()
                 {
                     self.cancel.store(true, Ordering::Relaxed);
-                    self.progress.message = "Annullamento…".into();
+                    self.progress.message = tr("Annullamento…", "Cancelling…").into();
                 }
             } else if self.prepared.is_some() {
                 if ui
                     .add(
                         egui::Button::new(theme::button_text(
                             FluentIcon::Convert,
-                            "Crea PDF unico",
+                            tr("Crea PDF unico", "Create merged PDF"),
                             colors.accent_text,
                         ))
                         .fill(colors.accent),
@@ -350,7 +375,10 @@ impl PdfMergeApp {
                 {
                     self.merge();
                 }
-            } else if ui.button("Riprepara pagine").clicked() {
+            } else if ui
+                .button(tr("Riprepara pagine", "Prepare pages again"))
+                .clicked()
+            {
                 self.prepare();
             }
         });
@@ -365,7 +393,8 @@ impl eframe::App for PdfMergeApp {
             self.close_when_idle = true;
             if self.is_busy() {
                 self.cancel.store(true, Ordering::Relaxed);
-                self.progress.message = "Annullamento e chiusura…".into();
+                self.progress.message =
+                    tr("Annullamento e chiusura…", "Cancelling and closing…").into();
                 ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
             } else if self.prepared.is_some() {
                 ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
@@ -391,10 +420,14 @@ impl eframe::App for PdfMergeApp {
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(colors.canvas).inner_margin(20))
             .show(ctx, |ui| {
-                ui.label(theme::heading("Unisci in un PDF", theme::TITLE));
+                ui.label(theme::heading(
+                    tr("Unisci in un PDF", "Merge into one PDF"),
+                    theme::TITLE,
+                ));
                 ui.label(
-                    RichText::new(format!(
+                    RichText::new(trf!(
                         "{} file selezionati · un unico documento con l’ordine che scegli.",
+                        "Selected files: {} · one document in the order you choose.",
                         self.files.len()
                     ))
                     .color(colors.secondary),
@@ -405,7 +438,7 @@ impl eframe::App for PdfMergeApp {
                 }
                 if let Some(error) = &self.error {
                     info_bar(ui, error, true);
-                    if ui.small_button("Copia errore").clicked() {
+                    if ui.small_button(tr("Copia errore", "Copy error")).clicked() {
                         ctx.copy_text(error.clone());
                     }
                     ui.add_space(6.0);
@@ -413,7 +446,11 @@ impl eframe::App for PdfMergeApp {
                 if let Some(output) = &self.output {
                     theme::show_card(ui, |ui| {
                         ui.label(
-                            theme::heading("PDF unico creato", theme::BODY).color(colors.success),
+                            theme::heading(
+                                tr("PDF unico creato", "Merged PDF created"),
+                                theme::BODY,
+                            )
+                            .color(colors.success),
                         );
                         ui.add(
                             egui::Label::new(
@@ -424,7 +461,7 @@ impl eframe::App for PdfMergeApp {
                         if ui
                             .add(egui::Button::new(theme::button_text(
                                 FluentIcon::Folder,
-                                "Apri cartella",
+                                tr("Apri cartella", "Open folder"),
                                 colors.text,
                             )))
                             .clicked()
@@ -444,7 +481,10 @@ impl eframe::App for PdfMergeApp {
                 if let Some(editor) = &mut self.editor {
                     editor.show(ui, enabled);
                 } else if self.work == Some(Work::Preparing) {
-                    ui.label("Le pagine saranno disponibili appena completata la preparazione.");
+                    ui.label(tr(
+                        "Le pagine saranno disponibili appena completata la preparazione.",
+                        "Pages will be available when preparation is complete.",
+                    ));
                     egui::ScrollArea::vertical()
                         .id_salt("pdf_merge_sources")
                         .show(ui, |ui| {

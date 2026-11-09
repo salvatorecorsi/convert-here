@@ -1,4 +1,5 @@
 //! Native, plain image/text pages. Prepared PDF bytes are also the saved result.
+use crate::i18n::tr;
 use crate::{
     engine::{Progress, cancelled, commit, external_temporary, stem},
     model::{ConversionSettings, OutputFormat},
@@ -110,19 +111,31 @@ impl PageLayoutSettings {
             self.margin_mm.is_finite()
                 && self.margin_mm >= 0.0
                 && self.margin_mm * 2.0 < width.min(height) - 1.0,
-            "Il margine deve lasciare spazio all'interno della pagina"
+            tr(
+                "Il margine deve lasciare spazio all'interno della pagina",
+                "The margin must leave space inside the page"
+            )
         );
         ensure!(
             (72..=600).contains(&self.dpi),
-            "DPI pagina: scegli un valore da 72 a 600"
+            tr(
+                "DPI pagina: scegli un valore da 72 a 600",
+                "Page DPI: choose a value from 72 to 600"
+            )
         );
         ensure!(
             self.font_size_pt.is_finite() && (6.0..=96.0).contains(&self.font_size_pt),
-            "Dimensione testo: scegli un valore da 6 a 96 pt"
+            tr(
+                "Dimensione testo: scegli un valore da 6 a 96 pt",
+                "Text size: choose a value from 6 to 96 pt"
+            )
         );
         ensure!(
             self.line_height.is_finite() && (1.0..=3.0).contains(&self.line_height),
-            "Interlinea: scegli un valore da 1 a 3"
+            tr(
+                "Interlinea: scegli un valore da 1 a 3",
+                "Line spacing: choose a value from 1 to 3"
+            )
         );
         Ok(())
     }
@@ -212,12 +225,15 @@ impl PreparedPageDocument {
         cancelled(cancel)?;
         ensure!(
             (1..=MAX_PREVIEW_SIDE).contains(&max_side),
-            "Anteprima: il lato massimo deve essere da 1 a 2048 pixel"
+            tr(
+                "Anteprima: il lato massimo deve essere da 1 a 2048 pixel",
+                "Preview: the maximum side must be 1 to 2048 pixels"
+            )
         );
-        let page = self
-            .pages
-            .get(page_index)
-            .context("Pagina di anteprima non disponibile")?;
+        let page = self.pages.get(page_index).context(tr(
+            "Pagina di anteprima non disponibile",
+            "The preview page is not available",
+        ))?;
         let scale = max_side as f32 / self.width.max(self.height);
         let width = (self.width * scale).round().max(1.0) as u32;
         let height = (self.height * scale).round().max(1.0) as u32;
@@ -241,11 +257,13 @@ impl PreparedPageDocument {
                 image::imageops::overlay(&mut canvas, &pixels, x, y);
             }
             Page::Text(lines) => {
-                let font = FontRef::try_from_slice(font_bytes()?)
-                    .context("Font di anteprima non leggibile")?;
+                let font = FontRef::try_from_slice(font_bytes()?).context(tr(
+                    "Font di anteprima non leggibile",
+                    "The preview font cannot be read",
+                ))?;
                 let units = font
                     .units_per_em()
-                    .context("Metriche del font non valide")?;
+                    .context(tr("Metriche del font non valide", "Invalid font metrics"))?;
                 let font_scale =
                     PxScale::from(self.font_size_pt * scale * font.height_unscaled() / units);
                 for line in lines {
@@ -290,7 +308,10 @@ fn font_bytes() -> Result<&'static [u8]> {
             .map(|font| font.font.as_ref().to_vec())
     })
     .as_deref()
-    .context("Font Ubuntu incorporato non disponibile")
+    .context(tr(
+        "Font Ubuntu incorporato non disponibile",
+        "The embedded Ubuntu font is not available",
+    ))
 }
 
 struct BoundedBytes<'a> {
@@ -301,12 +322,16 @@ struct BoundedBytes<'a> {
 impl Write for BoundedBytes<'_> {
     fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
         if self.cancel.load(std::sync::atomic::Ordering::Relaxed) {
-            return Err(std::io::Error::other("Operazione annullata"));
+            return Err(std::io::Error::other(tr(
+                "Operazione annullata",
+                "Operation cancelled",
+            )));
         }
         if bytes.len() > self.limit.saturating_sub(self.bytes.len()) {
-            return Err(std::io::Error::other(
+            return Err(std::io::Error::other(tr(
                 "Il documento supera il limite di memoria",
-            ));
+                "The document exceeds the memory limit",
+            )));
         }
         self.bytes.extend_from_slice(bytes);
         Ok(bytes.len())
@@ -325,7 +350,10 @@ fn image_page(
     let (width, height) = pixels.dimensions();
     ensure!(
         width > 0 && height > 0 && width as u64 * height as u64 <= 150_000_000,
-        "Dimensioni immagine non valide o superiori a 150 megapixel"
+        tr(
+            "Dimensioni immagine non valide o superiori a 150 megapixel",
+            "Invalid image dimensions or more than 150 megapixels"
+        )
     );
     let content = settings.content_rect();
     let (crop_x, crop_y, crop_width, crop_height) = if settings.fit == ImageFit::Cover {
@@ -360,7 +388,10 @@ fn image_page(
         .min(crop_height);
     ensure!(
         target_width as u64 * target_height as u64 <= MAX_PIXELS,
-        "L'immagine sulla pagina supera 40 megapixel: riduci i DPI"
+        tr(
+            "L'immagine sulla pagina supera 40 megapixel: riduci i DPI",
+            "The image on the page exceeds 40 megapixels: reduce the DPI"
+        )
     );
     cancelled(cancel)?;
     // PDF pages have a white matte. Composite before filtering so RGB hidden
@@ -402,7 +433,10 @@ fn image_page(
 }
 
 fn normalize_text(text: &str, cancel: &AtomicBool) -> Result<String> {
-    ensure!(text.len() <= MAX_TEXT_BYTES, "Il testo supera 8 MiB");
+    ensure!(
+        text.len() <= MAX_TEXT_BYTES,
+        tr("Il testo supera 8 MiB", "The text exceeds 8 MiB")
+    );
     let mut plain = String::with_capacity(text.len());
     let mut chars = text
         .strip_prefix('\u{feff}')
@@ -424,15 +458,19 @@ fn normalize_text(text: &str, cancel: &AtomicBool) -> Result<String> {
             }
             '\t' => plain.push_str("    "),
             '\n' | '\u{c}' => plain.push(character),
-            c if c.is_control() => bail!(
+            c if c.is_control() => bail!(crate::trf!(
                 "Il testo contiene un controllo non supportato (U+{:04X})",
+                "The text contains an unsupported control character (U+{:04X})",
                 c as u32
-            ),
+            )),
             c => plain.push(c),
         }
         ensure!(
             plain.len() <= MAX_TEXT_BYTES,
-            "Il testo normalizzato supera 8 MiB"
+            tr(
+                "Il testo normalizzato supera 8 MiB",
+                "The normalized text exceeds 8 MiB"
+            )
         );
     }
     let mut normalized = String::with_capacity(plain.len());
@@ -443,7 +481,10 @@ fn normalize_text(text: &str, cancel: &AtomicBool) -> Result<String> {
         normalized.push(character);
         ensure!(
             normalized.len() <= MAX_TEXT_BYTES,
-            "Il testo normalizzato supera 8 MiB"
+            tr(
+                "Il testo normalizzato supera 8 MiB",
+                "The normalized text exceeds 8 MiB"
+            )
         );
     }
     Ok(normalized)
@@ -468,14 +509,22 @@ impl<'a> TextComposer<'a> {
         glyphs: &'a BTreeMap<char, FontGlyph>,
         pages: &'a mut Vec<Page>,
     ) -> Result<Self> {
-        let font = FontRef::try_from_slice(font_bytes()?).context("Font di testo non leggibile")?;
-        let units = font.units_per_em().context("Metriche font non valide")?;
+        let font = FontRef::try_from_slice(font_bytes()?).context(tr(
+            "Font di testo non leggibile",
+            "The text font cannot be read",
+        ))?;
+        let units = font
+            .units_per_em()
+            .context(tr("Metriche font non valide", "Invalid font metrics"))?;
         let ascent = font.ascent_unscaled() / units * settings.font_size_pt;
         let descent = font.descent_unscaled() / units * settings.font_size_pt;
         let content = settings.content_rect();
         ensure!(
             ascent - descent <= content.height,
-            "Il testo non entra nei margini: riduci carattere o margini"
+            tr(
+                "Il testo non entra nei margini: riduci carattere o margini",
+                "The text does not fit inside the margins: reduce the font size or margins"
+            )
         );
         let advance = (settings.font_size_pt * settings.line_height).max(ascent - descent);
         Ok(Self {
@@ -501,7 +550,10 @@ impl<'a> TextComposer<'a> {
     fn new_page(&mut self) -> Result<()> {
         ensure!(
             self.pages.len() < MAX_PAGES,
-            "Il documento supera {MAX_PAGES} pagine"
+            crate::trf!(
+                "Il documento supera {MAX_PAGES} pagine",
+                "The document exceeds {MAX_PAGES} pages"
+            )
         );
         self.pages
             .push(Page::Text(std::mem::take(&mut self.current_page)));
@@ -573,7 +625,10 @@ impl<'a> TextComposer<'a> {
                     .collect();
                 ensure!(
                     cluster.len() <= 128,
-                    "Il testo contiene una sequenza combinata troppo lunga per l'impaginazione"
+                    tr(
+                        "Il testo contiene una sequenza combinata troppo lunga per l'impaginazione",
+                        "The text contains a combining sequence that is too long for page layout"
+                    )
                 );
                 let extra = self.width(cluster.iter().copied(), line.last().map(|g| g.gid));
                 if !line.is_empty() && width + extra > self.content.width {
@@ -583,7 +638,10 @@ impl<'a> TextComposer<'a> {
                 let extra = self.width(cluster.iter().copied(), line.last().map(|g| g.gid));
                 ensure!(
                     extra <= self.content.width + 0.001,
-                    "Un carattere non entra nella riga: riduci carattere o margini"
+                    tr(
+                        "Un carattere non entra nella riga: riduci carattere o margini",
+                        "A character does not fit on the line: reduce the font size or margins"
+                    )
                 );
                 line.extend(cluster);
                 width += extra;
@@ -617,14 +675,21 @@ pub fn prepare(
     settings.validate()?;
     ensure!(
         !inputs.is_empty() && inputs.len() <= MAX_PAGES,
-        "Seleziona da 1 a {MAX_PAGES} immagini o testi"
+        crate::trf!(
+            "Seleziona da 1 a {MAX_PAGES} immagini o testi",
+            "Select 1 to {MAX_PAGES} images or texts"
+        )
     );
     ensure!(
         (1..=100).contains(&jpeg_quality),
-        "Qualità JPEG: scegli un valore da 1 a 100"
+        tr(
+            "Qualità JPEG: scegli un valore da 1 a 100",
+            "JPEG quality: choose a value from 1 to 100"
+        )
     );
-    let face = ttf_parser::Face::parse(font_bytes()?, 0)
-        .map_err(|_| anyhow::anyhow!("Font PDF non leggibile"))?;
+    let face = ttf_parser::Face::parse(font_bytes()?, 0).map_err(|_| {
+        anyhow::anyhow!(tr("Font PDF non leggibile", "The PDF font cannot be read"))
+    })?;
     let mut glyphs = BTreeMap::new();
     let mut texts = BTreeMap::new();
     let mut text_bytes = 0usize;
@@ -633,10 +698,13 @@ pub fn prepare(
         if let PageInput::Text(text) = input {
             text_bytes = text_bytes
                 .checked_add(text.len())
-                .context("Testo troppo grande")?;
+                .context(tr("Testo troppo grande", "The text is too large"))?;
             ensure!(
                 text_bytes <= MAX_TEXT_BYTES,
-                "Il testo complessivo supera 8 MiB"
+                tr(
+                    "Il testo complessivo supera 8 MiB",
+                    "The combined text exceeds 8 MiB"
+                )
             );
             let text = normalize_text(text, cancel)?;
             for (position, character) in text.chars().enumerate() {
@@ -649,18 +717,23 @@ pub fn prepare(
                 glyph_count += 1;
                 ensure!(
                     glyph_count <= MAX_GLYPHS,
-                    "Il documento supera un milione di caratteri"
+                    tr(
+                        "Il documento supera un milione di caratteri",
+                        "The document exceeds one million characters"
+                    )
                 );
                 if glyphs.contains_key(&character) {
                     continue;
                 }
-                let gid = face.glyph_index(character).filter(|gid| gid.0 != 0).with_context(|| format!("Il font incorporato non supporta il carattere U+{:04X}; il testo non è stato esportato", character as u32))?;
-                let cid = u16::try_from(glyphs.len() + 1)
-                    .context("Troppi caratteri diversi nel documento")?;
-                let advance = face
-                    .glyph_hor_advance(gid)
-                    .context("Metriche del carattere non disponibili")?
-                    as f32
+                let gid = face.glyph_index(character).filter(|gid| gid.0 != 0).with_context(|| crate::trf!("Il font incorporato non supporta il carattere U+{:04X}; il testo non è stato esportato", "The embedded font does not support character U+{:04X}; the text was not exported", character as u32))?;
+                let cid = u16::try_from(glyphs.len() + 1).context(tr(
+                    "Troppi caratteri diversi nel documento",
+                    "The document contains too many distinct characters",
+                ))?;
+                let advance = face.glyph_hor_advance(gid).context(tr(
+                    "Metriche del carattere non disponibili",
+                    "Character metrics are not available",
+                ))? as f32
                     / face.units_per_em() as f32
                     * settings.font_size_pt;
                 glyphs.insert(
@@ -683,15 +756,21 @@ pub fn prepare(
             PageInput::Image(image) => {
                 ensure!(
                     pages.len() < MAX_PAGES,
-                    "Il documento supera {MAX_PAGES} pagine"
+                    crate::trf!(
+                        "Il documento supera {MAX_PAGES} pagine",
+                        "The document exceeds {MAX_PAGES} pages"
+                    )
                 );
                 let page = image_page(image, settings, jpeg_quality, cancel)?;
                 image_bytes = image_bytes
                     .checked_add(page.jpeg.len())
-                    .context("Documento troppo grande")?;
+                    .context(tr("Documento troppo grande", "The document is too large"))?;
                 ensure!(
                     image_bytes <= MAX_IMAGE_BYTES,
-                    "Le immagini del documento superano 96 MiB: riduci qualità o DPI"
+                    tr(
+                        "Le immagini del documento superano 96 MiB: riduci qualità o DPI",
+                        "The document images exceed 96 MiB: reduce the quality or DPI"
+                    )
                 );
                 pages.push(Page::Image(page));
             }
@@ -701,19 +780,28 @@ pub fn prepare(
         }
         progress(Progress {
             fraction: (index + 1) as f32 / inputs.len() as f32 * 0.8,
-            message: format!("Impaginazione di {} di {}…", index + 1, inputs.len()),
+            message: crate::trf!(
+                "Impaginazione di {} di {}…",
+                "Laying out {} of {}…",
+                index + 1,
+                inputs.len()
+            ),
         });
     }
     cancelled(cancel)?;
     let (width, height) = settings.page_size_points();
     progress(Progress {
         fraction: 0.85,
-        message: "Preparazione dei byte PDF…".into(),
+        message: tr("Preparazione dei byte PDF…", "Preparing PDF bytes…").into(),
     });
     let bytes = encode_pdf(&pages, &glyphs, settings, &face, cancel)?;
     progress(Progress {
         fraction: 1.0,
-        message: "PDF pronto: anteprima e peso disponibili".into(),
+        message: tr(
+            "PDF pronto: anteprima e peso disponibili",
+            "PDF ready: preview and file size available",
+        )
+        .into(),
     });
     Ok(PreparedPageDocument {
         bytes,
@@ -761,7 +849,8 @@ fn embed_font(
             widths.push(Object::Integer(glyph.cid as i64));
             widths.push(Object::Array(vec![real(
                 face.glyph_hor_advance(ttf_parser::GlyphId(glyph.gid))
-                    .context("Metriche PDF mancanti")? as f32
+                    .context(tr("Metriche PDF mancanti", "Missing PDF metrics"))?
+                    as f32
                     * scale,
             )]));
             let unicode: String = character
@@ -922,18 +1011,24 @@ pub fn convert_text_pdf(
             && input
                 .extension()
                 .is_some_and(|ext| ext.eq_ignore_ascii_case("txt")),
-        "L'impaginazione del testo richiede un file TXT e destinazione PDF"
+        tr(
+            "L'impaginazione del testo richiede un file TXT e destinazione PDF",
+            "Text layout requires a TXT file and PDF output"
+        )
     );
     let page = settings
         .image
         .page
         .as_ref()
-        .context("Impostazioni pagina mancanti")?;
+        .context(tr("Impostazioni pagina mancanti", "Missing page settings"))?;
     page.validate()?;
-    let mut file = File::open(input).context("File TXT non accessibile")?;
+    let mut file = File::open(input).context(tr(
+        "File TXT non accessibile",
+        "The TXT file is not accessible",
+    ))?;
     ensure!(
         file.metadata()?.len() <= MAX_TEXT_BYTES as u64,
-        "Il file TXT supera 8 MiB"
+        tr("Il file TXT supera 8 MiB", "The TXT file exceeds 8 MiB")
     );
     let mut bytes = Vec::new();
     let mut buffer = [0u8; 65536];
@@ -945,11 +1040,14 @@ pub fn convert_text_pdf(
         }
         ensure!(
             bytes.len() + count <= MAX_TEXT_BYTES,
-            "Il file TXT supera 8 MiB"
+            tr("Il file TXT supera 8 MiB", "The TXT file exceeds 8 MiB")
         );
         bytes.extend_from_slice(&buffer[..count]);
     }
-    let text = String::from_utf8(bytes).context("Il file TXT deve usare la codifica UTF-8")?;
+    let text = String::from_utf8(bytes).context(tr(
+        "Il file TXT deve usare la codifica UTF-8",
+        "The TXT file must use UTF-8 encoding",
+    ))?;
     let prepared = prepare(
         &[PageInput::Text(Arc::from(text))],
         page,
@@ -960,7 +1058,10 @@ pub fn convert_text_pdf(
     if let Some(limit) = settings.image.edit.as_ref().and_then(|edit| edit.max_bytes) {
         ensure!(
             prepared.exact_bytes() <= limit,
-            "Il PDF supera il limite di peso scelto; aumenta il limite o riduci il contenuto"
+            tr(
+                "Il PDF supera il limite di peso scelto; aumenta il limite o riduci il contenuto",
+                "The PDF exceeds the selected size limit; increase the limit or reduce the content"
+            )
         );
     }
     let (_stage, mut output) = external_temporary(dir, "pdf")?;
@@ -986,6 +1087,22 @@ pub fn save_prepared(
 mod tests {
     use super::*;
     use std::sync::atomic::Ordering;
+
+    #[test]
+    fn page_localization_preserves_formatted_unicode_code_points() {
+        use crate::i18n::{Language, with_language};
+        let cancel = AtomicBool::new(false);
+        for (language, message) in [
+            (Language::Italian, "controllo non supportato"),
+            (Language::English, "unsupported control character"),
+        ] {
+            with_language(language, || {
+                let error = normalize_text("\u{1}", &cancel).unwrap_err().to_string();
+                assert!(error.contains(message));
+                assert!(error.contains("U+0001"));
+            });
+        }
+    }
 
     #[test]
     fn bounded_writer_stops_without_retrying_cancellation_or_exceeding_its_limit() {

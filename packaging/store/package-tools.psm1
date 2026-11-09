@@ -115,7 +115,7 @@ function Assert-StorePackageLayout {
     if ($deviceFamilies.Count -ne 1 -or $deviceFamilies[0].GetAttribute('Name') -cne 'Windows.Desktop' -or
         $deviceFamilies[0].GetAttribute('MinVersion') -cne '10.0.22000.0') { throw 'Store package requires Windows 11 desktop (build 22000) or later.' }
     $languages = @($manifest.SelectNodes('/p:Package/p:Resources/p:Resource', $ns))
-    if ($languages.Count -ne 1 -or $languages[0].GetAttribute('Language') -cne 'it-it') { throw 'Store manifest must advertise only the implemented Italian UI language.' }
+    if ($languages.Count -ne 2 -or (@($languages | ForEach-Object { $_.GetAttribute('Language') } | Sort-Object) -join ',') -cne 'en-us,it-it') { throw 'Store manifest must advertise exactly the implemented Italian and English UI languages.' }
     if (@($manifest.SelectNodes('//*[local-name()="AllowExternalContent"]')).Count -ne 0) { throw 'Store package must contain its files; AllowExternalContent is forbidden.' }
     $capabilities = @($manifest.SelectNodes('/p:Package/p:Capabilities/*', $ns))
     if ($capabilities.Count -ne 1 -or $capabilities[0].NamespaceURI -cne 'http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities' -or

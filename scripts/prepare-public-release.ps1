@@ -45,7 +45,7 @@ $sourceInfo = & (Join-Path $root 'release-support\build-corresponding-source.ps1
 foreach ($name in @('the-converter.exe', 'the-converter-cli.exe', 'the_converter_shell.dll')) {
     Copy-Item -LiteralPath (Join-Path $source $name) -Destination $stage -Force
 }
-foreach ($name in @('README.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md')) {
+foreach ($name in @('README.md', 'README.en.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md')) {
     Copy-Item -LiteralPath (Join-Path $root $name) -Destination $stage -Force
 }
 $scripts = Join-Path $stage 'scripts'

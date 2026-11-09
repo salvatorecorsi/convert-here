@@ -1,5 +1,7 @@
 # Editor immagini, fogli e profili
 
+**Italiano** · [English](image-editor-profiles.en.md)
+
 Disponibile da **Convert Here 0.6.0**.
 
 ## Aprire l'editor
@@ -38,7 +40,7 @@ Questo è un impaginatore di testo semplice. I file Word e gli altri documenti O
 
 Nell'editor, **Salva le mie impostazioni** permette di dare un nome alle opzioni e scegliere **Mostra in Converti in**. Puoi salvare fino a **32 profili**, di cui **8 visibili nel menu**. Nelle Impostazioni, **I miei profili** consente di applicarli, modificarli, rinominarli, aggiornarli con le opzioni correnti, eliminarli o usarli come predefiniti.
 
-Il profilo conserva le opzioni, il nome, la visibilità e l'eventuale cartella di destinazione. L'immagine usata per la prova, il testo digitato e le anteprime non fanno parte del profilo. Un profilo immagine si applica alle immagini; un profilo pagina creato per TXT o testo semplice si applica al dominio compatibile indicato dalle sue opzioni.
+Il profilo conserva le opzioni, il nome, la visibilità e l'eventuale cartella di destinazione. Il nome scelto dall'utente non viene tradotto quando cambia la lingua dell'interfaccia. L'immagine usata per la prova, il testo digitato e le anteprime non fanno parte del profilo. Un profilo immagine si applica alle immagini; un profilo pagina creato per TXT o testo semplice si applica al dominio compatibile indicato dalle sue opzioni.
 
 Per una scorciatoia pronta, **Crea «Salva per web»** configura WebP con massimo 300 kB, qualità massima 90 e riduzione delle dimensioni consentita. Puoi poi cambiarne le opzioni. Per esempio, un altro profilo può usare JPEG con larghezza 1200 pixel, oppure PDF A5 con margini e DPI scelti.
 

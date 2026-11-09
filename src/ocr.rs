@@ -1,4 +1,5 @@
 //! Local OCR through Tesseract. No images or recognized text are sent online.
+use crate::i18n::tr;
 use crate::{
     engine::{Progress, cancelled, commit, run_process, stem, temporary},
     model::{ConversionSettings, MediaKind},
@@ -30,7 +31,13 @@ pub(crate) fn validate_language(language: &str) -> Result<()> {
                     .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
         })
     {
-        bail!("Lingua OCR non valida: usa i codici Tesseract, per esempio ita, eng o ita+eng");
+        bail!(
+            "{}",
+            crate::trf!(
+                "Lingua OCR non valida: usa i codici Tesseract, per esempio ita, eng o ita+eng",
+                "Invalid OCR language: use Tesseract codes, for example ita, eng or ita+eng"
+            )
+        );
     }
     Ok(())
 }
@@ -64,7 +71,7 @@ pub(crate) fn extract_text(
     cancelled(cancel)?;
     validate_language(&settings.ocr.language)?;
     let tesseract = tools.tesseract.as_ref().context(
-        "Per OCR locale serve Tesseract. Apri Impostazioni → Motori e seleziona tesseract.exe con i modelli delle lingue richieste.",
+        tr("Per OCR locale serve Tesseract. Apri Impostazioni → Motori e seleziona tesseract.exe con i modelli delle lingue richieste.", "Local OCR requires Tesseract. Open Settings → Conversion engines and select tesseract.exe with the required language models."),
     )?;
     let tessdata = adjacent_tessdata(tesseract, &settings.ocr.language)?;
     let stage = tempfile::Builder::new()
@@ -74,17 +81,32 @@ pub(crate) fn extract_text(
     let mut text = String::new();
     match MediaKind::from_path(input) {
         MediaKind::Pdf => {
-            let document = lopdf::Document::load(input).context("PDF non leggibile per OCR")?;
+            let document = lopdf::Document::load(input).context(tr(
+                "PDF non leggibile per OCR",
+                "PDF cannot be read for OCR",
+            ))?;
             if document.is_encrypted() {
-                bail!("Il PDF è protetto: sbloccalo prima di usare OCR");
+                bail!(
+                    "{}",
+                    crate::trf!(
+                        "Il PDF è protetto: sbloccalo prima di usare OCR",
+                        "The PDF is protected: unlock it before using OCR"
+                    )
+                );
             }
             let count = document.get_pages().len();
             if count == 0 || count > MAX_PAGES {
-                bail!("OCR richiede un PDF con da 1 a {MAX_PAGES} pagine");
+                bail!(
+                    "{}",
+                    crate::trf!(
+                        "OCR richiede un PDF con da 1 a {MAX_PAGES} pagine",
+                        "OCR requires a PDF with 1 to {MAX_PAGES} pages"
+                    )
+                );
             }
             drop(document);
             let pdftoppm = tools.pdftoppm.as_ref().context(
-                "Per OCR dei PDF serve anche Poppler. Apri Impostazioni → Motori per installarlo oppure seleziona pdftoppm.exe.",
+                tr("Per OCR dei PDF serve anche Poppler. Apri Impostazioni → Motori per installarlo oppure seleziona pdftoppm.exe.", "PDF OCR also requires Poppler. Open Settings → Conversion engines to install it or select pdftoppm.exe."),
             )?;
             let image_base = stage.path().join("page");
             let image_path = image_base.with_extension("png");
@@ -92,7 +114,10 @@ pub(crate) fn extract_text(
                 cancelled(cancel)?;
                 progress(Progress {
                     fraction: 0.05 + (page - 1) as f32 / count as f32 * 0.9,
-                    message: format!("OCR pagina {page} di {count}…"),
+                    message: crate::trf!(
+                        "OCR pagina {page} di {count}…",
+                        "OCR page {page} of {count}…"
+                    ),
                 });
                 let mut render = Command::new(pdftoppm);
                 render
@@ -111,7 +136,13 @@ pub(crate) fn extract_text(
                     progress,
                 )?;
                 if text.len() as u64 + recognized.len() as u64 + 2 > MAX_TEXT_BYTES {
-                    bail!("Il testo OCR supera il limite di 64 MB");
+                    bail!(
+                        "{}",
+                        crate::trf!(
+                            "Il testo OCR supera il limite di 64 MB",
+                            "OCR text exceeds the 64 MB limit"
+                        )
+                    );
                 }
                 text.push_str(recognized.trim_end_matches(['\r', '\n', '\u{c}']));
                 text.push('\n');
@@ -122,7 +153,7 @@ pub(crate) fn extract_text(
         MediaKind::Image => {
             progress(Progress {
                 fraction: 0.1,
-                message: "Preparazione immagine per OCR…".into(),
+                message: tr("Preparazione immagine per OCR…", "Preparing image for OCR…").into(),
             });
             let source = if crate::modern_images::is_modern_input(input) {
                 crate::modern_images::decode(input, stage.path(), tools, cancel, progress)?
@@ -132,11 +163,20 @@ pub(crate) fn extract_text(
             let mut decoder = image::ImageReader::open(&source)?
                 .with_guessed_format()?
                 .into_decoder()
-                .context("Immagine non leggibile per OCR")?;
+                .context(tr(
+                    "Immagine non leggibile per OCR",
+                    "Image cannot be read for OCR",
+                ))?;
             if let Some(limit) = image::Limits::default().max_alloc
                 && decoder.total_bytes() > limit
             {
-                bail!("L'immagine supera il limite di memoria per OCR");
+                bail!(
+                    "{}",
+                    crate::trf!(
+                        "L'immagine supera il limite di memoria per OCR",
+                        "The image exceeds the OCR memory limit"
+                    )
+                );
             }
             let orientation = decoder.orientation()?;
             let mut image = DynamicImage::from_decoder(decoder)?;
@@ -160,7 +200,11 @@ pub(crate) fn extract_text(
             cancelled(cancel)?;
             progress(Progress {
                 fraction: 0.3,
-                message: "Riconoscimento testo con Tesseract…".into(),
+                message: tr(
+                    "Riconoscimento testo con Tesseract…",
+                    "Recognizing text with Tesseract…",
+                )
+                .into(),
             });
             text = recognize_image(
                 &normalized,
@@ -171,12 +215,22 @@ pub(crate) fn extract_text(
                 progress,
             )?;
         }
-        _ => bail!("OCR supporta immagini e PDF"),
+        _ => bail!(
+            "{}",
+            crate::trf!(
+                "OCR supporta immagini e PDF",
+                "OCR supports images and PDFs"
+            )
+        ),
     }
     cancelled(cancel)?;
     if text.trim().is_empty() {
         bail!(
-            "OCR non ha riconosciuto testo. Controlla lingua, orientamento e qualità della scansione."
+            "{}",
+            crate::trf!(
+                "OCR non ha riconosciuto testo. Controlla lingua, orientamento e qualità della scansione.",
+                "OCR did not recognize any text. Check the language, orientation and scan quality."
+            )
         );
     }
     Ok(text)
@@ -194,8 +248,12 @@ fn adjacent_tessdata(executable: &Path, language: &str) -> Result<Option<PathBuf
     for code in language.split('+') {
         if !tessdata.join(format!("{code}.traineddata")).is_file() {
             bail!(
-                "Modello OCR {code}.traineddata mancante in {}. Installa il modello Tesseract o scegli una lingua disponibile.",
-                tessdata.display()
+                "{}",
+                crate::trf!(
+                    "Modello OCR {code}.traineddata mancante in {}. Installa il modello Tesseract o scegli una lingua disponibile.",
+                    "OCR model {code}.traineddata is missing from {}. Install the Tesseract model or choose an available language.",
+                    tessdata.display()
+                )
             );
         }
     }
@@ -226,16 +284,30 @@ fn recognize_image(
         "--dpi",
         &settings.pdf.dpi.to_string(),
     ]);
-    run_process(command, cancel, None, progress)
-        .context("OCR non riuscito: controlla Tesseract e i modelli delle lingue selezionate")?;
+    run_process(command, cancel, None, progress).context(tr(
+        "OCR non riuscito: controlla Tesseract e i modelli delle lingue selezionate",
+        "OCR failed: check Tesseract and the selected language models",
+    ))?;
     cancelled(cancel)?;
     let size = fs::metadata(&output_path)
-        .context("Tesseract non ha prodotto il testo OCR")?
+        .context(tr(
+            "Tesseract non ha prodotto il testo OCR",
+            "Tesseract did not produce OCR text",
+        ))?
         .len();
     if size > MAX_TEXT_BYTES {
-        bail!("Il testo OCR supera il limite di 64 MB");
+        bail!(
+            "{}",
+            crate::trf!(
+                "Il testo OCR supera il limite di 64 MB",
+                "OCR text exceeds the 64 MB limit"
+            )
+        );
     }
-    let text = fs::read_to_string(&output_path).context("Il testo OCR non è UTF-8 valido")?;
+    let text = fs::read_to_string(&output_path).context(tr(
+        "Il testo OCR non è UTF-8 valido",
+        "OCR text is not valid UTF-8",
+    ))?;
     fs::remove_file(&output_path)?;
     Ok(text)
 }
