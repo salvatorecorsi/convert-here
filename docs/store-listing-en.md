@@ -1,16 +1,16 @@
 # Microsoft Store listing — English (en-US)
 
-Draft for Convert Here **0.6.0**, candidate Store package **1.0.5.0**. Publisher and developer: **Salvatore Corsi**. Copy is ready with 20 features; screenshots, versioned URLs and upload must be verified against the final candidate. This document does not attest publication, submission or approval of 0.6.0. Earlier release evidence remains historical. The app supports Italian and English. Do not copy this preamble into public listing fields.
+Draft for Convert Here **0.7.0**, candidate Store package **1.0.6.0**. Publisher and developer: **Salvatore Corsi**. Copy is ready with 20 features; screenshots, versioned URLs and upload must be verified against the final candidate. This document does not attest publication, submission or approval of 0.7.0. Earlier release evidence remains historical. The app supports Italian and English. Do not copy this preamble into public listing fields.
 
 ## Short description
 
-Local conversion, an image editor with exact size, A4/A5 pages and Windows 11 menu profiles. Optional engines add formats and OCR. Italian and English interface.
+Local conversion for Windows 10/11, an image editor, A4/A5 pages and audio/video/PDF profiles. Optional engines add formats and OCR. Italian and English UI.
 
 ## Description
 
 Native image formats and image-to-PDF conversion work immediately, as do PDF compression, splitting and merging. Audio/video requires FFmpeg; PDF export requires Poppler; Office, Excel/CSV and HTML-to-PDF requires LibreOffice. HEIC/HEIF and AVIF require libheif; OCR requires Tesseract and language models, plus Poppler for scanned PDFs. These optional engines are not included. The interface and menu support Italian and English. Settings > Conversion engines lets you request FFmpeg, Poppler or both after confirming the source, version, size, licenses and folder. Internet is needed for this optional download; conversion and OCR remain local.
 
-Convert Here brings conversion to the folder where you work. In the Windows 11 context menu, choose Convert to and a compatible format. The job joins a queue with your saved settings, without opening the options window every time.
+Convert Here brings conversion to the folder where you work, on Windows 10 version 2004 or later (build 19041), x64, and Windows 11. In the Windows 10 classic or Windows 11 modern context menu, choose Convert to and a compatible format. The job joins a queue with your saved settings, without opening the options window every time.
 
 A placeholder with a pending icon immediately shows where the result will appear. Open it to check progress or cancel the job. When conversion finishes, the completed file replaces the placeholder. Outputs are saved beside their originals by default; numbered names preserve files that already exist.
 
@@ -20,7 +20,13 @@ Open Edit… beside an image to crop, resize or create a canvas with a custom re
 
 Lay out images, text written in New sheet… or UTF-8 TXT files on A4/A5 pages in portrait or landscape with custom margins. Plain text supports font size, line spacing, alignment and automatic pages, with embedded Ubuntu Light and selectable PDF text. Unsupported characters produce an explicit error. This native path does not require LibreOffice; Word documents keep the existing Office conversion workflow.
 
-Save my settings creates named profiles: up to 32 saved, with 8 visible in Convert to. Reuse relative crop, dimensions, canvas, quality, byte limits and page settings without storing the sample image or typed text. My profiles in Settings lets you apply and update recipes. Menu profiles appear only when enabled, their output format is active and selected inputs are compatible. Queue jobs retain the settings with which they were created.
+Save my settings creates named profiles: up to 32 saved, with 8 visible in Convert to. Reuse relative crop, dimensions, canvas, quality, byte limits and page settings without storing the sample image or typed text. The Profiles page lets you apply and update recipes. Menu profiles appear only when enabled, their output format is active and selected inputs are compatible. Queue jobs retain the settings with which they were created.
+
+The Profiles manager has Audio, Video, Images and Documents categories. Create, edit, duplicate, rename or delete recipes, choose a default, import/export JSON and restrict the input extensions of each profile. Relevant settings include bitrate, sample rate, channels, codecs, trimming, page layout and PDF operations. A PDF Merge profile opens the page-order editor; existing queued jobs keep their original recipe snapshot even after the profile is updated or deleted.
+
+Set a maximum size per file and a maximum audio/video duration, combined with the shorter trim interval. Actual size is checked before publication; split PDFs apply the cap to each page. Audio, video and PDF do not promise automatic size fitting: an oversized result is not published. JPEG/WebP retain adaptive quality and opt-in downsizing.
+
+Advanced exposes typed FFmpeg controls for encoders, compatible presets, color, GOP, bitrate, audio samples, numeric filters and metadata. Numeric, boolean and enumerated options are read from installed local encoders and verified before conversion. This is not a free-form command line. FFmpeg options apply to audio/video sources, including video-to-GIF; they do not apply to native image conversions.
 
 With libheif, read HEIC/HEIF and AVIF files or create HEIC and AVIF from supported images. Configure heif-dec.exe and heif-enc.exe in Settings > Conversion engines, keeping the build's DLLs and plugins together. Availability depends on installed HEVC/AV1 decoders and encoders. Choose output quality and width. Only the first image in a container is converted; image sequences and animations are not preserved.
 
@@ -47,26 +53,26 @@ Limitations: free editing of PDF page content is not available. OCR recognizes t
 Enter each line in a separate feature field, without adding bullet characters:
 
 ```text
-Convert to command directly in the Windows 11 File Explorer context menu
-Quick conversions join a queue without opening the options window each time
-Output-folder placeholders with job status available on demand
-Images in PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR and PNM
-Images and plain text on A4/A5 PDF pages with custom orientation and margins
-Local image editor: crop, resize and canvas with custom resolution, background and anchor
-Audio and video conversion with optional user-selected FFmpeg
-PDF to images, TXT, text-only Word DOCX and HTML with optional Poppler
-Excel to first-sheet CSV and UTF-8 CSV to XLSX, with four delimiters and optional LibreOffice
-Word and simple HTML to PDF with optional LibreOffice; JavaScript is not executed
-HEIC/HEIF and AVIF input and HEIC/AVIF output with optional libheif
-Local OCR for images and scanned PDFs with optional Tesseract and language models
-Separate PDF Bulk outputs or one PDF Merge with individual page drag and drop
-Preserve original files and use numbered output names for existing files
-Format conversion processed on your PC without an in-app account
-Choose visible outputs: eight defaults and 93 recognized input extensions
-Optional FFmpeg and Poppler downloads with confirmation, SHA-256 verification and retained licenses
-Preview and exact byte size for PNG/JPEG/WebP/PDF; save the same prepared bytes
-Up to 32 personal profiles, with 8 Convert to menu shortcuts for compatible inputs
-Typed text or UTF-8 TXT to PDF with embedded font and selectable text
+Convert to in the Windows 10 classic and Windows 11 modern menus, from build 19041 x64
+Quick queue with output placeholders and job status on demand
+44 outputs and 93 input extensions, with eight visible outputs by default
+Native images, optional libheif for HEIC/AVIF and optional FFmpeg for audio/video
+Image editor with crop, resize, canvas, background and anchor
+Preview and exact size for PNG/JPEG/WebP/PDF; save the same prepared bytes
+Images, typed text and UTF-8 TXT on A4/A5 PDF pages with an embedded font
+Audio, Video, Images and Documents profile manager: 32 saved, 8 menu shortcuts
+Import/export profile JSON and select compatible input extensions
+Maximum size per file and maximum audio/video duration combined with trimming
+Typed advanced FFmpeg controls with installed-encoder options checked in the core
+Audio/video bitrate, codecs, sample rate, channels, normalization, FPS and trimming
+PDF to images, TXT and text-only DOCX/HTML with optional Poppler
+Excel/CSV with four delimiters and Word/HTML to PDF with optional LibreOffice
+Local OCR with Tesseract and language models; scanned PDFs also need Poppler
+Compress/split PDFs, separate PDF Bulk results or PDF Merge with draggable pages
+Preserve originals and use numbered names when files already exist
+Queued profiles keep their recipe after the profile is modified or deleted
+Local processing; no account, subscription or payment required to keep using it
+Optional FFmpeg/Poppler downloads with confirmation, SHA-256 and retained licenses
 ```
 
 ## Search terms
@@ -86,7 +92,7 @@ conversion queue
 ## Additional system requirements
 
 ```text
-Windows 11 x64 for the modern context menu
+Windows 10 version 2004 (build 19041) or later, x64; classic menu on Windows 10 and modern menu on Windows 11
 FFmpeg for audio/video; Poppler for PDF export; LibreOffice for Office/HTML to PDF and Excel/CSV conversion. Optional engines are not included. Optional FFmpeg/Poppler downloads from Settings > Conversion engines require Internet.
 libheif with heif-dec.exe, heif-enc.exe, DLLs and plugins for HEIC/AVIF; Tesseract and language models for OCR, plus Poppler for PDFs. Not included.
 ```
@@ -94,7 +100,7 @@ libheif with heif-dec.exe, heif-enc.exe, DLLs and plugins for HEIC/AVIF; Tessera
 ## What's new
 
 ```text
-Edit images with crop, resize and custom canvas; export PNG, JPEG, WebP or PDF with preview and actual byte size. Adjust quality and set a size limit, with dimension reduction only when permitted. Lay out images, typed text or UTF-8 TXT on A4/A5 pages. Save up to 32 profiles with 8 Convert to menu shortcuts. Processing stays on your PC, with 44 outputs and 93 recognized input extensions. Free: no payment is required to keep using it.
+New Audio, Video, Images and Documents profile manager: create, duplicate and exchange JSON recipes, select inputs and show up to 8 menu shortcuts. Added a per-file size cap, audio/video duration limit and advanced FFmpeg controls verified against local encoders. The Store package now targets Windows 10 build 19041 or later, x64, with the classic Windows 10 and modern Windows 11 menus. Image editing, A4/A5 text, 44 outputs and 93 input extensions remain available. Local and free; no payment is required to keep using it.
 ```
 
 ## Screenshot captions
@@ -106,7 +112,7 @@ Edit images with crop, resize and custom canvas; export PNG, JPEG, WebP or PDF w
 
 Screenshots 1, 3 and 4 show 0.4.0; screenshot 2 reuses the unchanged PDF Merge UI from 0.3.1. [Screenshot paths](store-assets/README.md).
 
-Native editor and profile screenshots remain to be captured for the 0.6.0 candidate. Match captions only after verifying the image: “Crop and adjust quality and size on the prepared result”; “Lay out text on A4 or A5”; “Save settings and reuse your profiles”. State the language actually shown in each screenshot. Do not attribute these new functions to historical screenshots.
+Native editor and profile screenshots remain to be captured for the 0.7.0 candidate. Match captions only after verifying the image: “Crop and adjust quality and size on the prepared result”; “Lay out text on A4 or A5”; “Save settings and reuse your profiles”. State the language actually shown in each screenshot. Do not attribute these new functions to historical screenshots.
 
 ## Copyright and additional license terms
 
@@ -116,18 +122,18 @@ Copyright:
 Copyright (C) 2026 Salvatore Corsi.
 ```
 
-Planned Additional license terms URL, to be verified after the 0.6.0 tag is published and before saving it in the portal. It links to the complete GPLv3 text:
+Planned Additional license terms URL, to be verified after the 0.7.0 tag is published and before saving it in the portal. It links to the complete GPLv3 text:
 
 ```text
-https://github.com/salvatorecorsi/convert-here/blob/v0.6.0/LICENSE
+https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/LICENSE
 ```
 
-The project uses GPL-3.0-only. The candidate plans `ConvertHere-0.6.0-source.zip` with source code, vendored Cargo dependencies and offline build instructions. These field-entry instructions are not part of the public description.
+The project uses GPL-3.0-only. The candidate plans `ConvertHere-0.7.0-source.zip` with source code, vendored Cargo dependencies and offline build instructions. These field-entry instructions are not part of the public description.
 
 ## Submission references
 
-Data controller and developer: **Salvatore Corsi**; publisher: **Salvatore Corsi**. Privacy and support contact: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Candidate 0.6.0 privacy statement](https://github.com/salvatorecorsi/convert-here/blob/v0.6.0/docs/privacy.md), to be verified after the tag is published. Reserved name: **Convert Here**. See the [submission procedure](store-submission.md) for licensing, identity and current status.
+Data controller and developer: **Salvatore Corsi**; publisher: **Salvatore Corsi**. Privacy and support contact: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Candidate 0.7.0 privacy statement](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/privacy.md), to be verified after the tag is published. Reserved name: **Convert Here**. See the [submission procedure](store-submission.md) for licensing, identity and current status.
 
-These are local 0.6.0 drafts, not fields already saved in the portal. Evidence for 0.4.0 and other earlier versions remains historical. [Candidate testing instructions](store-testing-0.6.0.md).
+These are local 0.7.0 drafts, not fields already saved in the portal. Evidence for 0.4.0 and other earlier versions remains historical. [Candidate testing instructions](store-testing-0.7.0.md).
 
 Description: 10,000 characters maximum; short description: 1,000 maximum (this draft is below 270); up to 20 features of 200 characters each; release notes: 1,500 maximum, empty for the first submission. [Official MSIX listing limits](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).

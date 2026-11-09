@@ -89,6 +89,8 @@ pub fn prepare_pdf_merge(
     let mut local_settings = settings.clone();
     local_settings.format = OutputFormat::Pdf;
     local_settings.pdf.action = PdfAction::Compress;
+    // The common cap applies to the final merged file, not private source PDFs.
+    local_settings.limits.max_bytes = None;
     let mut originals = Vec::with_capacity(inputs.len());
     for input in inputs {
         cancelled(cancel)?;
@@ -267,6 +269,7 @@ pub fn merge_prepared(
         Some(order),
         &prepared.sources[0].input,
         settings.output_dir.as_deref(),
+        &settings.limits,
         cancel,
         &mut progress,
     )

@@ -190,7 +190,7 @@ $payload = @(Get-ChildItem -LiteralPath $stage -File -Recurse | Sort-Object Full
 $packageHash = (Get-FileHash -LiteralPath $package -Algorithm SHA256).Hash.ToLowerInvariant()
 $report = [ordered]@{
     SchemaVersion = 2; Mode = $identity.Mode; BuiltAtUtc = [DateTime]::UtcNow.ToString('o'); SourceCommit = $sourceCommit; SourceDirty = $sourceWorkingTreeDirty
-    ApplicationVersion = $cargoVersion; StoreVersion = $identity.Version; Architecture = 'x64'; MinimumOSVersion = '10.0.22000.0'; Identity = $identity
+    ApplicationVersion = $cargoVersion; StoreVersion = $identity.Version; Architecture = 'x64'; MinimumOSVersion = '10.0.19041.0'; Identity = $identity
     Package = $fileName; PackageSHA256 = $packageHash; Signed = $false; FullPackage = $true; ExternalContent = $false
     ApplicationCount = 1; ConsoleCliBundled = $false; EnginesBundled = $false; NativeRuntimeInstallerBundled = $true; RuntimeDownloadScriptBundled = $false; CertificateStoreChanged = $false; PackageInstalled = $false
     MakeAppxValidation = 'Passed (no /nv)'; WindowsAppCertificationKit = 'Not run'; PartnerCenterUpload = 'Not performed'
@@ -205,7 +205,7 @@ $submissionText = @(
     ('Identity Name: ' + $identity.Name), ('Publisher: ' + $identity.Publisher), ('Display name: ' + $identity.DisplayName),
     ('Publisher display name: ' + $identity.PublisherDisplayName), ('Store version: ' + $identity.Version), ('Cargo version: ' + $cargoVersion),
     ('GUI execution alias: ' + $identity.ExecutionAlias), '',
-    'Full Windows 11 x64 MSIX (minimum build 22000), packagedClassicApp/mediumIL, visible app-list entry and packaged Explorer COM command.',
+    'Full Windows 10/11 x64 MSIX (minimum Windows 10 build 19041), packagedClassicApp/mediumIL, visible app-list entry and packaged Explorer COM command.',
     'MakeAppx semantic validation passed without /nv. All application binaries, runtime metadata, logos and dependency notices are inside the package.',
     'Exactly one GUI application is declared. Its executable and the Explorer DLL are the only binary payloads; the console CLI belongs to the separate GitHub distribution.',
     'No conversion engines or PowerShell downloader are bundled. Native engine installation is available in Settings after explicit user confirmation.',

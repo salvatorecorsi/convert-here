@@ -347,6 +347,8 @@ pub struct ConversionSettings {
     pub pdf: PdfSettings,
     pub csv: CsvSettings,
     pub ocr: OcrSettings,
+    pub limits: ConversionLimits,
+    pub media_options: std::collections::BTreeMap<String, String>,
 }
 impl Default for ConversionSettings {
     fn default() -> Self {
@@ -359,6 +361,52 @@ impl Default for ConversionSettings {
             pdf: PdfSettings::default(),
             csv: CsvSettings::default(),
             ocr: OcrSettings::default(),
+            limits: ConversionLimits::default(),
+            media_options: std::collections::BTreeMap::new(),
+        }
+    }
+}
+
+/// Optional per-output limits. Old settings omit this field and remain unlimited.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct ConversionLimits {
+    pub max_bytes: Option<u64>,
+    /// Maximum audio/video duration in seconds, measured after trim_start.
+    pub max_duration: Option<f64>,
+}
+
+impl ConversionLimits {
+    pub fn validate(&self) -> anyhow::Result<()> {
+        if self.max_bytes == Some(0) {
+            anyhow::bail!(crate::i18n::tr(
+                "Il peso massimo deve essere maggiore di zero",
+                "The maximum size must be greater than zero"
+            ));
+        }
+        if self
+            .max_duration
+            .is_some_and(|value| !value.is_finite() || value <= 0.0 || value > 86400.0)
+        {
+            anyhow::bail!(crate::i18n::tr(
+                "La durata massima deve essere finita, maggiore di zero e non oltre 86400 secondi",
+                "The maximum duration must be finite, greater than zero and at most 86400 seconds"
+            ));
+        }
+        Ok(())
+    }
+
+    /// Check actual completed bytes, not an estimate of the encoder's output.
+    pub fn check_bytes(&self, bytes: u64) -> anyhow::Result<()> {
+        match self.max_bytes {
+            Some(maximum) if bytes > maximum => anyhow::bail!(
+                "{} ({bytes} > {maximum} byte)",
+                crate::i18n::tr(
+                    "Il risultato supera il peso massimo; nessun risultato oltre il limite è stato salvato",
+                    "The output exceeds the size limit; no oversized output was saved"
+                )
+            ),
+            _ => Ok(()),
         }
     }
 }

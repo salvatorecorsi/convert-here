@@ -10,7 +10,7 @@ Sviluppato da **[Salvatore Corsi](https://github.com/salvatorecorsi)**, Convert 
 
 **La release GitHub 0.6.0 è bilingue, in italiano e inglese.** Scarica installer o portable e scegli la lingua in **Impostazioni → Lingua**. Vedi [Lingue](#lingue).
 
-La **0.6.0 è pubblicata su GitHub**, con editor immagini, impaginazione A4/A5 e profili personali: [note di rilascio IT](docs/release-notes-0.6.0.md) / [EN](docs/release-notes-0.6.0.en.md). Il pacchetto Store 1.0.6.0 è pronto ma non ancora caricato o inviato: [stato Store](docs/store-submission.md).
+La **0.6.0 è pubblicata su GitHub**, con editor immagini, impaginazione A4/A5 e profili personali: [note di rilascio IT](docs/release-notes-0.6.0.md) / [EN](docs/release-notes-0.6.0.en.md). La **0.7.0 è in preparazione**, con quattro schede, un manager dei profili, import/export JSON, limiti comuni e opzioni avanzate dei motori: [novità previste](docs/release-notes-0.7.0.md). Per la pubblicazione Store consulta lo [stato della candidatura](docs/store-submission.md).
 
 ![Convert Here: due immagini convertite da PNG a JPEG, con formato, qualità e destinazione nella stessa finestra](docs/screenshots/conversione-immagini.png)
 
@@ -31,7 +31,7 @@ La **0.6.0 è pubblicata su GitHub**, con editor immagini, impaginazione A4/A5 e
 
 Apri **Modifica…** dalla riga di un'immagine per ritagliare, ridimensionare e creare una tela con sfondo, risoluzione e posizione scelti. Esporta PNG, JPEG, WebP o PDF con anteprima e peso effettivo: il salvataggio scrive gli stessi byte preparati, senza sovrascrivere file esistenti. JPEG/WebP hanno qualità regolabile e un peso massimo; **300 kB = 300000 byte**. La riduzione ulteriore delle dimensioni è facoltativa; un limite impossibile impedisce il salvataggio.
 
-Impagina immagini, testo scritto in **Nuovo foglio…** o TXT UTF-8 su **A4/A5**, senza motori esterni. Salva fino a **32 profili**, di cui **8 nel menu Converti in** per ingressi compatibili. I profili conservano parametri, senza l'immagine di prova o il testo digitato. [Guida editor e profili](docs/image-editor-profiles.md).
+Impagina immagini, testo scritto in **Nuovo foglio…** o TXT UTF-8 su **A4/A5**, senza motori esterni. Nella scheda **Profili** crea, modifica, duplica, rinomina o elimina fino a **32 ricette**, di cui **8 nel menu Converti in**. Scegli gli ingressi ammessi per ogni profilo, la cartella di uscita e il predefinito; importa ed esporta ricette JSON senza includere immagini o testo di prova. I profili **PDF Merge** aprono l'ordinamento delle pagine con le opzioni salvate e richiedono almeno due file. [Guida editor e profili](docs/image-editor-profiles.md).
 
 ## Installazione
 
@@ -54,18 +54,20 @@ Per disinstallare usa **Impostazioni Windows → App → App installate → Conv
 
 ### Dalla finestra dell'app
 
-1. Apri Convert Here e trascina i file nella finestra, oppure scegli **Aggiungi file**.
+1. Nella scheda **File**, trascina i file nella finestra oppure scegli **Aggiungi file**.
 2. Seleziona il **formato** di destinazione e un preset: **Leggero**, **Bilanciato** o **Alta qualità**.
 3. Scegli se salvare **accanto all'originale** o in una cartella a tua scelta. Apri **Impostazioni personalizzate** per i controlli del formato.
 4. Avvia la conversione e segui l'avanzamento dei singoli file. Puoi annullare il lavoro.
 
 Le preferenze restano salvate tra gli avvii. Gli originali e i risultati già presenti vengono conservati: se un nome è occupato, l'app aggiunge un numero. La coda interattiva usa un formato comune alla selezione; se le categorie non hanno una destinazione comune, convertile in gruppi separati.
 
+Le quattro schede separano le attività: **File** per preparare le conversioni, **Cronologia** per lavori attivi e risultati precedenti, **Impostazioni** per motori, uscite e aspetto, **Profili** per gestire le ricette. La cronologia conserva anche i risultati della finestra principale, dell'editor e di PDF Merge tra gli avvii.
+
 ### Dal tasto destro in Esplora file
 
 Seleziona uno o più file e scegli **Converti in → MP3**, **WAV**, **PDF** o un altro formato compatibile. La conversione entra nella coda rapida in background con le impostazioni salvate. **Impostazioni personalizzate…** apre invece la finestra dell'app.
 
-Nella destinazione compare un segnaposto con una **clessidra blu** e il nome previsto del risultato. È un collegamento temporaneo: fai doppio clic per vedere avanzamento, dettagli e annullamento. Al termine viene sostituito dal file convertito; in caso di errore mostra una **X rossa**. Chiudere la finestra di stato lascia proseguire il lavoro. La finestra principale mostra la **Coda rapida** e la **Cronologia**. [Come funziona la coda](docs/queued-conversions.md).
+Nella destinazione compare un segnaposto con una **clessidra blu** e il nome previsto del risultato. È un collegamento temporaneo: fai doppio clic per vedere avanzamento, dettagli e annullamento. Al termine viene sostituito dal file convertito; in caso di errore mostra una **X rossa**. Chiudere la finestra di stato lascia proseguire il lavoro. La scheda **Cronologia** riunisce coda rapida e conversioni della finestra. [Come funziona la coda](docs/queued-conversions.md).
 
 Con più file convertibili in PDF:
 
@@ -95,6 +97,12 @@ Apri **Impostazioni → Formati di uscita** e abilita le destinazioni che usi. L
 Puoi regolare bitrate, frequenza, canali e normalizzazione audio; codec H.264/H.265, qualità, larghezza, FPS e taglio dei video; ridimensionamento, qualità JPEG e DPI dei PDF. L'app mostra i controlli pertinenti al formato. La disponibilità dei codec audio/video dipende dalla build di FFmpeg configurata.
 
 La [guida completa alle conversioni](docs/conversions.md) elenca estensioni di ingresso, codec, opzioni e limiti di ogni famiglia.
+
+### Limiti e opzioni avanzate
+
+Nei profili puoi impostare un **peso massimo per ogni risultato** e una **durata massima audio/video**. Il peso è verificato sui byte prodotti: se supera il limite, il risultato non viene pubblicato. L'editor JPEG/WebP può adattare la qualità e, se autorizzato, le dimensioni; per audio e video un limite di peso non promette una qualità o un bitrate adattati automaticamente. La durata si applica dopo l'inizio del taglio e rispetta anche l'eventuale fine scelta.
+
+Per audio, video e GIF da video, **Avanzate** offre una ricerca tra controlli di codec, filtri, metadati e prestazioni. Le opzioni specifiche dell'encoder vengono lette dal FFmpeg locale configurato e verificate prima della conversione. Le scelte dipendono da codec, contenitore e motori installati: non è un campo per comandi liberi. Un profilo con queste opzioni accetta sorgenti audio/video; la conversione nativa immagine → GIF resta disponibile senza opzioni FFmpeg. [Configurazione e profili](docs/configuration.md#profili-personali).
 
 ### Comprimere, dividere e unire PDF
 

@@ -639,6 +639,9 @@ pub fn convert_prepared(
             verify_output(plan, output)?;
             // persist_noclobber performs a same-volume atomic move, including a final race check.
             let temporary = super::staged_temporary(source, &plan.work_dir)?;
+            plan.settings
+                .limits
+                .check_bytes(temporary.as_file().metadata()?.len())?;
             temporary.as_file().sync_all()?;
             let file = temporary
                 .persist_noclobber(&output.path)

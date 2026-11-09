@@ -10,7 +10,7 @@ Developed by **[Salvatore Corsi](https://github.com/salvatorecorsi)**, Convert H
 
 **GitHub release 0.6.0 is bilingual, in Italian and English.** Download the installer or portable package and choose a language in **Settings → Language**. See [Languages](#languages).
 
-**0.6.0 is published on GitHub**, with an image editor, A4/A5 layout and personal profiles: [English release notes](docs/release-notes-0.6.0.en.md) / [Italian](docs/release-notes-0.6.0.md). Store package 1.0.6.0 is ready but has not been uploaded or submitted: [Store status](docs/store-submission.md).
+**0.6.0 is published on GitHub**, with an image editor, A4/A5 layout and personal profiles: [English release notes](docs/release-notes-0.6.0.en.md) / [Italian](docs/release-notes-0.6.0.md). **0.7.0 is being prepared**, with four tabs, a profile manager, JSON import/export, shared limits and advanced engine options: [planned changes](docs/release-notes-0.7.0.en.md). See the [Store submission status](docs/store-submission.md) for publication details.
 
 ![Convert Here in English: two PNG images converted to JPEG, with two completed files and zero errors](docs/screenshots/en-conversion.jpg)
 
@@ -31,7 +31,7 @@ Developed by **[Salvatore Corsi](https://github.com/salvatorecorsi)**, Convert H
 
 Open **Edit…** beside an image to crop, resize and create a canvas with a custom background, resolution and position. Export PNG, JPEG, WebP or PDF with a preview and actual byte size: saving writes the same prepared bytes without overwriting existing files. JPEG/WebP offer adjustable quality and a size limit; **300 kB = 300000 bytes**. Further dimension reduction is optional; an impossible limit prevents saving.
 
-Lay out images, text written in **New sheet…** or UTF-8 TXT on **A4/A5** without external engines. Save up to **32 profiles**, with **8 in Convert to** for compatible inputs. Profiles store parameters without the sample image or typed text. [Editor and profiles guide](docs/image-editor-profiles.en.md).
+Lay out images, text written in **New sheet…** or UTF-8 TXT on **A4/A5** without external engines. In **Profiles**, create, edit, duplicate, rename or delete up to **32 recipes**, with **8 in Convert to**. Choose each profile's allowed inputs, output folder and default status; import and export JSON recipes without including sample images or text. **PDF Merge** profiles open page ordering with their saved settings and require at least two files. [Editor and profiles guide](docs/image-editor-profiles.en.md).
 
 ## Installation
 
@@ -54,18 +54,20 @@ To uninstall, use **Windows Settings → Apps → Installed apps → Convert Her
 
 ### From the app window
 
-1. Open Convert Here and drag files into the window, or choose **Add files**.
+1. In **Files**, drag files into the window or choose **Add files**.
 2. Select the output **format** and a preset: **Compact**, **Balanced** or **High quality**.
 3. Choose to save **next to the original** or in a folder of your choice. Open **Custom settings** for format-specific controls.
 4. Start the conversion and follow each file's progress. You can cancel the job.
 
 Preferences are saved between sessions. Originals and existing results are preserved: the app adds a number when a name is already taken. The interactive queue uses one format shared by the selection; convert categories in separate groups if they have no common destination.
 
+Four tabs separate the tasks: **Files** prepares conversions, **History** shows active jobs and previous results, **Settings** configures engines, outputs and appearance, and **Profiles** manages recipes. History also retains results from the main window, editor and PDF Merge between sessions.
+
 ### From the File Explorer context menu
 
 Select one or more files and choose **Convert to → MP3**, **WAV**, **PDF** or another compatible format. The conversion enters the background quick queue using your saved settings. **Custom settings…** opens the app window instead.
 
-A placeholder with a **blue hourglass** and the planned output name appears in the destination. It is a temporary shortcut: double-click to see progress, details and cancellation. The converted file replaces it when the job finishes; an error gives it a **red X**. Closing the status window lets the job continue. The main window shows the **Quick queue** and **History**. [How the queue works](docs/queued-conversions.en.md).
+A placeholder with a **blue hourglass** and the planned output name appears in the destination. It is a temporary shortcut: double-click to see progress, details and cancellation. The converted file replaces it when the job finishes; an error gives it a **red X**. Closing the status window lets the job continue. **History** combines quick-queue jobs and window conversions. [How the queue works](docs/queued-conversions.en.md).
 
 With multiple files that can become PDFs:
 
@@ -95,6 +97,12 @@ Open **Settings → Output formats** and enable the destinations you use. Your c
 Adjust audio bitrate, sample rate, channels and normalization; video H.264/H.265 codec, quality, width, FPS and trimming; image resizing, JPEG quality and PDF DPI. The app shows the relevant controls for each format. Available audio/video codecs depend on the configured FFmpeg build.
 
 The [complete conversion guide](docs/conversions.en.md) lists input extensions, codecs, options and the limits of each family.
+
+### Limits and advanced options
+
+Profiles can set a **maximum size for each output** and a **maximum audio/video duration**. Size is checked against the produced bytes; oversized outputs are not published. The JPEG/WebP editor can adapt quality and, with permission, dimensions. An audio/video size limit does not promise automatic quality or bitrate adjustment. Duration applies after the trim start and also respects any selected end time.
+
+For audio, video and video-to-GIF, **Advanced** provides searchable codec, filter, metadata and performance controls. Encoder-specific options are read from the configured local FFmpeg and checked before conversion. Choices depend on the codec, container and installed engines; this is not a free-form command field. Profiles with these options require audio/video sources. Native image-to-GIF remains available without FFmpeg options. [Configuration and profiles](docs/configuration.en.md#personal-profiles).
 
 ### Compressing, splitting and merging PDFs
 

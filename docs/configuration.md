@@ -56,15 +56,23 @@ Le scelte vengono salvate e il menu le rilegge senza riavviare Esplora file. Anc
 
 Per l'aspetto puoi seguire il tema di Windows oppure scegliere **Chiaro** o **Scuro**.
 
-## Profili personali — candidata 0.6.0
+## Profili personali
 
-**Salva le mie impostazioni** nell'editor conserva una ricetta con nome. Si possono salvare 32 profili e mostrarne 8 in **Converti in**, se il formato è abilitato e tutti gli ingressi selezionati sono compatibili. Nelle Impostazioni, **I miei profili** consente di applicare, aggiornare, rinominare, eliminare e scegliere il predefinito. Riapri il menu Explorer dopo aver modificato un profilo; i lavori già accodati mantengono la propria ricetta.
+Nella nuova scheda **Profili**, crea, modifica, duplica, rinomina, elimina e scegli la ricetta predefinita. Si possono salvare **32 profili** e mostrarne **8 in Converti in**, se il formato è abilitato e ogni ingresso selezionato è compatibile. Puoi ammettere tutti gli ingressi compatibili o limitare una ricetta a estensioni specifiche. Il filtro non cambia le 93 estensioni riconosciute dall'app. Riapri il menu Explorer dopo aver modificato un profilo; i lavori già accodati mantengono la propria ricetta. I profili PDF Merge richiedono almeno due file e aprono l'ordinamento pagine.
 
-I profili salvano parametri e l'eventuale cartella di destinazione, senza immagine di prova, testo digitato o anteprime. Il nome di un profilo è un testo scelto dall'utente e non viene tradotto cambiando lingua. [Guida completa](image-editor-profiles.md).
+**Importa JSON…**, **Esporta…** ed **Esporta tutti…** trasferiscono le ricette. Il JSON comprende parametri, filtri, visibilità ed eventuale cartella di uscita, senza percorsi dei motori o contenuti di prova. L'importazione è atomica, crea nuove copie e non sovrascrive profili; oltre gli 8 visibili importa le ricette aggiuntive fuori dal menu. Un file oltre 256 KiB o un totale superiore a 32 profili viene rifiutato. Il nome scelto dall'utente non viene tradotto. [Guida completa ed esempio JSON](image-editor-profiles.md).
+
+### Peso, durata e Avanzate
+
+Il **peso massimo per file** comune viene verificato prima di pubblicare ogni risultato. I vecchi limiti immagine continuano a funzionare; se coesistono, vale il minore. L'editor JPEG/WebP può cercare una qualità adatta e ridimensionare solo se autorizzato. Gli altri percorsi falliscono se il risultato resta troppo grande; il limite audio/video non è una promessa di bitrate automatico.
+
+La **durata massima audio/video** si applica alle sorgenti audio/video, anche per estrazione audio e GIF, dopo l'inizio scelto e insieme alla fine del taglio. Non modifica immagini o testo.
+
+**Avanzate** raccoglie controlli tipizzati e ricercabili per codec, filtri, metadati e prestazioni. Le opzioni specifiche dell'encoder sono rilevate dal FFmpeg locale configurato, non da un servizio online. Le disponibilità dipendono da build, codec e contenitore; opzioni incompatibili o non verificabili producono un errore. Le ricette con opzioni FFmpeg richiedono ingressi audio/video, anche quando l'uscita è GIF. Non sono accettati comandi liberi, script o percorsi eseguibili nel catalogo.
 
 ## Preferenze e resoconti
 
-Le preferenze e l'ultimo resoconto rapido si trovano in `%APPDATA%\SalvatoreCorsi\TheConverter\config`, nei file `preferences.json` e `report-last.json`. Il resoconto include percorsi locali ed errori e non viene trasmesso. La conversione interattiva mantiene i propri risultati nella coda corrente.
+Le preferenze e l'ultimo resoconto rapido si trovano in `%APPDATA%\SalvatoreCorsi\TheConverter\config`, nei file `preferences.json` e `report-last.json`. `history.json` conserva fino a 300 conversioni terminate dalla finestra, dall'editor e da PDF Merge, entro 1 MiB; la scheda **Cronologia** le riunisce ai lavori della coda rapida. Questi file includono percorsi locali ed errori e non vengono trasmessi. Le scritture della cronologia avvengono in background; un file non leggibile viene segnalato e conservato.
 
 In un'installazione MSIX Windows può reindirizzare i percorsi nei dati privati del pacchetto. L'app non cifra i file di preferenze e stato: si applicano le protezioni dell'account Windows e del dispositivo. [Informativa privacy](privacy.md).
 

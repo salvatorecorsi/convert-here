@@ -2,6 +2,20 @@
 
 Queste verifiche accompagnano la preparazione Store di Convert Here, sviluppato da Salvatore Corsi. Non equivalgono alla certificazione Microsoft e non sostituiscono l'identita reale di Partner Center.
 
+## Versione 0.7.0 / Store 1.0.6.0 — in preparazione
+
+La nuova versione è **in preparazione**: tag, release GitHub e pacchetto Store non sono ancora pubblicati. Le prove seguenti riguardano i sorgenti e la build debug locale **0.7.0** destinati alla successiva build release; non attestano un'installazione del nuovo MSIX o un invio a Microsoft.
+
+La suite completa ha superato **348 test app**, con **un test già ignorato**, e **18 test DLL**. Sono passate anche **due ulteriori regressioni dei controlli numerici e degli alias UI**, oltre a **Clippy con `--all-targets -- -D warnings`**. Le fixture di packaging Store hanno superato **50 controlli** e quelle di branding **37**, sia con PowerShell 7 sia con Windows PowerShell 5.1. Le prove COM e di avvio isolato verificano anche filtri di ingresso, profili Merge e profili FFmpeg per sorgenti audio/video, senza registrare la DLL nel sistema.
+
+La QA della finestra Windows ha verificato le quattro schede **File, Cronologia, Impostazioni e Profili**, le colonne dei formati, la griglia dei motori e il manager. Un'importazione JSON non valida è stata rifiutata senza creare profili (**0**); quella valida ha importato **4 profili**. Queste prove sono distinte dal semplice parsing del JSON e dalle regressioni automatiche.
+
+Un profilo rapido ha convertito un **FLAC di 35 secondi in MP3** con durata massima di **30 secondi**. Il risultato misura **721649 byte**; FFprobe riporta **30.000000 secondi**. La cronologia è stata aggiornata e osservata anche in un'altra finestra dell'app.
+
+Le [due catture italiane della 0.7.0](store-assets/0.7.0/README.md), **JPEG 1722 × 959**, documentano Impostazioni e Profili dalla build debug nativa degli stessi sorgenti destinati alla release. Provenienza, nomi e digest sono nel registro della cartella; gli indici [Store](store-assets/README.md) e [screenshot](screenshots/README.md) mantengono separate le catture precedenti.
+
+Il requisito del nuovo manifest Store è **Windows 10 build 19041 o successivo, x64**, verificato dalle fixture di packaging. **Non è stato eseguito un test di installazione su un host Windows 10 reale, né il WACK.** Non vengono anticipati esiti di audit degli artefatti finali, certificazione o pubblicazione.
+
 ## Release 0.6.0 pubblicata / Store 1.0.5.0 non caricato
 
 La [release GitHub 0.6.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.6.0) è pubblicata dal **9 novembre 2026, 18:28:13 UTC**, senza stato draft, dal commit `9b959405e64e62f1f05f49a821bb9444747b3620`. [Windows checks 42672724894](https://github.com/salvatorecorsi/convert-here/actions/runs/42672724894) è **SUCCESS**. Dimensioni e digest dei quattro asset GitHub corrispondono esattamente ai file locali verificati; il report di consegna è `.tools/delivery-060.json`.

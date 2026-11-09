@@ -7,9 +7,39 @@ pub const MAX_MENU_PROFILES: usize = 8;
 pub const MAX_PROFILE_NAME_CHARS: usize = 40;
 pub const MAX_PREFERENCES_BYTES: u64 = 256 * 1024;
 
+// Input support is independent of the enabled output formats. The Explorer
+// parity test compares this complete list with MediaKind::from_path.
+pub const RECOGNIZED_INPUT_EXTENSIONS: &[&str] = &[
+    "mp3", "mpga", "wav", "flac", "aac", "m4a", "ogg", "opus", "aiff", "aif", "wma", "alac", "ape",
+    "m4b", "mka", "mp2", "oga", "weba", "ac3", "au", "caf", "amr", "dts", "tta", "voc", "wv",
+    "tak", "w64", "aifc", "ra", "mp4", "m4v", "mkv", "mov", "webm", "avi", "wmv", "mpeg", "mpg",
+    "mts", "m2ts", "ts", "3gp", "flv", "asf", "vob", "ogv", "m2v", "mxf", "f4v", "divx", "3g2",
+    "m2t", "mpe", "mpv", "png", "jpg", "jpeg", "webp", "gif", "bmp", "tif", "tiff", "ico", "qoi",
+    "tga", "ff", "hdr", "exr", "pnm", "pam", "pbm", "pgm", "ppm", "avif", "heic", "heif", "pdf",
+    "doc", "docx", "odt", "rtf", "txt", "ppt", "pptx", "odp", "xls", "xlsx", "xlsm", "ods", "csv",
+    "html", "htm",
+];
+
+pub fn normalize_input_extensions(inputs: &[String]) -> Option<Vec<String>> {
+    let mut normalized = BTreeSet::new();
+    for input in inputs {
+        let input = input.trim();
+        let extension = input
+            .strip_prefix('.')
+            .unwrap_or(input)
+            .to_ascii_lowercase();
+        if !RECOGNIZED_INPUT_EXTENSIONS.contains(&extension.as_str()) {
+            return None;
+        }
+        normalized.insert(extension);
+    }
+    Some(normalized.into_iter().collect())
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProfileInputPolicy {
     Compatible,
+    Media,
     Images,
     ImagesOrText,
     Pdf,
@@ -19,11 +49,42 @@ impl ProfileInputPolicy {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Compatible => "compatible",
+            Self::Media => "media",
             Self::Images => "images",
             Self::ImagesOrText => "images_or_text",
             Self::Pdf => "pdf",
         }
     }
+}
+
+pub fn is_media_output(extension: &str) -> bool {
+    matches!(
+        extension,
+        "mp3"
+            | "wav"
+            | "flac"
+            | "aac"
+            | "ogg"
+            | "opus"
+            | "aiff"
+            | "m4a"
+            | "wma"
+            | "ac3"
+            | "au"
+            | "caf"
+            | "mp4"
+            | "mkv"
+            | "mov"
+            | "webm"
+            | "avi"
+            | "gif"
+            | "mpeg"
+            | "wmv"
+            | "flv"
+            | "ts"
+            | "m4v"
+            | "3gp"
+    )
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,6 +95,18 @@ pub struct ProfileMenuItem {
     pub show_in_menu: bool,
     pub output_extension: &'static str,
     pub input_policy: ProfileInputPolicy,
+    pub input_extensions: Vec<String>,
+    pub requires_multiple: bool,
+}
+
+impl ProfileMenuItem {
+    pub fn allows_extension(&self, extension: &str) -> bool {
+        self.input_extensions.is_empty()
+            || self
+                .input_extensions
+                .binary_search(&extension.to_ascii_lowercase())
+                .is_ok()
+    }
 }
 
 pub fn valid_name(name: &str) -> bool {
@@ -103,15 +176,20 @@ pub fn decode_profile(value: &Value) -> Option<ProfileMenuItem> {
     if settings.get("format")?.as_str()? != output_identifier(output_extension) {
         return None;
     }
-    if output_extension == "pdf"
+    let media = match settings.get("media_options") {
+        None => false,
+        Some(Value::Object(options)) => !options.is_empty(),
+        _ => return None,
+    };
+    if media && !is_media_output(output_extension) {
+        return None;
+    }
+    let requires_multiple = output_extension == "pdf"
         && settings
             .get("pdf")
             .and_then(|v| v.get("action"))
             .and_then(Value::as_str)
-            == Some("Merge")
-    {
-        return None;
-    }
+            == Some("Merge");
     let image = settings.get("image");
     let edit = image
         .and_then(|v| v.get("edit"))
@@ -133,7 +211,9 @@ pub fn decode_profile(value: &Value) -> Option<ProfileMenuItem> {
     if split && (edit || page) {
         return None;
     }
-    let derived = if split {
+    let derived = if media {
+        ProfileInputPolicy::Media
+    } else if split {
         ProfileInputPolicy::Pdf
     } else if edit {
         ProfileInputPolicy::Images
@@ -145,6 +225,17 @@ pub fn decode_profile(value: &Value) -> Option<ProfileMenuItem> {
     if value.get("input_policy")?.as_str()? != derived.as_str() {
         return None;
     }
+    let input_extensions = match value.get("input_extensions") {
+        None => vec![],
+        Some(value) => {
+            let values = value
+                .as_array()?
+                .iter()
+                .map(|v| v.as_str().map(str::to_owned))
+                .collect::<Option<Vec<_>>>()?;
+            normalize_input_extensions(&values)?
+        }
+    };
     Some(ProfileMenuItem {
         id: id.into(),
         revision,
@@ -152,6 +243,8 @@ pub fn decode_profile(value: &Value) -> Option<ProfileMenuItem> {
         show_in_menu,
         output_extension,
         input_policy: derived,
+        input_extensions,
+        requires_multiple,
     })
 }
 

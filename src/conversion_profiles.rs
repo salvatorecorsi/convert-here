@@ -12,11 +12,24 @@ use std::{collections::BTreeSet, path::Path};
 
 pub use crate::profile_menu_shared::{
     MAX_MENU_PROFILES, MAX_PREFERENCES_BYTES, MAX_PROFILE_NAME_CHARS, MAX_SAVED_PROFILES,
-    ProfileInputPolicy,
+    ProfileInputPolicy, RECOGNIZED_INPUT_EXTENSIONS,
 };
 
 pub fn valid_profile_id(id: &str) -> bool {
     profile_menu_shared::profile_guid_bytes(id).is_some()
+}
+
+pub fn compatible_input_extensions(format: OutputFormat) -> Vec<&'static str> {
+    RECOGNIZED_INPUT_EXTENSIONS
+        .iter()
+        .copied()
+        .filter(|extension| {
+            crate::model::supported_formats(MediaKind::from_path(Path::new(&format!(
+                "input.{extension}"
+            ))))
+            .contains(&format)
+        })
+        .collect()
 }
 
 #[derive(Debug, Clone)]
@@ -26,6 +39,7 @@ pub struct ConversionProfile {
     pub name: String,
     pub show_in_menu: bool,
     pub settings: ConversionSettings,
+    pub input_extensions: Vec<String>,
     // Preserve the producer's settings representation. Newly introduced serde
     // defaults and unknown future fields must not invalidate an existing recipe.
     settings_wire: serde_json::Value,
@@ -33,7 +47,10 @@ pub struct ConversionProfile {
 
 impl ConversionProfile {
     pub fn input_policy(&self) -> ProfileInputPolicy {
-        if self.settings.format == OutputFormat::Pdf && self.settings.pdf.action == PdfAction::Split
+        if !self.settings.media_options.is_empty() {
+            ProfileInputPolicy::Media
+        } else if self.settings.format == OutputFormat::Pdf
+            && self.settings.pdf.action == PdfAction::Split
         {
             ProfileInputPolicy::Pdf
         } else if self.settings.image.edit.is_some() {
@@ -53,6 +70,9 @@ impl ConversionProfile {
             show_in_menu: self.show_in_menu,
             output_extension: self.settings.format.extension(),
             input_policy: self.input_policy(),
+            input_extensions: self.input_extensions.clone(),
+            requires_multiple: self.settings.format == OutputFormat::Pdf
+                && self.settings.pdf.action == PdfAction::Merge,
         }
     }
 
@@ -73,6 +93,18 @@ impl ConversionProfile {
             );
             let kind = MediaKind::from_path(input);
             ensure!(
+                self.input_extensions.is_empty()
+                    || input.extension().and_then(|e| e.to_str()).is_some_and(|e| {
+                        self.input_extensions
+                            .binary_search(&e.to_ascii_lowercase())
+                            .is_ok()
+                    }),
+                tr(
+                    "L’estensione del file non è abilitata per questo profilo",
+                    "The file extension is not enabled for this profile"
+                )
+            );
+            ensure!(
                 crate::model::supported_formats(kind).contains(&self.settings.format),
                 tr(
                     "Il profilo non è compatibile con tutti i file selezionati",
@@ -80,6 +112,13 @@ impl ConversionProfile {
                 )
             );
             match self.input_policy() {
+                ProfileInputPolicy::Media => ensure!(
+                    matches!(kind, MediaKind::Audio | MediaKind::Video),
+                    tr(
+                        "Le opzioni FFmpeg del profilo richiedono file audio o video",
+                        "The profile's FFmpeg options require audio or video files"
+                    )
+                ),
                 ProfileInputPolicy::Images => ensure!(
                     kind == MediaKind::Image,
                     tr(
@@ -115,11 +154,57 @@ impl ConversionProfile {
                 "Select 1 to 10000 files for the profile"
             )
         );
+        ensure!(
+            self.settings.format != OutputFormat::Pdf
+                || self.settings.pdf.action != PdfAction::Merge
+                || count >= 2,
+            tr(
+                "Il profilo PDF Merge richiede almeno due file",
+                "The PDF Merge profile requires at least two files"
+            )
+        );
         Ok(())
     }
 }
 
 fn validate_profile(profile: &ConversionProfile) -> Result<()> {
+    ensure!(
+        profile_menu_shared::normalize_input_extensions(&profile.input_extensions)
+            .is_some_and(|normalized| normalized == profile.input_extensions),
+        tr(
+            "Estensioni di ingresso del profilo non valide",
+            "Invalid profile input extensions"
+        )
+    );
+    ensure!(
+        profile.input_extensions.iter().all(|extension| {
+            let kind = MediaKind::from_path(Path::new(&format!("input.{extension}")));
+            crate::model::supported_formats(kind).contains(&profile.settings.format)
+                && match profile.input_policy() {
+                    ProfileInputPolicy::Media => {
+                        matches!(kind, MediaKind::Audio | MediaKind::Video)
+                    }
+                    ProfileInputPolicy::Compatible => true,
+                    ProfileInputPolicy::Images => kind == MediaKind::Image,
+                    ProfileInputPolicy::ImagesOrText => {
+                        kind == MediaKind::Image || extension == "txt"
+                    }
+                    ProfileInputPolicy::Pdf => kind == MediaKind::Pdf,
+                }
+        }),
+        tr(
+            "Le estensioni di ingresso non sono compatibili con le opzioni del profilo",
+            "The input extensions are not compatible with the profile options"
+        )
+    );
+    ensure!(
+        profile.settings.media_options.is_empty()
+            || profile_menu_shared::is_media_output(profile.settings.format.extension()),
+        tr(
+            "Le opzioni FFmpeg richiedono una destinazione audio, video o GIF",
+            "FFmpeg options require an audio, video or GIF output"
+        )
+    );
     ensure!(
         profile_menu_shared::profile_guid_bytes(&profile.id).is_some(),
         tr(
@@ -156,14 +241,6 @@ fn validate_profile(profile: &ConversionProfile) -> Result<()> {
             "The profile name must contain 1 to 40 characters, without control characters"
         )
     );
-    ensure!(
-        profile.settings.format != OutputFormat::Pdf
-            || profile.settings.pdf.action != PdfAction::Merge,
-        tr(
-            "PDF Merge richiede la finestra per ordinare le pagine",
-            "PDF Merge requires the page ordering window"
-        )
-    );
     engine::validate(&profile.settings)?;
     if let Some(edit) = &profile.settings.image.edit {
         crate::image_edit::validate(edit)?;
@@ -194,6 +271,7 @@ fn revision_for(profile: &ConversionProfile) -> Result<u64> {
         &profile.name,
         profile.show_in_menu,
         &profile.settings_wire,
+        &profile.input_extensions,
     )
 }
 
@@ -202,8 +280,14 @@ fn revision_for_wire(
     name: &str,
     show: bool,
     settings: &serde_json::Value,
+    input_extensions: &[String],
 ) -> Result<u64> {
-    let value = serde_json::json!([id, name, show, settings]);
+    // Existing recipes retain their exact revision when they have no filter.
+    let value = if input_extensions.is_empty() {
+        serde_json::json!([id, name, show, settings])
+    } else {
+        serde_json::json!([id, name, show, settings, input_extensions])
+    };
     let bytes = serde_json::to_vec(&canonical_json(&value))?;
     let digest = Sha256::digest(bytes);
     let value = u64::from_be_bytes(digest[..8].try_into().unwrap());
@@ -260,6 +344,8 @@ impl Serialize for ConversionProfile {
             show_in_menu: bool,
             output_extension: &'static str,
             input_policy: &'static str,
+            #[serde(skip_serializing_if = "Vec::is_empty")]
+            input_extensions: &'a Vec<String>,
             settings: &'a serde_json::Value,
         }
         validate_profile(self).map_err(serde::ser::Error::custom)?;
@@ -271,6 +357,7 @@ impl Serialize for ConversionProfile {
             show_in_menu: self.show_in_menu,
             output_extension: self.settings.format.extension(),
             input_policy: self.input_policy().as_str(),
+            input_extensions: &self.input_extensions,
             settings: &self.settings_wire,
         }
         .serialize(serializer)
@@ -285,6 +372,7 @@ fn decode_profile(value: serde_json::Value) -> Option<ConversionProfile> {
         &header.name,
         header.show_in_menu,
         &settings_wire,
+        &header.input_extensions,
     )
     .ok()?
         != header.revision
@@ -297,6 +385,7 @@ fn decode_profile(value: serde_json::Value) -> Option<ConversionProfile> {
         name: header.name,
         show_in_menu: header.show_in_menu,
         settings: serde_json::from_value(settings_wire.clone()).ok()?,
+        input_extensions: header.input_extensions,
         settings_wire,
     };
     validate_profile(&profile).ok()?;
@@ -308,6 +397,30 @@ fn decode_profile(value: serde_json::Value) -> Option<ConversionProfile> {
 #[derive(Debug, Clone, Default)]
 pub struct ConversionProfiles {
     profiles: Vec<ConversionProfile>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ImportSummary {
+    pub imported: usize,
+    pub hidden_from_menu: usize,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PortableProfiles {
+    schema: String,
+    version: u32,
+    profiles: Vec<PortableProfile>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PortableProfile {
+    name: String,
+    show_in_menu: bool,
+    #[serde(default)]
+    input_extensions: Vec<String>,
+    settings: serde_json::Value,
 }
 
 impl ConversionProfiles {
@@ -353,6 +466,15 @@ impl ConversionProfiles {
         show_in_menu: bool,
         settings: ConversionSettings,
     ) -> Result<String> {
+        self.create_with_inputs(name, show_in_menu, settings, vec![])
+    }
+    pub fn create_with_inputs(
+        &mut self,
+        name: String,
+        show_in_menu: bool,
+        settings: ConversionSettings,
+        input_extensions: Vec<String>,
+    ) -> Result<String> {
         ensure!(
             !name.chars().any(char::is_control),
             tr(
@@ -385,6 +507,7 @@ impl ConversionProfiles {
             show_in_menu,
             settings,
             settings_wire,
+            input_extensions: normalize_inputs(&input_extensions)?,
         };
         profile.revision = revision_for(&profile)?;
         validate_profile(&profile)?;
@@ -397,6 +520,17 @@ impl ConversionProfiles {
         name: String,
         show_in_menu: bool,
         settings: ConversionSettings,
+    ) -> Result<()> {
+        let input_extensions = self.resolve(id, None)?.input_extensions.clone();
+        self.update_with_inputs(id, name, show_in_menu, settings, input_extensions)
+    }
+    pub fn update_with_inputs(
+        &mut self,
+        id: &str,
+        name: String,
+        show_in_menu: bool,
+        settings: ConversionSettings,
+        input_extensions: Vec<String>,
     ) -> Result<()> {
         ensure!(
             !name.chars().any(char::is_control),
@@ -420,6 +554,7 @@ impl ConversionProfiles {
             show_in_menu,
             settings,
             settings_wire,
+            input_extensions: normalize_inputs(&input_extensions)?,
         };
         profile.revision = revision_for(&profile)?;
         validate_profile(&profile)?;
@@ -434,6 +569,101 @@ impl ConversionProfiles {
     pub fn set_show_in_menu(&mut self, id: &str, value: bool) -> Result<()> {
         let p = self.resolve(id, None)?.clone();
         self.update(id, p.name, value, p.settings)
+    }
+    /// Portable recipes contain no machine tool paths or durable identifiers.
+    pub fn export_json(&self, selected_id: Option<&str>) -> Result<Vec<u8>> {
+        let profiles: Vec<_> = match selected_id {
+            Some(id) => vec![self.resolve(id, None)?],
+            None => self.iter().collect(),
+        };
+        let mut portable = Vec::with_capacity(profiles.len());
+        for profile in profiles {
+            validate_profile(profile)?;
+            portable.push(PortableProfile {
+                name: profile.name.clone(),
+                show_in_menu: profile.show_in_menu,
+                input_extensions: profile.input_extensions.clone(),
+                settings: profile.settings_wire.clone(),
+            });
+        }
+        let bytes = serde_json::to_vec_pretty(&PortableProfiles {
+            schema: "convert-here-profiles".into(),
+            version: 1,
+            profiles: portable,
+        })?;
+        ensure!(
+            bytes.len() as u64 <= MAX_PREFERENCES_BYTES,
+            tr(
+                "Il file dei profili supera 256 KiB",
+                "The profiles file exceeds 256 KiB"
+            )
+        );
+        Ok(bytes)
+    }
+    /// Stage the complete import before mutating the current collection.
+    pub fn import_json(&mut self, bytes: &[u8]) -> Result<ImportSummary> {
+        ensure!(
+            bytes.len() as u64 <= MAX_PREFERENCES_BYTES,
+            tr(
+                "Il file dei profili supera 256 KiB",
+                "The profiles file exceeds 256 KiB"
+            )
+        );
+        let portable: PortableProfiles = serde_json::from_slice(bytes)?;
+        ensure!(
+            portable.schema == "convert-here-profiles" && portable.version == 1,
+            tr(
+                "Formato o versione del file profili non supportati",
+                "Unsupported profiles file format or version"
+            )
+        );
+        ensure!(
+            portable.profiles.len() <= MAX_SAVED_PROFILES.saturating_sub(self.len()),
+            tr(
+                "L’importazione supererebbe il limite di 32 profili",
+                "The import would exceed the limit of 32 profiles"
+            )
+        );
+        let mut staged = self.clone();
+        let mut summary = ImportSummary::default();
+        let mut visible = staged.iter().filter(|p| p.show_in_menu).count();
+        for entry in portable.profiles {
+            let id = new_id()?;
+            ensure!(
+                staged.get(&id).is_none(),
+                tr(
+                    "Identificatore del profilo già presente; riprova",
+                    "The profile identifier already exists; try again"
+                )
+            );
+            let show_in_menu = entry.show_in_menu && visible < MAX_MENU_PROFILES;
+            if entry.show_in_menu && !show_in_menu {
+                summary.hidden_from_menu += 1;
+            }
+            let mut profile = ConversionProfile {
+                id,
+                revision: 0,
+                name: entry.name,
+                show_in_menu,
+                settings: serde_json::from_value(entry.settings.clone())?,
+                settings_wire: entry.settings,
+                input_extensions: normalize_inputs(&entry.input_extensions)?,
+            };
+            profile.revision = revision_for(&profile)?;
+            validate_profile(&profile)?;
+            visible += usize::from(show_in_menu);
+            staged.profiles.push(profile);
+            summary.imported += 1;
+        }
+        ensure!(
+            serde_json::to_vec(&staged)?.len() as u64 <= MAX_PREFERENCES_BYTES,
+            tr(
+                "I profili importati supererebbero 256 KiB",
+                "The imported profiles would exceed 256 KiB"
+            )
+        );
+        *self = staged;
+        Ok(summary)
     }
     fn check_menu_limit(&self, except: Option<&str>, show: bool) -> Result<()> {
         ensure!(
@@ -450,6 +680,15 @@ impl ConversionProfiles {
         );
         Ok(())
     }
+}
+
+fn normalize_inputs(inputs: &[String]) -> Result<Vec<String>> {
+    profile_menu_shared::normalize_input_extensions(inputs).ok_or_else(|| {
+        anyhow::anyhow!(tr(
+            "Scegli solo estensioni di ingresso riconosciute da Convert Here",
+            "Choose only input extensions recognized by Convert Here"
+        ))
+    })
 }
 
 impl Serialize for ConversionProfiles {
@@ -550,6 +789,310 @@ fn new_id() -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn input_filters_normalize_preserve_legacy_revisions_and_gate_every_selected_file() {
+        let mut profiles = ConversionProfiles::default();
+        let id = profiles
+            .create("Ingresso".into(), true, settings())
+            .unwrap();
+        let legacy = profiles.get(&id).unwrap().clone();
+        let legacy_header = serde_json::json!([
+            legacy.id,
+            legacy.name,
+            legacy.show_in_menu,
+            legacy.settings_wire
+        ]);
+        let digest = Sha256::digest(serde_json::to_vec(&canonical_json(&legacy_header)).unwrap());
+        assert_eq!(
+            legacy.revision,
+            u64::from_be_bytes(digest[..8].try_into().unwrap()).max(1)
+        );
+        profiles
+            .update_with_inputs(
+                &id,
+                legacy.name.clone(),
+                true,
+                settings(),
+                vec![".PNG".into(), "jpg".into(), " png ".into()],
+            )
+            .unwrap();
+        let filtered = profiles.get(&id).unwrap().clone();
+        assert_eq!(filtered.input_extensions, ["jpg", "png"]);
+        assert_ne!(filtered.revision, legacy.revision);
+        let dir = tempfile::tempdir().unwrap();
+        let png = dir.path().join("input.PNG");
+        let jpg = dir.path().join("other.jpg");
+        let webp = dir.path().join("other.webp");
+        for input in [&png, &jpg, &webp] {
+            std::fs::write(input, []).unwrap();
+        }
+        filtered
+            .validate_for_inputs([png.as_path(), jpg.as_path()])
+            .unwrap();
+        assert!(
+            filtered
+                .validate_for_inputs([png.as_path(), webp.as_path()])
+                .is_err()
+        );
+        profiles
+            .update(&id, "Rinomina".into(), false, settings())
+            .unwrap();
+        assert_eq!(profiles.get(&id).unwrap().input_extensions, ["jpg", "png"]);
+        let before = serde_json::to_vec(&profiles).unwrap();
+        for invalid in ["exe", "", "..png", "png/jpg", "☃"] {
+            assert!(
+                profiles
+                    .update_with_inputs(
+                        &id,
+                        "Rinomina".into(),
+                        false,
+                        settings(),
+                        vec![invalid.into()]
+                    )
+                    .is_err()
+            );
+            assert_eq!(serde_json::to_vec(&profiles).unwrap(), before);
+        }
+        profiles
+            .update_with_inputs(&id, legacy.name, true, settings(), vec![])
+            .unwrap();
+        assert_eq!(profiles.get(&id).unwrap().revision, legacy.revision);
+        let mut tampered = serde_json::to_value(&profiles).unwrap();
+        tampered[0]["input_extensions"] = serde_json::json!(["png"]);
+        assert!(
+            serde_json::from_value::<ConversionProfiles>(tampered)
+                .unwrap()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn known_but_incompatible_input_filters_cannot_create_update_or_import_silent_profiles() {
+        let mut profiles = ConversionProfiles::default();
+        let mut audio = settings();
+        audio.format = OutputFormat::Mp3;
+        assert!(
+            profiles
+                .create_with_inputs("Muto".into(), true, audio.clone(), vec!["png".into()])
+                .is_err()
+        );
+        let id = profiles
+            .create_with_inputs("Immagini".into(), true, settings(), vec!["png".into()])
+            .unwrap();
+        let before = serde_json::to_vec(&profiles).unwrap();
+        assert!(
+            profiles
+                .update(&id, "Audio".into(), true, audio.clone())
+                .is_err()
+        );
+        assert_eq!(serde_json::to_vec(&profiles).unwrap(), before);
+        let mut portable: serde_json::Value =
+            serde_json::from_slice(&profiles.export_json(None).unwrap()).unwrap();
+        portable["profiles"][0]["input_extensions"] = serde_json::json!(["png", "mp3"]);
+        assert!(
+            profiles
+                .import_json(&serde_json::to_vec(&portable).unwrap())
+                .is_err()
+        );
+        assert_eq!(serde_json::to_vec(&profiles).unwrap(), before);
+        // Extracting audio from video remains a valid explicit input choice.
+        profiles
+            .create_with_inputs(
+                "Audio e video".into(),
+                false,
+                audio,
+                vec!["mp3".into(), "mkv".into()],
+            )
+            .unwrap();
+    }
+
+    #[test]
+    fn ffmpeg_profiles_require_media_sources_and_cannot_silently_ignore_options() {
+        let mut profiles = ConversionProfiles::default();
+        let mut gif = settings();
+        gif.format = OutputFormat::Gif;
+        gif.media_options.insert("threads".into(), "1".into());
+        let id = profiles
+            .create("GIF video".into(), true, gif.clone())
+            .unwrap();
+        let profile = profiles.get(&id).unwrap();
+        assert_eq!(profile.input_policy(), ProfileInputPolicy::Media);
+        let directory = tempfile::tempdir().unwrap();
+        let video = directory.path().join("clip.mp4");
+        let image = directory.path().join("image.png");
+        for input in [&video, &image] {
+            std::fs::write(input, []).unwrap();
+        }
+        profile.validate_for_inputs([video.as_path()]).unwrap();
+        assert!(profile.validate_for_inputs([image.as_path()]).is_err());
+        assert!(
+            profiles
+                .create_with_inputs("GIF immagine".into(), false, gif, vec!["png".into()])
+                .is_err()
+        );
+        let mut native = settings();
+        native.media_options.insert("threads".into(), "1".into());
+        assert!(
+            profiles
+                .create("Opzioni ignorate".into(), false, native)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn portable_roundtrip_uses_new_ids_preserves_wire_and_filters_without_tool_paths() {
+        let wire = serde_json::json!({"format":"Png","future_setting":{"preserved":true}});
+        let mut source: ConversionProfiles =
+            serde_json::from_value(serde_json::json!([raw_recipe(wire.clone())])).unwrap();
+        let original = source.iter().next().unwrap().clone();
+        source
+            .update_with_inputs(
+                &original.id,
+                original.name,
+                true,
+                original.settings,
+                vec!["PNG".into()],
+            )
+            .unwrap();
+        let bytes = source.export_json(Some(&original.id)).unwrap();
+        let portable: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(portable["schema"], "convert-here-profiles");
+        assert_eq!(portable["version"], 1);
+        assert_eq!(portable["profiles"][0]["settings"], wire);
+        for field in ["id", "revision", "tools", "tool_paths"] {
+            assert!(portable["profiles"][0].get(field).is_none());
+        }
+        let mut destination = source.clone();
+        let summary = destination.import_json(&bytes).unwrap();
+        assert_eq!(
+            summary,
+            ImportSummary {
+                imported: 1,
+                hidden_from_menu: 0
+            }
+        );
+        let imported = destination.iter().find(|p| p.id != original.id).unwrap();
+        assert_eq!(imported.input_extensions, ["png"]);
+        assert_eq!(imported.settings_wire, wire);
+        assert_eq!(
+            source.get(&original.id).unwrap().revision,
+            destination.get(&original.id).unwrap().revision
+        );
+        assert!(source.export_json(Some("missing")).is_err());
+    }
+
+    #[test]
+    fn portable_import_is_atomic_for_invalid_recipes_size_schema_and_saved_limit() {
+        let mut profiles = ConversionProfiles::default();
+        profiles
+            .create("Esistente".into(), true, settings())
+            .unwrap();
+        let original = serde_json::to_vec(&profiles).unwrap();
+        let exported: serde_json::Value =
+            serde_json::from_slice(&profiles.export_json(None).unwrap()).unwrap();
+        let mut invalids = vec![serde_json::json!({}), exported.clone()];
+        invalids[1]["version"] = serde_json::json!(2);
+        let mut invalid = exported.clone();
+        invalid["profiles"].as_array_mut().unwrap().push(serde_json::json!({"name":"Bad","show_in_menu":true,"input_extensions":["exe"],"settings":{"format":"Png"}}));
+        invalids.push(invalid);
+        let mut invalid = exported.clone();
+        invalid["profiles"][0]["tools"] = serde_json::json!({"ffmpeg":"untrusted.exe"});
+        invalids.push(invalid);
+        let mut invalid = exported.clone();
+        invalid["profiles"][0]["settings"]["image"]["quality"] = serde_json::json!(0);
+        invalids.push(invalid);
+        for invalid in invalids {
+            assert!(
+                profiles
+                    .import_json(&serde_json::to_vec(&invalid).unwrap())
+                    .is_err()
+            );
+            assert_eq!(serde_json::to_vec(&profiles).unwrap(), original);
+        }
+        assert!(
+            profiles
+                .import_json(&vec![b' '; MAX_PREFERENCES_BYTES as usize + 1])
+                .is_err()
+        );
+        assert_eq!(serde_json::to_vec(&profiles).unwrap(), original);
+        let mut too_many = exported;
+        let entry = too_many["profiles"][0].clone();
+        too_many["profiles"] = serde_json::json!(vec![entry; MAX_SAVED_PROFILES]);
+        assert!(
+            profiles
+                .import_json(&serde_json::to_vec(&too_many).unwrap())
+                .is_err()
+        );
+        assert_eq!(serde_json::to_vec(&profiles).unwrap(), original);
+    }
+
+    #[test]
+    fn portable_import_hides_only_excess_menu_profiles_and_keeps_filter_policy() {
+        let mut profiles = ConversionProfiles::default();
+        for index in 0..7 {
+            profiles
+                .create(format!("Current {index}"), true, settings())
+                .unwrap();
+        }
+        let mut incoming = ConversionProfiles::default();
+        for index in 0..3 {
+            incoming
+                .create_with_inputs(
+                    format!("Imported {index}"),
+                    true,
+                    settings(),
+                    vec!["png".into()],
+                )
+                .unwrap();
+        }
+        let summary = profiles
+            .import_json(&incoming.export_json(None).unwrap())
+            .unwrap();
+        assert_eq!(
+            summary,
+            ImportSummary {
+                imported: 3,
+                hidden_from_menu: 2
+            }
+        );
+        assert_eq!(profiles.iter().filter(|p| p.show_in_menu).count(), 8);
+        assert_eq!(profiles.iter().filter(|p| !p.show_in_menu).count(), 2);
+        let mut page = settings();
+        page.format = OutputFormat::Pdf;
+        page.image.page = Some(Default::default());
+        assert!(
+            profiles
+                .create_with_inputs(
+                    "Incompatibile".into(),
+                    false,
+                    page.clone(),
+                    vec!["txt".into(), "docx".into()]
+                )
+                .is_err()
+        );
+        let id = profiles
+            .create_with_inputs("TXT".into(), false, page, vec!["txt".into()])
+            .unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let txt = dir.path().join("input.txt");
+        let word = dir.path().join("input.docx");
+        for input in [&txt, &word] {
+            std::fs::write(input, []).unwrap();
+        }
+        profiles
+            .get(&id)
+            .unwrap()
+            .validate_for_inputs([txt.as_path()])
+            .unwrap();
+        assert!(
+            profiles
+                .get(&id)
+                .unwrap()
+                .validate_for_inputs([word.as_path()])
+                .is_err()
+        );
+    }
 
     #[test]
     fn ordinary_output_changes_remove_incompatible_recipes_and_keep_quality() {
@@ -677,7 +1220,7 @@ mod tests {
 
     fn raw_recipe(settings: serde_json::Value) -> serde_json::Value {
         let id = "0123456789abcdef0123456789abcdef";
-        let revision = revision_for_wire(id, "Compatibile", true, &settings).unwrap();
+        let revision = revision_for_wire(id, "Compatibile", true, &settings, &[]).unwrap();
         serde_json::json!({"id":id,"revision":revision,"name":"Compatibile","show_in_menu":true,"output_extension":"png","input_policy":"compatible","settings":settings})
     }
 
@@ -814,7 +1357,7 @@ mod tests {
     }
 
     #[test]
-    fn saved_and_visible_limits_names_ids_and_quick_merge_are_validated() {
+    fn saved_and_visible_limits_names_ids_and_merge_selection_are_validated() {
         let mut profiles = ConversionProfiles::default();
         let mut ids = BTreeSet::new();
         for index in 0..MAX_SAVED_PROFILES {
@@ -849,7 +1392,38 @@ mod tests {
         let mut merge = settings();
         merge.format = OutputFormat::Pdf;
         merge.pdf.action = PdfAction::Merge;
-        assert!(fresh.create("Merge".into(), false, merge).is_err());
+        let id = fresh.create("Merge".into(), false, merge).unwrap();
+        let directory = tempfile::tempdir().unwrap();
+        let image = directory.path().join("image.png");
+        let pdf = directory.path().join("pages.pdf");
+        for input in [&image, &pdf] {
+            std::fs::write(input, []).unwrap();
+        }
+        let profile = fresh.get(&id).unwrap();
+        assert!(profile.menu_item().requires_multiple);
+        assert!(profile.validate_for_inputs([image.as_path()]).is_err());
+        profile
+            .validate_for_inputs([image.as_path(), pdf.as_path()])
+            .unwrap();
+        let mut roundtrip: ConversionProfiles =
+            serde_json::from_slice(&serde_json::to_vec(&fresh).unwrap()).unwrap();
+        assert_eq!(roundtrip.get(&id).unwrap().revision, profile.revision);
+        roundtrip
+            .update_with_inputs(
+                &id,
+                "Merge immagini".into(),
+                false,
+                profile.settings.clone(),
+                vec!["png".into()],
+            )
+            .unwrap();
+        assert!(
+            roundtrip
+                .get(&id)
+                .unwrap()
+                .validate_for_inputs([image.as_path(), pdf.as_path()])
+                .is_err()
+        );
     }
 
     #[test]

@@ -2,6 +2,10 @@
 
 Schermate reali dell'interfaccia Windows, usate nel [README italiano](../../README.md) e nel [README inglese](../../README.en.md) per illustrare l'uso del programma. Mostrano file dimostrativi; i motori visibili appartengono all'ambiente di prova.
 
+## Nuova interfaccia 0.7.0 · in preparazione
+
+Le nuove catture sono nel [registro Store 0.7.0](../store-assets/0.7.0/README.md): [Impostazioni](../store-assets/0.7.0/01-impostazioni-it.jpg) e [Profili](../store-assets/0.7.0/02-profili-it.jpg). Sono JPEG **1722 × 959**, acquisiti il 9 novembre 2026 dalla build debug nativa 0.7.0 degli stessi sorgenti destinati alla release. Mostrano colonne dei formati, griglia dei motori e manager dei profili. Il registro riporta i digest e distingue la QA funzionale dalle catture; non si dichiara pubblicato o installato il nuovo pacchetto Store.
+
 ## Interfaccia inglese · 9 novembre 2026
 
 Catture native ottenute il **9 novembre 2026** da una build debug dei sorgenti bilingui successivi alla release 0.4.0. Le immagini sono **JPEG integrali della finestra**, senza ritocchi, sovrapposizioni o ridimensionamenti. Documentano l'interfaccia bilingue inclusa nella 0.5.0; sono state acquisite durante le verifiche dei sorgenti prima della build release.

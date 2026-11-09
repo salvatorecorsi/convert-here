@@ -101,8 +101,11 @@ try {
     Change-Manifest { param($doc) $doc.Package.Identity.SetAttribute('Version', '2.0.0.0') }
     Assert-Fails { Assert-StorePackageLayout -StageDirectory $layout -Identity $preview } 'Mismatched package version accepted.'
     Reset-Manifest
-    Change-Manifest { param($doc) $doc.Package.Dependencies.TargetDeviceFamily.SetAttribute('MinVersion', '10.0.19041.0') }
-    Assert-Fails { Assert-StorePackageLayout -StageDirectory $layout -Identity $preview } 'Store manifest silently targeted Windows 10.'
+    Change-Manifest { param($doc) $doc.Package.Dependencies.TargetDeviceFamily.SetAttribute('MinVersion', '10.0.17763.0') }
+    Assert-Fails { Assert-StorePackageLayout -StageDirectory $layout -Identity $preview } 'OS below the uap10 packagedClassicApp requirement was accepted.'
+    Reset-Manifest
+    Change-Manifest { param($doc) $doc.Package.Dependencies.TargetDeviceFamily.SetAttribute('MinVersion', '10.0.22000.0') }
+    Assert-Fails { Assert-StorePackageLayout -StageDirectory $layout -Identity $preview } 'Windows 11-only minimum would block supported Windows 10 users.'
     Reset-Manifest
     Change-Manifest { param($doc) $resource = $doc.CreateElement('Resource', 'http://schemas.microsoft.com/appx/manifest/foundation/windows10'); $resource.SetAttribute('Language', 'fr-fr'); [void]$doc.Package.Resources.AppendChild($resource) }
     Assert-Fails { Assert-StorePackageLayout -StageDirectory $layout -Identity $preview } 'Unimplemented UI language advertised.'

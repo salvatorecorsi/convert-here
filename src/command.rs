@@ -42,8 +42,8 @@ struct Args {
     /// Conversione rapida da Esplora file, con preferenze salvate e resoconto locale.
     #[arg(long, requires = "quick_destination", conflicts_with_all = ["convert", "diagnose", "custom_settings"], help = the_converter::i18n::tr("Conversione rapida da Esplora file, con preferenze salvate e resoconto locale.", "Quick conversion from File Explorer, using saved preferences and a local report."))]
     quick: bool,
-    /// Esegui una ricetta salvata, mantenendo una copia delle impostazioni in coda.
-    #[arg(long, requires = "quick", value_parser = parse_profile_id, conflicts_with_all = ["target", "settings", "preset", "pdf_batch", "pdf_action", "ocr", "ocr_language", "csv_separator", "install_runtime", "queue_job", "queue_worker", "custom_settings"], help = i18n::tr("Esegui una ricetta salvata, mantenendo una copia delle impostazioni in coda.", "Run a saved recipe, keeping a settings snapshot in the queue."))]
+    /// Esegui una ricetta salvata; PDF Merge apre l’ordinamento delle pagine.
+    #[arg(long, requires = "quick", value_parser = parse_profile_id, conflicts_with_all = ["target", "settings", "preset", "pdf_batch", "pdf_action", "ocr", "ocr_language", "csv_separator", "install_runtime", "queue_job", "queue_worker", "custom_settings"], help = i18n::tr("Esegui una ricetta salvata; PDF Merge apre l’ordinamento delle pagine.", "Run a saved recipe; PDF Merge opens page ordering."))]
     profile: Option<String>,
     /// Revisione mostrata dal menu; impedisce di avviare una ricetta modificata.
     #[arg(long, requires = "profile", value_parser = clap::value_parser!(u64).range(1..), help = i18n::tr("Revisione mostrata dal menu; impedisce di avviare una ricetta modificata.", "Revision shown in the menu; prevents running a changed recipe."))]
@@ -320,6 +320,17 @@ fn run(args: Args) -> Result<()> {
             let (profile, tools) =
                 crate::app::quick_profile_configuration(&id, args.profile_revision)?;
             profile.validate_for_inputs(files.iter().map(PathBuf::as_path))?;
+            if profile.settings.format == OutputFormat::Pdf
+                && profile.settings.pdf.action == PdfAction::Merge
+            {
+                return crate::pdf_merge_app::launch_with_settings(
+                    files,
+                    profile.settings.clone(),
+                    tools,
+                    None,
+                )
+                .map_err(|error| anyhow::anyhow!("{error}"));
+            }
             return enqueue_quick(files, &profile.settings, &tools);
         }
         return quick_convert(files, args.target.expect("clap requires target"));
@@ -508,7 +519,11 @@ fn quick_convert(files: Vec<PathBuf>, format: OutputFormat) -> Result<()> {
         ))
     }
     let (mut settings, tools) = crate::app::quick_configuration();
+    let format_changed = settings.format != format;
     settings.select_output_format(format);
+    if format_changed {
+        settings.media_options.clear();
+    }
     if format == OutputFormat::Pdf {
         settings.pdf.action = PdfAction::Compress;
     }

@@ -14,7 +14,10 @@ use std::{
     path::{Path, PathBuf},
     process::Command,
     ptr,
-    sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering},
+    sync::{
+        atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering},
+        Mutex,
+    },
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -63,6 +66,7 @@ const SELECTION_SUPPORTED: u64 = 1 << 59;
 const SELECTION_ALL_IMAGES: u64 = 1 << 58;
 const SELECTION_ALL_IMAGES_OR_TEXT: u64 = 1 << 57;
 const SELECTION_ALL_PDFS: u64 = 1 << 56;
+const SELECTION_ALL_MEDIA: u64 = 1 << 55;
 const PDF_TARGET: u64 = 1 << 19;
 const PDF_MERGE_GUID_SLOT: usize = 45;
 const AUDIO_TARGETS: u64 = ((1 << 7) - 1) | (((1 << 5) - 1) << 21);
@@ -210,6 +214,7 @@ struct ExplorerObject {
     profile: Option<ProfileMenuItem>,
     separator_before: bool,
     selection_mask: AtomicU64,
+    selection_extensions: Mutex<Option<Vec<String>>>,
 }
 
 #[repr(C)]
@@ -286,6 +291,7 @@ fn allocate_command(target: Option<&str>, parent: bool, pdf_merge: bool) -> *mut
         profile: None,
         separator_before: false,
         selection_mask: AtomicU64::new(UNKNOWN_SELECTION_MASK),
+        selection_extensions: Mutex::new(None),
     })) as *mut c_void
 }
 
@@ -620,7 +626,20 @@ unsafe extern "system" fn explorer_tooltip(
 ) -> HResult {
     let command = &*(this as *mut ExplorerObject);
     let language = ui_language();
-    if command.profile.is_some() {
+    if command
+        .profile
+        .as_ref()
+        .is_some_and(|profile| profile.requires_multiple)
+    {
+        string_result(
+            localized(
+                language,
+                "Ordina le pagine con le impostazioni del profilo e crea un unico PDF",
+                "Reorder pages with the profile settings and create a single PDF",
+            ),
+            out,
+        )
+    } else if command.profile.is_some() {
         string_result(
             localized(
                 language,
@@ -738,10 +757,17 @@ unsafe extern "system" fn explorer_enumerate(this: *mut c_void, out: *mut *mut c
     // Some callers enumerate before GetState. Only filter an actual per-object
     // selection snapshot; child GetState and Invoke always validate their inputs.
     let preferences = load_menu_preferences();
+    let extensions = (*(this as *mut ExplorerObject))
+        .selection_extensions
+        .lock()
+        .ok()
+        .and_then(|snapshot| snapshot.clone());
     let profiles = preferences
         .profiles
         .into_iter()
-        .filter(|profile| profile_compatible(profile, mask, preferences.enabled))
+        .filter(|profile| {
+            profile_selection_compatible(profile, mask, preferences.enabled, extensions.as_deref())
+        })
         .collect();
     *out = allocate_profile_enumerator(0, visible_target_mask(mask, preferences.enabled), profiles);
     S_OK
@@ -927,7 +953,9 @@ fn profile_compatible(profile: &ProfileMenuItem, selection: u64, enabled: u64) -
     }
     profile.show_in_menu
         && selection & enabled & target != 0
+        && (!profile.requires_multiple || selection & SELECTION_MULTIPLE != 0)
         && match profile.input_policy {
+            ProfileInputPolicy::Media => selection & SELECTION_ALL_MEDIA != 0,
             ProfileInputPolicy::Compatible => true,
             ProfileInputPolicy::Images => {
                 selection != UNKNOWN_SELECTION_MASK && selection & SELECTION_ALL_IMAGES != 0
@@ -951,6 +979,31 @@ fn profile_is_current(
     })
 }
 
+fn profile_selection_compatible(
+    profile: &ProfileMenuItem,
+    selection: u64,
+    enabled: u64,
+    extensions: Option<&[String]>,
+) -> bool {
+    profile_compatible(profile, selection, enabled)
+        && (selection == UNKNOWN_SELECTION_MASK
+            || profile.input_extensions.is_empty()
+            || extensions.is_some_and(|values| {
+                !values.is_empty()
+                    && values
+                        .iter()
+                        .all(|extension| profile.allows_extension(extension))
+            }))
+}
+
+fn profile_accepts_paths(profile: &ProfileMenuItem, paths: &[PathBuf]) -> bool {
+    paths.iter().all(|path| {
+        path.extension()
+            .and_then(|e| e.to_str())
+            .is_some_and(|extension| profile.allows_extension(extension))
+    })
+}
+
 fn selection_metadata(paths: &[PathBuf]) -> u64 {
     let mut metadata = if paths.len() >= 2 {
         SELECTION_MULTIPLE
@@ -969,6 +1022,13 @@ fn selection_metadata(paths: &[PathBuf]) -> u64 {
     }
     if !paths.is_empty() && paths.iter().all(|path| target_mask(path) == PDF_TARGETS) {
         metadata |= SELECTION_ALL_PDFS;
+    }
+    if !paths.is_empty()
+        && paths
+            .iter()
+            .all(|path| matches!(target_mask(path), AUDIO_TARGETS | VIDEO_TARGETS))
+    {
+        metadata |= SELECTION_ALL_MEDIA;
     }
     if !paths.is_empty()
         && paths.iter().all(|path| {
@@ -1068,6 +1128,9 @@ unsafe extern "system" fn explorer_state(
     }
     *out = ECS_HIDDEN;
     let command = &*(this as *mut ExplorerObject);
+    if let Ok(mut snapshot) = command.selection_extensions.lock() {
+        *snapshot = None;
+    }
     command
         .selection_mask
         .store(UNKNOWN_SELECTION_MASK, Ordering::Release);
@@ -1083,7 +1146,13 @@ unsafe extern "system" fn explorer_state(
         *out = ECS_DISABLED;
         return S_OK;
     }
-    if command.pdf_merge && count < 2 {
+    if (command.pdf_merge
+        || command
+            .profile
+            .as_ref()
+            .is_some_and(|profile| profile.requires_multiple))
+        && count < 2
+    {
         command.selection_mask.store(0, Ordering::Release);
         return S_OK;
     }
@@ -1109,6 +1178,19 @@ unsafe extern "system" fn explorer_state(
     }
     let mask = common_target_mask(paths.iter().map(PathBuf::as_path));
     let metadata = selection_metadata(&paths);
+    if let Ok(mut snapshot) = command.selection_extensions.lock() {
+        let mut extensions: Vec<_> = paths
+            .iter()
+            .filter_map(|path| {
+                path.extension()
+                    .and_then(|e| e.to_str())
+                    .map(str::to_ascii_lowercase)
+            })
+            .collect();
+        extensions.sort();
+        extensions.dedup();
+        *snapshot = Some(extensions);
+    }
     command.selection_mask.store(
         mask | if mask != 0 { metadata } else { 0 },
         Ordering::Release,
@@ -1118,6 +1200,7 @@ unsafe extern "system" fn explorer_state(
         && required.is_none_or(|required| load_menu_preferences().enabled & required != 0)
         && command.profile.as_ref().is_none_or(|profile| {
             profile_is_current(profile, mask | metadata, &load_menu_preferences())
+                && profile_accepts_paths(profile, &paths)
         })
     {
         *out = ECS_ENABLED;
@@ -1155,7 +1238,13 @@ unsafe extern "system" fn explorer_invoke(
         Ok(count) if count > 0 && count <= MAX_SELECTION => count,
         _ => return E_FAIL,
     };
-    if command.pdf_merge && count < 2 {
+    if (command.pdf_merge
+        || command
+            .profile
+            .as_ref()
+            .is_some_and(|profile| profile.requires_multiple))
+        && count < 2
+    {
         return E_FAIL;
     }
     let mut selected_paths = Vec::with_capacity(count as usize);
@@ -1179,11 +1268,12 @@ unsafe extern "system" fn explorer_invoke(
         return E_FAIL;
     }
     if command.profile.as_ref().is_some_and(|profile| {
-        !profile_is_current(
-            profile,
-            mask | selection_metadata(&selected_paths),
-            &preferences,
-        )
+        !profile_accepts_paths(profile, &selected_paths)
+            || !profile_is_current(
+                profile,
+                mask | selection_metadata(&selected_paths),
+                &preferences,
+            )
     }) {
         return E_FAIL;
     }
@@ -1382,6 +1472,126 @@ mod tests {
                 .count(),
             8
         );
+    }
+
+    #[test]
+    fn profile_input_filters_intersect_all_files_without_changing_policy_or_guid() {
+        let original = profile_fixture("0123456789abcdef0123456789abcdef", "PNG only");
+        let mut value = original.clone();
+        value["input_extensions"] = serde_json::json!([".PNG", "png"]);
+        let profile = profile_menu_shared::decode_profile(&value).unwrap();
+        assert_eq!(profile.input_extensions, ["png"]);
+        let mask = IMAGE_TARGETS | SELECTION_ALL_IMAGES | SELECTION_ALL_IMAGES_OR_TEXT;
+        let enabled = extension_mask(["webp"]);
+        let png = vec!["png".into()];
+        let mixed = vec!["jpg".into(), "png".into()];
+        assert!(profile_selection_compatible(
+            &profile,
+            mask,
+            enabled,
+            Some(&png)
+        ));
+        assert!(!profile_selection_compatible(
+            &profile,
+            mask,
+            enabled,
+            Some(&mixed)
+        ));
+        assert!(!profile_selection_compatible(&profile, mask, enabled, None));
+        assert!(!profile_selection_compatible(&profile, mask, 0, Some(&png)));
+        assert!(!profile_selection_compatible(
+            &profile,
+            PDF_TARGETS,
+            enabled,
+            Some(&png)
+        ));
+        assert!(profile_selection_compatible(
+            &profile,
+            UNKNOWN_SELECTION_MASK,
+            enabled,
+            None
+        ));
+        assert!(profile_accepts_paths(
+            &profile,
+            &[PathBuf::from("image.PNG")]
+        ));
+        assert!(!profile_accepts_paths(
+            &profile,
+            &[PathBuf::from("image.PNG"), PathBuf::from("other.jpg")]
+        ));
+        let preferences = MenuPreferences {
+            enabled,
+            profiles: vec![profile.clone()],
+        };
+        assert!(!profile_is_current(
+            &profile_menu_shared::decode_profile(&original).unwrap(),
+            mask,
+            &preferences
+        ));
+        let mut invalid = value;
+        invalid["input_extensions"] = serde_json::json!(["exe"]);
+        assert!(profile_menu_shared::decode_profile(&invalid).is_none());
+        invalid["input_extensions"] = serde_json::json!(null);
+        assert!(profile_menu_shared::decode_profile(&invalid).is_none());
+    }
+
+    #[test]
+    fn merge_profiles_require_multiple_inputs_but_preserve_image_and_page_policies() {
+        let mut value = serde_json::json!({"id":"3123456789abcdef0123456789abcdef","revision":71,"name":"Merge","show_in_menu":true,"output_extension":"pdf","input_policy":"compatible","settings":{"format":"Pdf","pdf":{"action":"Merge"}}});
+        let profile = profile_menu_shared::decode_profile(&value).unwrap();
+        assert!(profile.requires_multiple);
+        assert!(!profile_compatible(
+            &profile,
+            IMAGE_TARGETS | SELECTION_ALL_IMAGES,
+            PDF_TARGET
+        ));
+        assert!(profile_compatible(
+            &profile,
+            IMAGE_TARGETS | SELECTION_ALL_IMAGES | SELECTION_MULTIPLE,
+            PDF_TARGET
+        ));
+        value["settings"]["image"] = serde_json::json!({"page":{}});
+        value["input_policy"] = serde_json::json!("images_or_text");
+        let profile = profile_menu_shared::decode_profile(&value).unwrap();
+        assert!(profile.requires_multiple);
+        assert!(!profile_compatible(
+            &profile,
+            PDF_TARGETS | SELECTION_ALL_PDFS | SELECTION_MULTIPLE,
+            PDF_TARGET
+        ));
+        assert!(profile_compatible(
+            &profile,
+            IMAGE_TARGETS | SELECTION_ALL_IMAGES_OR_TEXT | SELECTION_MULTIPLE,
+            PDF_TARGET
+        ));
+    }
+
+    #[test]
+    fn ffmpeg_gif_profiles_are_offered_for_video_but_not_native_images() {
+        let mut value = serde_json::json!({"id":"4123456789abcdef0123456789abcdef","revision":71,"name":"GIF video","show_in_menu":true,"output_extension":"gif","input_policy":"media","settings":{"format":"Gif","media_options":{"threads":"1"}}});
+        let profile = profile_menu_shared::decode_profile(&value).unwrap();
+        let video = PathBuf::from("clip.mp4");
+        let image = PathBuf::from("image.png");
+        let enabled = extension_mask(["gif"]);
+        assert!(profile_compatible(
+            &profile,
+            target_mask(&video) | selection_metadata(std::slice::from_ref(&video)),
+            enabled
+        ));
+        assert!(!profile_compatible(
+            &profile,
+            target_mask(&image) | selection_metadata(std::slice::from_ref(&image)),
+            enabled
+        ));
+        assert!(!profile_compatible(
+            &profile,
+            common_target_mask([video.as_path(), image.as_path()])
+                | selection_metadata(&[video, image]),
+            enabled
+        ));
+        value["output_extension"] = serde_json::json!("png");
+        value["settings"]["format"] = serde_json::json!("Png");
+        assert!(profile_menu_shared::decode_profile(&value).is_none());
     }
 
     #[test]
@@ -1878,7 +2088,17 @@ mod tests {
             .map(core_model::OutputFormat::extension)
             .collect();
         assert_eq!(core_targets, TARGETS);
-        assert!(TARGETS.len() < 56); // The upper bits record selection metadata.
+        for format in core_model::OutputFormat::ALL {
+            let expected = matches!(
+                format.kind(),
+                core_model::MediaKind::Audio | core_model::MediaKind::Video
+            ) || format == core_model::OutputFormat::Gif;
+            assert_eq!(
+                profile_menu_shared::is_media_output(format.extension()),
+                expected
+            );
+        }
+        assert!(TARGETS.len() < 55); // The upper bits record selection metadata.
         let registration = include_str!("../../scripts/install-context-menu.ps1");
         let extensions: Vec<_> = registration
             .lines()
@@ -1905,6 +2125,13 @@ mod tests {
         let mut registered = extensions.clone();
         core_extensions.sort_unstable();
         registered.sort_unstable();
+        let mut profile_extensions = profile_menu_shared::RECOGNIZED_INPUT_EXTENSIONS.to_vec();
+        profile_extensions.sort_unstable();
+        assert_eq!(profile_extensions.len(), 93);
+        assert_eq!(
+            core_extensions, profile_extensions,
+            "Profile filters must use exactly the recognized input whitelist"
+        );
         assert_eq!(
             core_extensions, registered,
             "Explorer input whitelist differs from the app"

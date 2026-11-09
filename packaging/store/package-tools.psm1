@@ -113,7 +113,7 @@ function Assert-StorePackageLayout {
     if ($manifest.Package.Identity.GetAttribute('ProcessorArchitecture') -cne 'x64') { throw 'Store shell package must target x64.' }
     $deviceFamilies = @($manifest.SelectNodes('/p:Package/p:Dependencies/p:TargetDeviceFamily', $ns))
     if ($deviceFamilies.Count -ne 1 -or $deviceFamilies[0].GetAttribute('Name') -cne 'Windows.Desktop' -or
-        $deviceFamilies[0].GetAttribute('MinVersion') -cne '10.0.22000.0') { throw 'Store package requires Windows 11 desktop (build 22000) or later.' }
+        $deviceFamilies[0].GetAttribute('MinVersion') -cne '10.0.19041.0') { throw 'Store package must support Windows 10 desktop version 2004 (build 19041) or later.' }
     $languages = @($manifest.SelectNodes('/p:Package/p:Resources/p:Resource', $ns))
     if ($languages.Count -ne 2 -or (@($languages | ForEach-Object { $_.GetAttribute('Language') } | Sort-Object) -join ',') -cne 'en-us,it-it') { throw 'Store manifest must advertise exactly the implemented Italian and English UI languages.' }
     if (@($manifest.SelectNodes('//*[local-name()="AllowExternalContent"]')).Count -ne 0) { throw 'Store package must contain its files; AllowExternalContent is forbidden.' }

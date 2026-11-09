@@ -156,10 +156,15 @@ public static class ConverterShellSmokeV2 {
     static string ProfilePreferences(ulong revision) {
         return "{\"ui_language\":\"it\",\"enabled_output_formats\":[\"png\",\"webp\",\"pdf\"],\"conversion_profiles\":[{\"id\":\"0123456789abcdef0123456789abcdef\",\"revision\":" + revision + ",\"name\":\"Salva per web & città\",\"show_in_menu\":true,\"output_extension\":\"webp\",\"input_policy\":\"images\",\"settings\":{\"format\":\"Webp\",\"image\":{\"edit\":{}}}},{\"id\":\"1123456789abcdef0123456789abcdef\",\"revision\":71,\"name\":\"Editor PNG\",\"show_in_menu\":true,\"output_extension\":\"png\",\"input_policy\":\"images\",\"settings\":{\"format\":\"Png\",\"image\":{\"edit\":{}}}},{\"id\":\"2123456789abcdef0123456789abcdef\",\"revision\":71,\"name\":\"Pagina A4\",\"show_in_menu\":true,\"output_extension\":\"pdf\",\"input_policy\":\"images_or_text\",\"settings\":{\"format\":\"Pdf\",\"image\":{\"page\":{}},\"pdf\":{\"action\":\"Compress\"}}}]}";
     }
+    static string FilteredProfilePreferences(string extension) {
+        return ProfilePreferences(71).Replace("\"output_extension\":\"webp\"", "\"input_extensions\":[\"" + extension + "\"],\"output_extension\":\"webp\"");
+    }
     static void ValidateProfiles(IntPtr parent, string image, string pdf, string audio, string text, string document, string preferences) {
         string previous = System.IO.File.ReadAllText(preferences);
+        string jpg = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(image), "profile-filter.JPG");
         const string custom = "Impostazioni personalizzate…";
         try {
+            System.IO.File.WriteAllText(jpg, "Isolated shell path fixture");
             System.IO.File.WriteAllText(preferences, ProfilePreferences(71));
             Expect("Profili immagini", Visible(parent, image), new string[]{"PNG", "WebP", "PDF", "Salva per web & città · WEBP", "Editor PNG · PNG", "Pagina A4 · PDF", custom});
             System.IO.File.WriteAllText(preferences, ProfilePreferences(71).Replace("\"ui_language\":\"it\"", "\"ui_language\":\"en\""));
@@ -169,6 +174,10 @@ public static class ConverterShellSmokeV2 {
             Expect("Pagina TXT nativa", Visible(parent, text), new string[]{"PDF", "Pagina A4 · PDF", custom});
             Expect("Pagina esclusa Word", Visible(parent, document), new string[]{"PDF", custom});
             Expect("Profili esclusi batch immagini e PDF", Visible(parent, image, pdf), new string[]{"PNG", "PDF (Bulk)", "PDF (Merge)", custom});
+            System.IO.File.WriteAllText(preferences, FilteredProfilePreferences("png"));
+            Expect("Filtro PNG ammette PNG", Visible(parent, image), new string[]{"PNG", "WebP", "PDF", "Salva per web & città · WEBP", "Editor PNG · PNG", "Pagina A4 · PDF", custom});
+            Expect("Filtro PNG esclude JPG", Visible(parent, jpg), new string[]{"PNG", "WebP", "PDF", "Editor PNG · PNG", "Pagina A4 · PDF", custom});
+            Expect("Filtro PNG interseca tutta la selezione", Visible(parent, image, jpg), new string[]{"PNG", "WebP", "PDF (Bulk)", "PDF (Merge)", "Editor PNG · PNG", "Pagina A4 · PDF", custom});
             WithSelection(new string[]{image}, delegate(IntPtr selection) {
                 uint state; Check(((GetState)Slot(parent, 7, typeof(GetState)))(parent, selection, 1, out state));
                 IntPtr enumerator = IntPtr.Zero, profile = IntPtr.Zero;
@@ -184,18 +193,24 @@ public static class ConverterShellSmokeV2 {
                     if (profile == IntPtr.Zero) throw new Exception("Profilo dinamico mancante");
                     Guid canonical; Check(((GetCanonical)Slot(profile, 6, typeof(GetCanonical)))(profile, out canonical));
                     if (canonical != new Guid("d61a4567-89ab-cdef-0123-456789abcdef")) throw new Exception("GUID profilo non stabile");
-                    foreach (string replacement in new string[]{ProfilePreferences(72), "{\"enabled_output_formats\":[\"webp\"]}", ProfilePreferences(71).Replace("[\"png\",\"webp\",\"pdf\"]", "[]")}) {
+                    foreach (string replacement in new string[]{ProfilePreferences(72), ProfilePreferences(71), FilteredProfilePreferences("jpg"), "{\"enabled_output_formats\":[\"webp\"]}", ProfilePreferences(71).Replace("[\"png\",\"webp\",\"pdf\"]", "[]")}) {
                         System.IO.File.WriteAllText(preferences, replacement);
                         Check(((GetState)Slot(profile, 7, typeof(GetState)))(profile, selection, 1, out state));
                         if (state != 2 || ((InvokeCommand)Slot(profile, 8, typeof(InvokeCommand)))(profile, selection, IntPtr.Zero) >= 0) throw new Exception("Profilo obsoleto/eliminato/disabilitato eseguibile");
                     }
-                    System.IO.File.WriteAllText(preferences, ProfilePreferences(71));
+                    System.IO.File.WriteAllText(preferences, FilteredProfilePreferences("png"));
+                    Check(((GetState)Slot(profile, 7, typeof(GetState)))(profile, selection, 1, out state));
+                    if (state != 0) throw new Exception("Profilo filtrato valido nascosto");
+                    WithSelection(new string[]{jpg}, delegate(IntPtr changed) {
+                        uint changedState; Check(((GetState)Slot(profile, 7, typeof(GetState)))(profile, changed, 1, out changedState));
+                        if (changedState != 2 || ((InvokeCommand)Slot(profile, 8, typeof(InvokeCommand)))(profile, changed, IntPtr.Zero) >= 0) throw new Exception("Profilo ignora filtro estensione su selezione modificata");
+                    });
                     WithSelection(new string[]{audio}, delegate(IntPtr incompatible) {
                         if (((InvokeCommand)Slot(profile, 8, typeof(InvokeCommand)))(profile, incompatible, IntPtr.Zero) >= 0) throw new Exception("Profilo ignora selezione modificata");
                     });
                 } finally { if (profile != IntPtr.Zero) Marshal.Release(profile); if (enumerator != IntPtr.Zero) Marshal.Release(enumerator); }
             });
-        } finally { System.IO.File.WriteAllText(preferences, previous); }
+        } finally { System.IO.File.WriteAllText(preferences, previous); if (System.IO.File.Exists(jpg)) System.IO.File.Delete(jpg); }
     }
     static void WithSelection(string[] files, Action<IntPtr> action) {
         IntPtr[] pidls = new IntPtr[files.Length];
@@ -212,10 +227,53 @@ public static class ConverterShellSmokeV2 {
             foreach (IntPtr pidl in pidls) if (pidl != IntPtr.Zero) Marshal.FreeCoTaskMem(pidl);
         }
     }
+    static void ValidateMergeProfile(IntPtr parent, string image, string pdf, string document, string preferences) {
+        string previous = System.IO.File.ReadAllText(preferences);
+        string merge = "{\"ui_language\":\"it\",\"enabled_output_formats\":[\"pdf\"],\"conversion_profiles\":[{\"id\":\"3123456789abcdef0123456789abcdef\",\"revision\":71,\"name\":\"Raccolta PDF\",\"show_in_menu\":true,\"output_extension\":\"pdf\",\"input_policy\":\"compatible\",\"input_extensions\":[\"pdf\",\"png\"],\"settings\":{\"format\":\"Pdf\",\"pdf\":{\"action\":\"Merge\"}}}]}";
+        try {
+            System.IO.File.WriteAllText(preferences, merge);
+            Expect("Profilo Merge nascosto per file singolo", Visible(parent,image),new string[]{"PDF","Impostazioni personalizzate…"});
+            Expect("Profilo Merge richiede filtro per tutta la selezione", Visible(parent,image,document),new string[]{"PDF (Bulk)","PDF (Merge)","Impostazioni personalizzate…"});
+            Expect("Profilo Merge per due ingressi", Visible(parent,image,pdf),new string[]{"PDF (Bulk)","PDF (Merge)","Raccolta PDF · PDF","Impostazioni personalizzate…"});
+            WithSelection(new string[]{image,pdf},delegate(IntPtr valid) {
+                uint state; Check(((GetState)Slot(parent,7,typeof(GetState)))(parent,valid,1,out state));
+                IntPtr enumerator=IntPtr.Zero,profile=IntPtr.Zero;
+                try {
+                    Check(((EnumCommands)Slot(parent,10,typeof(EnumCommands)))(parent,out enumerator));
+                    var next=(NextCommand)Slot(enumerator,3,typeof(NextCommand));
+                    for (;;) {
+                        IntPtr child; uint fetched; Check(next(enumerator,1,out child,out fetched));
+                        if(fetched==0) break;
+                        if(Title(child)=="Raccolta PDF · PDF") {profile=child;break;}
+                        Marshal.Release(child);
+                    }
+                    if(profile==IntPtr.Zero) throw new Exception("Profilo Merge mancante");
+                    Check(((GetState)Slot(profile,7,typeof(GetState)))(profile,valid,1,out state));
+                    if(state!=0) throw new Exception("Profilo Merge valido nascosto");
+                    WithSelection(new string[]{image},delegate(IntPtr single) {
+                        uint singleState; Check(((GetState)Slot(profile,7,typeof(GetState)))(profile,single,1,out singleState));
+                        if(singleState!=2 || ((InvokeCommand)Slot(profile,8,typeof(InvokeCommand)))(profile,single,IntPtr.Zero)>=0) throw new Exception("Profilo Merge accetta un solo file");
+                    });
+                    System.IO.File.WriteAllText(preferences,merge.Replace("\"Merge\"","\"Compress\""));
+                    Check(((GetState)Slot(profile,7,typeof(GetState)))(profile,valid,1,out state));
+                    if(state!=2 || ((InvokeCommand)Slot(profile,8,typeof(InvokeCommand)))(profile,valid,IntPtr.Zero)>=0) throw new Exception("Profilo Merge usa operazione obsoleta");
+                } finally {if(profile!=IntPtr.Zero) Marshal.Release(profile);if(enumerator!=IntPtr.Zero) Marshal.Release(enumerator);}
+            });
+        } finally {System.IO.File.WriteAllText(preferences,previous);}
+    }
     static Guid ExpectedCanonical(byte xor) {
         byte[] bytes = new Guid("67b51ba1-8a78-4b4b-a5f9-08a825be91f8").ToByteArray();
         bytes[15] ^= xor;
         return new Guid(bytes);
+    }
+    static void ValidateMediaProfile(IntPtr parent, string image, string video, string preferences) {
+        string previous=System.IO.File.ReadAllText(preferences);
+        try {
+            System.IO.File.WriteAllText(preferences,"{\"ui_language\":\"it\",\"enabled_output_formats\":[\"gif\"],\"conversion_profiles\":[{\"id\":\"4123456789abcdef0123456789abcdef\",\"revision\":71,\"name\":\"GIF video\",\"show_in_menu\":true,\"output_extension\":\"gif\",\"input_policy\":\"media\",\"settings\":{\"format\":\"Gif\",\"media_options\":{\"threads\":\"1\"}}}]}");
+            Expect("Profilo FFmpeg su video",Visible(parent,video),new string[]{"GIF","GIF video · GIF","Impostazioni personalizzate…"});
+            Expect("Profilo FFmpeg escluso dal GIF nativo",Visible(parent,image),new string[]{"GIF","Impostazioni personalizzate…"});
+            Expect("Profilo FFmpeg escluso da batch misto",Visible(parent,image,video),new string[]{"GIF","Impostazioni personalizzate…"});
+        } finally {System.IO.File.WriteAllText(preferences,previous);}
     }
     static void ValidatePdfActions(IntPtr parent, string image, string pdf, string audio, string preferences) {
         WithSelection(new string[]{image, pdf}, delegate(IntPtr valid) {
@@ -301,6 +359,7 @@ public static class ConverterShellSmokeV2 {
                 if ((requested == "mp3" && title == "MP3") ||
                     (requested == "custom" && (title == "Impostazioni personalizzate…" || title == "Custom settings…")) ||
                     (requested == "profile" && title == "Salva per web & città · WEBP") ||
+                    (requested == "profile-merge" && title == "Raccolta PDF · PDF") ||
                     (requested == "pdf-bulk" && title == "PDF (Bulk)") ||
                     (requested == "pdf-merge" && title == "PDF (Merge)")) break;
                 if (index >= 127) throw new Exception("Troppi sottocomandi");
@@ -390,6 +449,8 @@ public static class ConverterShellSmokeV2 {
             if (Title(command) != "Converti in") throw new Exception("Italian menu title did not refresh");
             ValidatePdfActions(command, supported, pdf, audio, preferences);
             ValidateProfiles(command, supported, pdf, audio, text, document, preferences);
+            ValidateMergeProfile(command, supported, pdf, document, preferences);
+            ValidateMediaProfile(command, supported, video, preferences);
             Marshal.Release(command); command = IntPtr.Zero;
             Marshal.Release(factory); factory = IntPtr.Zero;
             if (unload() != 0) throw new Exception("Oggetti COM non rilasciati");
@@ -449,11 +510,15 @@ try {
             @{ Command = 'custom'; Files = @($audio, $video); Prefix = @('--custom-settings', '--selection-file') },
             @{ Command = 'pdf-bulk'; Files = @($document, $supported, $pdf); Prefix = @('--quick', '--target', 'pdf', '--pdf-batch', 'bulk', '--selection-file') },
             @{ Command = 'pdf-merge'; Files = @($pdf, $supported, $document); Prefix = @('--target', 'pdf', '--pdf-batch', 'merge', '--selection-file') },
-            @{ Command = 'profile'; Files = @($supported); Prefix = @('--quick', '--profile', '0123456789abcdef0123456789abcdef', '--profile-revision', '71', '--selection-file') }
+            @{ Command = 'profile'; Files = @($supported); Prefix = @('--quick', '--profile', '0123456789abcdef0123456789abcdef', '--profile-revision', '71', '--selection-file') },
+            @{ Command = 'profile-merge'; Files = @($supported,$pdf); Prefix = @('--quick', '--profile', '3123456789abcdef0123456789abcdef', '--profile-revision', '71', '--selection-file') }
         )) {
             if (Test-Path -LiteralPath $InvokeCaptureFile) { throw 'Il file di cattura deve essere assente prima del test.' }
             if ($case.Command -ceq 'profile') {
                 [IO.File]::WriteAllText($preferences, '{"ui_language":"it","enabled_output_formats":["webp"],"conversion_profiles":[{"id":"0123456789abcdef0123456789abcdef","revision":71,"name":"Salva per web & città","show_in_menu":true,"output_extension":"webp","input_policy":"images","settings":{"format":"Webp","image":{"edit":{}}}}]}')
+            }
+            if ($case.Command -ceq 'profile-merge') {
+                [IO.File]::WriteAllText($preferences, '{"ui_language":"it","enabled_output_formats":["pdf"],"conversion_profiles":[{"id":"3123456789abcdef0123456789abcdef","revision":71,"name":"Raccolta PDF","show_in_menu":true,"output_extension":"pdf","input_policy":"compatible","settings":{"format":"Pdf","pdf":{"action":"Merge"}}}]}')
             }
             [ConverterShellSmokeV2]::CaptureInvoke($library, $InvokeCaptureFile, [string[]]$case.Files, $case.Command)
             $captured = [IO.File]::ReadAllLines($InvokeCaptureFile)

@@ -3,6 +3,7 @@
 //! Interactive forms and signatures require a dedicated editor and are rejected.
 use crate::engine::{Progress, cancelled, commit, file_identity, stem, temporary};
 use crate::i18n::tr;
+use crate::model::ConversionLimits;
 use crate::pdf_merge::{MergePageRef, validate_order};
 use anyhow::{Context, Result, bail};
 use lopdf::{Dictionary, Document, Object, ObjectId, dictionary};
@@ -38,7 +39,15 @@ pub fn merge(
         );
     }
     let first = canonical_pdf(&inputs[0])?;
-    merge_ordered(inputs, None, &first, dir, cancel, progress)
+    merge_ordered(
+        inputs,
+        None,
+        &first,
+        dir,
+        &ConversionLimits::default(),
+        cancel,
+        progress,
+    )
 }
 
 /// Prepared sources are private snapshots; naming_input is the original label.
@@ -47,6 +56,7 @@ pub(crate) fn merge_ordered(
     order: Option<&[MergePageRef]>,
     naming_input: &Path,
     dir: Option<&Path>,
+    limits: &ConversionLimits,
     cancel: &AtomicBool,
     progress: &mut impl FnMut(Progress),
 ) -> Result<Vec<PathBuf>> {
@@ -124,6 +134,7 @@ pub(crate) fn merge_ordered(
     let mut output = temporary(&dir, "pdf")?;
     merged.save_to(output.as_file_mut())?;
     cancelled(cancel)?;
+    limits.check_bytes(output.as_file().metadata()?.len())?;
     let output = commit(
         output,
         &dir,

@@ -1,6 +1,8 @@
 use crate::{
     file_icons::FileIcons,
     image_editor::{self, EditorAction, ImageEditor},
+    profile_manager::{ProfileManager, ProfileManagerAction},
+    settings_ui::{self, EngineAction},
     theme::{self, FluentIcon},
 };
 use eframe::egui::{self, Color32, RichText};
@@ -306,32 +308,31 @@ struct RuntimeInstallTask {
 enum MainView {
     #[default]
     Files,
-    QuickQueue,
     History,
-}
-
-struct ProfileDialog {
-    id: Option<String>,
-    name: String,
-    show_in_menu: bool,
-    settings: ConversionSettings,
+    Settings,
+    Profiles,
 }
 
 pub struct ConverterApp {
     pdf_merge: Option<crate::pdf_merge_app::PdfMergeApp>,
     image_editor: Option<ImageEditor>,
-    profile_dialog: Option<ProfileDialog>,
+    profile_manager: ProfileManager,
     view: MainView,
     conversion_started: Option<std::time::Instant>,
+    conversion_format: OutputFormat,
     conversion_elapsed: std::time::Duration,
     file_icons: FileIcons,
     saved: SavedState,
     tools: ToolPaths,
     items: Vec<QueueItem>,
+    gui_jobs: Vec<QueueJob>,
+    gui_history: Option<crate::gui_history::AsyncHistory>,
+    history_revision: u64,
+    history_refresh: Option<std::time::Instant>,
+    history_error: Option<String>,
     running: bool,
     cancel: Arc<AtomicBool>,
     receiver: Option<mpsc::Receiver<Event>>,
-    show_tools: bool,
     pending_runtime_install: Option<Vec<RuntimeEngine>>,
     runtime_install: Option<RuntimeInstallTask>,
     runtime_notice: Option<(String, bool)>,
@@ -364,24 +365,36 @@ impl ConverterApp {
             saved.settings = profile.settings.clone();
         }
         if let Some(format) = target {
-            saved.settings.select_output_format(format);
+            select_format_defaults(&mut saved.settings, format);
         }
         let tools = ToolPaths::configured(&saved.overrides);
+        let gui_history = crate::gui_history::path()
+            .map(crate::gui_history::AsyncHistory::open)
+            .transpose();
+        let (gui_history, history_error) = match gui_history {
+            Ok(history) => (history, None),
+            Err(error) => (None, Some(format!("{error:#}"))),
+        };
         let mut app = Self {
             pdf_merge: None,
             image_editor: None,
-            profile_dialog: None,
+            profile_manager: ProfileManager::default(),
             view: MainView::Files,
             conversion_started: None,
+            conversion_format: saved.settings.format,
             conversion_elapsed: std::time::Duration::ZERO,
             file_icons: FileIcons::default(),
             saved,
             tools,
             items: Vec::new(),
+            gui_jobs: Vec::new(),
+            gui_history,
+            history_revision: 0,
+            history_refresh: None,
+            history_error,
             running: false,
             cancel: Arc::new(AtomicBool::new(false)),
             receiver: None,
-            show_tools: false,
             pending_runtime_install: None,
             runtime_install: None,
             runtime_notice: None,
@@ -426,6 +439,174 @@ impl ConverterApp {
                     ));
                 }
             }
+        }
+    }
+
+    fn profile_manager_action(&mut self, action: ProfileManagerAction) {
+        if let ProfileManagerAction::Export { id } = &action {
+            let result = (|| -> anyhow::Result<()> {
+                use std::io::Write;
+                let bytes = self.saved.conversion_profiles.export_json(id.as_deref())?;
+                let name = if id.is_some() {
+                    "ConvertHere-profile.json"
+                } else {
+                    "ConvertHere-profiles.json"
+                };
+                let Some(mut path) = rfd::FileDialog::new()
+                    .set_file_name(name)
+                    .add_filter("JSON", &["json"])
+                    .save_file()
+                else {
+                    return Ok(());
+                };
+                if path.extension().is_none() {
+                    path.set_extension("json");
+                }
+                anyhow::ensure!(
+                    path.extension()
+                        .is_some_and(|extension| extension.eq_ignore_ascii_case("json")),
+                    tr("Scegli un file .json.", "Choose a .json file.")
+                );
+                let parent = path.parent().unwrap_or_else(|| Path::new("."));
+                let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
+                temporary.write_all(&bytes)?;
+                temporary.as_file().sync_all()?;
+                temporary.persist(&path).map_err(|error| error.error)?;
+                self.profile_manager
+                    .notify(tr("Profili esportati.", "Profiles exported.").into(), false);
+                Ok(())
+            })();
+            if let Err(error) = result {
+                self.profile_manager.notify(format!("{error:#}"), true);
+            }
+            return;
+        }
+        let editor_id = match &action {
+            ProfileManagerAction::EditImage(id) => Some(id.clone()),
+            _ => None,
+        };
+        if let Some(id) = editor_id {
+            self.open_profile_editor(&id);
+            return;
+        }
+        let previous = self.saved.clone();
+        let previous_dirty = self.settings_dirty;
+        let mut saved_id = None;
+        let mut open_editor = false;
+        let result = (|| -> anyhow::Result<String> {
+            match action {
+                ProfileManagerAction::Save {
+                    id,
+                    name,
+                    show_in_menu,
+                    settings,
+                    input_extensions,
+                    open_image_editor,
+                } => {
+                    let id = if let Some(id) = id {
+                        self.saved.conversion_profiles.update_with_inputs(
+                            &id,
+                            name,
+                            show_in_menu,
+                            *settings,
+                            input_extensions,
+                        )?;
+                        id
+                    } else {
+                        self.saved.conversion_profiles.create_with_inputs(
+                            name,
+                            show_in_menu,
+                            *settings,
+                            input_extensions,
+                        )?
+                    };
+                    saved_id = Some(id);
+                    open_editor = open_image_editor;
+                    Ok(tr("Profilo salvato.", "Profile saved.").into())
+                }
+                ProfileManagerAction::SetVisibility(id, visible) => {
+                    self.saved
+                        .conversion_profiles
+                        .set_show_in_menu(&id, visible)?;
+                    Ok(String::new())
+                }
+                ProfileManagerAction::Delete(id) => {
+                    self.saved.conversion_profiles.remove(&id);
+                    if self.saved.default_profile_id.as_deref() == Some(id.as_str()) {
+                        self.saved.default_profile_id = None;
+                    }
+                    Ok(tr("Profilo eliminato.", "Profile deleted.").into())
+                }
+                ProfileManagerAction::MakeDefault(id) => {
+                    let profile = self.saved.conversion_profiles.resolve(&id, None)?;
+                    self.saved.settings = profile.settings.clone();
+                    self.saved.default_profile_id = Some(id);
+                    self.saved.preset = 3;
+                    self.sync_output_choice();
+                    Ok(tr("Predefinito aggiornato.", "Default updated.").into())
+                }
+                ProfileManagerAction::ClearDefault => {
+                    self.saved.default_profile_id = None;
+                    Ok(tr("Predefinito rimosso.", "Default cleared.").into())
+                }
+                ProfileManagerAction::Import(bytes) => {
+                    let imported = self.saved.conversion_profiles.import_json(&bytes)?;
+                    Ok(trf!(
+                        "{} profili importati · {} fuori dal menu",
+                        "{} profiles imported · {} hidden from menu",
+                        imported.imported,
+                        imported.hidden_from_menu
+                    ))
+                }
+                ProfileManagerAction::Export { .. } | ProfileManagerAction::EditImage(_) => {
+                    unreachable!()
+                }
+            }
+        })();
+        match result {
+            Ok(message) => {
+                self.settings_dirty = true;
+                self.persist_with_force(true);
+                if self.settings_dirty {
+                    self.saved = previous;
+                    self.settings_dirty = previous_dirty;
+                    self.profile_manager.notify(
+                        self.notice.clone().unwrap_or_else(|| {
+                            tr("Salvataggio non riuscito.", "Could not save.").into()
+                        }),
+                        true,
+                    );
+                    return;
+                }
+                if let Some(id) = saved_id {
+                    self.profile_manager.saved(id.clone());
+                    if open_editor {
+                        self.open_profile_editor(&id);
+                    }
+                }
+                if !message.is_empty() {
+                    self.profile_manager.notify(message, false);
+                }
+            }
+            Err(error) => {
+                self.saved = previous;
+                self.settings_dirty = previous_dirty;
+                self.profile_manager.notify(format!("{error:#}"), true);
+            }
+        }
+    }
+
+    fn open_profile_editor(&mut self, id: &str) {
+        if let Some(profile) = self.saved.conversion_profiles.get(id).cloned() {
+            let input = self
+                .items
+                .iter()
+                .find(|item| {
+                    image_editor::editable(&item.path)
+                        && profile.validate_for_inputs([item.path.as_path()]).is_ok()
+                })
+                .map(|item| item.path.clone());
+            self.open_editor(input, Some(profile));
         }
     }
 
@@ -478,7 +659,6 @@ impl ConverterApp {
             editor.editing_profile(profile.id, profile.name, profile.show_in_menu);
         }
         self.image_editor = Some(editor);
-        self.show_tools = false;
     }
 
     fn apply_profile(&mut self, profile: &ConversionProfile) {
@@ -531,8 +711,8 @@ impl ConverterApp {
                     })
                 } else {
                     tr(
-                        "Impostazioni predefinite salvate. Gli originali restano invariati.",
-                        "Default settings saved. Original files are preserved.",
+                        "Impostazioni predefinite salvate.",
+                        "Default settings saved.",
                     )
                     .into()
                 };
@@ -544,12 +724,43 @@ impl ConverterApp {
                 id,
                 name,
                 show_in_menu,
-                settings,
+                mut settings,
             } => {
+                let previous = self.saved.clone();
+                let previous_dirty = self.settings_dirty;
+                if id
+                    .as_deref()
+                    .and_then(|id| previous.conversion_profiles.get(id))
+                    .is_some_and(|profile| profile.settings.pdf.action == PdfAction::Merge)
+                    && settings.format == OutputFormat::Pdf
+                {
+                    settings.pdf.action = PdfAction::Merge;
+                }
+                let old_inputs = id
+                    .as_deref()
+                    .and_then(|id| previous.conversion_profiles.get(id))
+                    .map(|profile| profile.input_extensions.clone())
+                    .unwrap_or_default();
+                let allowed = crate::profile_manager::allowed_inputs(&settings);
+                let inputs: Vec<_> = old_inputs
+                    .iter()
+                    .filter(|extension| allowed.contains(&extension.as_str()))
+                    .cloned()
+                    .collect();
+                if !old_inputs.is_empty() && inputs.is_empty() {
+                    if let Some(editor) = &mut self.image_editor {
+                        editor.notify(tr(
+                            "Queste modifiche non sono compatibili con gli ingressi del profilo. Modifica gli ingressi nella scheda Profili.",
+                            "These edits are incompatible with the profile's inputs. Change its allowed inputs in Profiles.",
+                        ).into(), true);
+                    }
+                    return;
+                }
+                let narrowed = inputs.len() != old_inputs.len();
                 let result = if let Some(id) = id {
                     self.saved
                         .conversion_profiles
-                        .update(&id, name.clone(), show_in_menu, settings)
+                        .update_with_inputs(&id, name.clone(), show_in_menu, settings, inputs)
                         .map(|()| id)
                 } else {
                     self.saved
@@ -570,14 +781,26 @@ impl ConverterApp {
                                 .into()
                             })
                         } else {
-                            trf!(
-                                "Profilo «{}» salvato. Il menu Converti in si aggiorna alla prossima apertura.",
-                                "Profile ‘{}’ saved. Convert to refreshes the next time you open it.",
-                                name.trim()
-                            )
+                            let mut message =
+                                trf!("Profilo «{}» salvato.", "Profile ‘{}’ saved.", name.trim());
+                            if narrowed {
+                                message.push_str(tr(
+                                    " Ingressi limitati ai formati compatibili con le modifiche.",
+                                    " Inputs restricted to formats compatible with the edits.",
+                                ));
+                            }
+                            message
                         };
+                        if error {
+                            self.saved = previous;
+                            self.settings_dirty = previous_dirty;
+                        } else if let Some(profile) = self.saved.conversion_profiles.get(&id) {
+                            self.profile_manager.refresh_if_current(profile);
+                        }
                         if let Some(editor) = &mut self.image_editor {
-                            editor.editing_profile(id, name.trim().into(), show_in_menu);
+                            if !error {
+                                editor.editing_profile(id, name.trim().into(), show_in_menu);
+                            }
                             editor.notify(message, error);
                         }
                     }
@@ -588,258 +811,6 @@ impl ConverterApp {
                     }
                 }
             }
-        }
-    }
-
-    fn profile_settings(&mut self, ui: &mut egui::Ui) {
-        let profiles: Vec<_> = self.saved.conversion_profiles.iter().cloned().collect();
-        let mut edit = None;
-        let mut apply = None;
-        let mut rename = None;
-        let mut remove = None;
-        let mut update = None;
-        let mut visibility = None;
-        let mut make_default = None;
-        let mut create_web = false;
-        theme::show_card(ui, |ui| {
-            ui.label(theme::heading(
-                tr("I miei profili", "My profiles"),
-                theme::SUBTITLE,
-            ));
-            ui.label(tr("Salva formato, qualità e opzioni. I profili visibili compaiono in «Converti in» ed eseguono subito la conversione.", "Save the format, quality and options. Visible profiles appear in Convert to and run the conversion immediately."));
-            ui.label(trf!(
-                "{} di 32 salvati · massimo 8 nel menu",
-                "{} of 32 saved · up to 8 in the menu",
-                profiles.len()
-            ));
-            if ui
-                .button(tr("Crea «Salva per web»", "Create ‘Save for web’"))
-                .clicked()
-            {
-                create_web = true;
-            }
-            ui.label(RichText::new(tr("WebP, massimo 300 kB: adatta qualità e, se necessario, riduce le dimensioni. Potrai modificarlo nell’editor.", "WebP, up to 300 kB: adjusts quality and, if needed, reduces dimensions. You can change it in the editor.")).small().weak());
-            if profiles.is_empty() {
-                ui.label(tr(
-                    "Puoi creare altri profili dalle opzioni di conversione o dall’editor.",
-                    "Create more profiles from the conversion options or the editor.",
-                ));
-            }
-            for profile in &profiles {
-                ui.separator();
-                ui.horizontal_wrapped(|ui| {
-                    ui.label(theme::heading(&profile.name, theme::BODY));
-                    ui.label(profile_summary(profile));
-                    if self.saved.default_profile_id.as_deref() == Some(profile.id.as_str()) {
-                        ui.label(tr("Predefinito", "Default"));
-                    }
-                });
-                let mut visible = profile.show_in_menu;
-                if ui
-                    .checkbox(
-                        &mut visible,
-                        tr("Mostra in Converti in", "Show in Convert to"),
-                    )
-                    .changed()
-                {
-                    visibility = Some((profile.id.clone(), visible));
-                }
-                if !self
-                    .saved
-                    .enabled_output_formats
-                    .contains(profile.settings.format)
-                {
-                    ui.label(RichText::new(tr("Il formato è disattivato: riabilitalo in Formati di uscita per vedere questo profilo nel menu.", "This format is disabled: enable it in Output formats to show this profile in the menu.")).color(theme::palette(ui.ctx()).secondary));
-                }
-                ui.horizontal_wrapped(|ui| {
-                    if ui.button(tr("Applica", "Apply")).clicked() {
-                        apply = Some(profile.clone());
-                    }
-                    if ui
-                        .button(tr("Modifica opzioni…", "Edit options…"))
-                        .clicked()
-                    {
-                        edit = Some(profile.clone());
-                    }
-                    if ui.button(tr("Rinomina…", "Rename…")).clicked() {
-                        rename = Some(profile.clone());
-                    }
-                    if ui
-                        .button(tr(
-                            "Aggiorna con le opzioni correnti",
-                            "Update with current options",
-                        ))
-                        .clicked()
-                    {
-                        update = Some(profile.clone());
-                    }
-                    if ui
-                        .button(tr("Usa come predefinito", "Set as default"))
-                        .clicked()
-                    {
-                        make_default = Some(profile.clone());
-                    }
-                    if ui.button(tr("Elimina", "Delete")).clicked() {
-                        remove = Some(profile.id.clone());
-                    }
-                });
-            }
-        });
-        if create_web {
-            let mut settings = ConversionSettings {
-                format: OutputFormat::Webp,
-                ..Default::default()
-            };
-            settings.output_dir = self.saved.settings.output_dir.clone();
-            settings.image.quality = 90;
-            settings.image.edit = Some(the_converter::image_edit::ImageEditSettings {
-                max_bytes: Some(300_000),
-                allow_downsize: true,
-                ..Default::default()
-            });
-            match self.saved.conversion_profiles.create(
-                tr("Salva per web", "Save for web").into(),
-                true,
-                settings,
-            ) {
-                Ok(id) => {
-                    self.settings_dirty = true;
-                    self.persist_with_force(true);
-                    if let Some(profile) = self.saved.conversion_profiles.get(&id).cloned() {
-                        edit = Some(profile);
-                    }
-                }
-                Err(error) => self.notice = Some(format!("{error:#}")),
-            }
-        }
-        if let Some((id, visible)) = visibility {
-            match self
-                .saved
-                .conversion_profiles
-                .set_show_in_menu(&id, visible)
-            {
-                Ok(()) => self.settings_dirty = true,
-                Err(error) => self.notice = Some(format!("{error:#}")),
-            }
-        }
-        if let Some(id) = remove {
-            self.saved.conversion_profiles.remove(&id);
-            if self.saved.default_profile_id.as_deref() == Some(id.as_str()) {
-                self.saved.default_profile_id = None;
-            }
-            self.settings_dirty = true;
-        }
-        if let Some(profile) = update {
-            match self.saved.conversion_profiles.update(
-                &profile.id,
-                profile.name,
-                profile.show_in_menu,
-                self.saved.settings.clone(),
-            ) {
-                Ok(()) => self.settings_dirty = true,
-                Err(error) => self.notice = Some(format!("{error:#}")),
-            }
-        }
-        if let Some(profile) = rename {
-            self.profile_dialog = Some(ProfileDialog {
-                id: Some(profile.id),
-                name: profile.name,
-                show_in_menu: profile.show_in_menu,
-                settings: profile.settings,
-            });
-        }
-        if let Some(profile) = make_default {
-            self.saved.default_profile_id = Some(profile.id.clone());
-            self.saved.settings = profile.settings;
-            self.saved.preset = 3;
-            self.sync_output_choice();
-            self.settings_dirty = true;
-        }
-        if let Some(profile) = apply {
-            self.apply_profile(&profile);
-            self.show_tools = false;
-        }
-        if let Some(profile) = edit {
-            if matches!(
-                profile.settings.format,
-                OutputFormat::Png | OutputFormat::Jpg | OutputFormat::Webp
-            ) || profile.settings.image.edit.is_some()
-                || profile.settings.image.page.is_some()
-            {
-                let input = self
-                    .items
-                    .iter()
-                    .find(|item| {
-                        image_editor::editable(&item.path)
-                            && profile.validate_for_inputs([item.path.as_path()]).is_ok()
-                    })
-                    .map(|item| item.path.clone());
-                self.open_editor(input, Some(profile));
-            } else {
-                self.apply_profile(&profile);
-                self.advanced = true;
-                self.show_tools = false;
-                self.notice = Some(
-                    tr(
-                        "Modifica le opzioni, poi aggiorna il profilo nelle Impostazioni.",
-                        "Edit the options, then update the profile in Settings.",
-                    )
-                    .into(),
-                );
-            }
-        }
-        if self.settings_dirty {
-            self.persist_with_force(true);
-        }
-    }
-
-    fn profile_dialog(&mut self, ctx: &egui::Context) {
-        let Some(mut dialog) = self.profile_dialog.take() else {
-            return;
-        };
-        let mut save = false;
-        let mut close = false;
-        egui::Modal::new(egui::Id::new("save_conversion_profile")).show(ctx,|ui| {
-            ui.set_width(430.0);
-            ui.label(theme::heading(if dialog.id.is_some(){tr("Aggiorna profilo", "Update profile")}else{tr("Salva profilo", "Save profile")},theme::SUBTITLE));
-            ui.label(trf!("Formato: {}. Le opzioni correnti saranno riutilizzate per ogni conversione del profilo.", "Format: {}. These options will be reused for every conversion with this profile.",dialog.settings.format.label()));
-            ui.add(egui::TextEdit::singleline(&mut dialog.name).hint_text(tr("Nome profilo", "Profile name")).char_limit(40));
-            ui.checkbox(&mut dialog.show_in_menu,tr("Mostra in Converti in", "Show in Convert to"));
-            ui.horizontal(|ui|{
-                save=ui.add_enabled(!dialog.name.trim().is_empty(),egui::Button::new(tr("Salva", "Save"))).clicked();
-                close=ui.button(tr("Annulla", "Cancel")).clicked();
-            });
-        });
-        if save {
-            let result = if let Some(id) = &dialog.id {
-                self.saved
-                    .conversion_profiles
-                    .update(
-                        id,
-                        dialog.name.clone(),
-                        dialog.show_in_menu,
-                        dialog.settings.clone(),
-                    )
-                    .map(|()| id.clone())
-            } else {
-                self.saved.conversion_profiles.create(
-                    dialog.name.clone(),
-                    dialog.show_in_menu,
-                    dialog.settings.clone(),
-                )
-            };
-            match result {
-                Ok(_) => {
-                    self.settings_dirty = true;
-                    self.persist_with_force(true);
-                }
-                Err(error) => {
-                    self.notice = Some(format!("{error:#}"));
-                    self.profile_dialog = Some(dialog);
-                }
-            }
-        } else if !close && !ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
-            self.profile_dialog = Some(dialog);
         }
     }
 
@@ -868,7 +839,7 @@ impl ConverterApp {
         }
         let common = self.common_formats();
         if !common.is_empty() && !common.contains(&self.saved.settings.format) {
-            self.saved.settings.select_output_format(common[0]);
+            select_format_defaults(&mut self.saved.settings, common[0]);
             self.settings_dirty = true;
         }
         if (self.saved.settings.pdf.action == PdfAction::Split
@@ -905,7 +876,7 @@ impl ConverterApp {
         if !available.contains(&self.saved.settings.format)
             && let Some(format) = available.first()
         {
-            self.saved.settings.select_output_format(*format);
+            select_format_defaults(&mut self.saved.settings, *format);
             self.saved.settings.audio.sample_rate = 0;
         }
     }
@@ -994,11 +965,7 @@ impl ConverterApp {
             self.runtime_install = None;
             self.runtime_notice = Some(match result {
                 Ok(()) => (
-                    tr(
-                        "Installazione completata. I motori sono pronti per le conversioni locali.",
-                        "Installation complete. The engines are ready for local conversions.",
-                    )
-                    .into(),
+                    tr("Installazione completata.", "Installation complete.").into(),
                     false,
                 ),
                 Err(error) => (error, true),
@@ -1008,111 +975,7 @@ impl ConverterApp {
 
     fn output_format_settings(&mut self, ui: &mut egui::Ui) {
         let before = self.saved.enabled_output_formats.clone();
-        theme::show_card(ui, |ui| {
-            ui.label(theme::heading(
-                tr("Formati di uscita", "Output formats"),
-                theme::SUBTITLE,
-            ));
-            ui.label(tr("Scegli i formati da mostrare nell’app e in «Converti in». Tutti i formati in ingresso restano supportati.", "Choose the formats to show in the app and in “Convert to”. All input formats remain supported."));
-            ui.horizontal_wrapped(|ui| {
-                let count = self
-                    .saved
-                    .enabled_output_formats
-                    .filter(OutputFormat::ALL)
-                    .count();
-                ui.label(trf!(
-                    "{count} di {} attivi",
-                    "{count} of {} enabled",
-                    OutputFormat::ALL.len()
-                ));
-                if ui.button(tr("Più comuni", "Most common")).clicked() {
-                    self.saved.enabled_output_formats.reset_common();
-                }
-                if ui.button(tr("Attiva tutti", "Enable all")).clicked() {
-                    self.saved.enabled_output_formats.enable_all();
-                }
-                if ui.button(tr("Disattiva tutti", "Disable all")).clicked() {
-                    self.saved.enabled_output_formats.disable_all();
-                }
-            });
-            for (index, title) in [
-                "Audio",
-                "Video",
-                tr("Immagini", "Images"),
-                tr("Documenti e PDF", "Documents and PDF"),
-            ]
-            .into_iter()
-            .enumerate()
-            {
-                let formats: Vec<_> = OutputFormat::ALL
-                    .into_iter()
-                    .filter(|format| match index {
-                        0 => format.kind() == MediaKind::Audio,
-                        1 => format.kind() == MediaKind::Video,
-                        2 => format.kind() == MediaKind::Image,
-                        _ => matches!(
-                            format.kind(),
-                            MediaKind::Pdf
-                                | MediaKind::Document
-                                | MediaKind::Spreadsheet
-                                | MediaKind::Html
-                        ),
-                    })
-                    .collect();
-                let enabled = self
-                    .saved
-                    .enabled_output_formats
-                    .filter(formats.iter().copied())
-                    .count();
-                egui::CollapsingHeader::new(format!("{title} · {enabled}/{}", formats.len()))
-                    .id_salt(("enabled_output_category", index))
-                    .default_open(index == 0)
-                    .show(ui, |ui| {
-                        ui.horizontal(|ui| {
-                            if ui.small_button(tr("Tutti", "All")).clicked() {
-                                for format in &formats {
-                                    self.saved.enabled_output_formats.set_enabled(*format, true);
-                                }
-                            }
-                            if ui.small_button(tr("Nessuno", "None")).clicked() {
-                                for format in &formats {
-                                    self.saved
-                                        .enabled_output_formats
-                                        .set_enabled(*format, false);
-                                }
-                            }
-                        });
-                        ui.horizontal_wrapped(|ui| {
-                            for format in formats {
-                                let mut enabled =
-                                    self.saved.enabled_output_formats.contains(format);
-                                if ui
-                                    .checkbox(
-                                        &mut enabled,
-                                        format!("{} (.{})", format.label(), format.extension()),
-                                    )
-                                    .changed()
-                                {
-                                    self.saved
-                                        .enabled_output_formats
-                                        .set_enabled(format, enabled);
-                                }
-                            }
-                        });
-                    });
-            }
-            if self.saved.enabled_output_formats.is_empty() {
-                info_bar(
-                    ui,
-                    tr(
-                        "Non ci sono uscite attive. Abilita almeno un formato per convertire; puoi comunque aggiungere i file.",
-                        "No output formats are enabled. Enable at least one format to convert; you can still add files.",
-                    ),
-                    InfoKind::Info,
-                );
-            }
-            ui.label(RichText::new(tr("Per esempio: un FLAC resta selezionabile e offre MP3 e WAV con le impostazioni iniziali.", "For example, you can still select a FLAC file and convert it to MP3 or WAV with the default settings.")).small().weak());
-        });
+        settings_ui::formats(ui, &mut self.saved.enabled_output_formats);
         if self.saved.enabled_output_formats != before {
             self.sync_output_choice();
             self.settings_dirty = true;
@@ -1350,6 +1213,7 @@ impl ConverterApp {
         let (sender, receiver) = mpsc::channel();
         self.receiver = Some(receiver);
         self.running = true;
+        self.conversion_format = settings.format;
         self.conversion_started = Some(std::time::Instant::now());
         self.conversion_elapsed = std::time::Duration::ZERO;
         self.notice = None;
@@ -1395,10 +1259,17 @@ impl ConverterApp {
                     self.items[index].state = JobState::Running(fraction.clamp(0.0, 1.0), message)
                 }
                 Event::Complete(index, outputs) => {
-                    self.items[index].state = JobState::Complete(outputs)
+                    self.items[index].state = JobState::Complete(outputs);
+                    self.record_history(index);
                 }
-                Event::Failed(index, error) => self.items[index].state = JobState::Failed(error),
-                Event::Cancelled(index) => self.items[index].state = JobState::Cancelled,
+                Event::Failed(index, error) => {
+                    self.items[index].state = JobState::Failed(error);
+                    self.record_history(index);
+                }
+                Event::Cancelled(index) => {
+                    self.items[index].state = JobState::Cancelled;
+                    self.record_history(index);
+                }
                 Event::End => {
                     self.running = false;
                     if let Some(started) = self.conversion_started.take() {
@@ -1406,10 +1277,18 @@ impl ConverterApp {
                     }
                     self.receiver = None;
                     if self.cancel.load(Ordering::Relaxed) {
-                        for item in &mut self.items {
-                            if matches!(item.state, JobState::Waiting | JobState::Running(..)) {
-                                item.state = JobState::Cancelled;
-                            }
+                        let waiting: Vec<_> = self
+                            .items
+                            .iter()
+                            .enumerate()
+                            .filter_map(|(index, item)| {
+                                matches!(item.state, JobState::Waiting | JobState::Running(..))
+                                    .then_some(index)
+                            })
+                            .collect();
+                        for index in waiting {
+                            self.items[index].state = JobState::Cancelled;
+                            self.record_history(index);
                         }
                     }
                 }
@@ -1431,44 +1310,18 @@ impl ConverterApp {
     }
 
     fn header(&mut self, ui: &mut egui::Ui) {
-        let colors = theme::palette(ui.ctx());
         ui.horizontal(|ui| {
-            if self.show_tools {
-                if ui
-                    .add(
-                        egui::Button::new(theme::button_text(
-                            FluentIcon::Back,
-                            tr("Indietro", "Back"),
-                            colors.text,
-                        ))
-                        .frame(false),
-                    )
-                    .clicked()
-                {
-                    self.show_tools = false;
-                }
-                ui.label(theme::heading(
-                    tr("Impostazioni", "Settings"),
-                    theme::SUBTITLE,
-                ));
-            } else {
-                navigation_tabs(ui, &mut self.view);
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui
-                        .add(
-                            egui::Button::new(theme::button_text(
-                                FluentIcon::Settings,
-                                tr("Impostazioni", "Settings"),
-                                colors.text,
-                            ))
-                            .frame(false),
-                        )
-                        .clicked()
-                    {
-                        self.show_tools = true;
-                    }
-                });
+            if settings_ui::tool_button(
+                ui,
+                FluentIcon::Back,
+                tr("File da convertire", "Files to convert"),
+                self.view != MainView::Files,
+            )
+            .clicked()
+            {
+                self.view = MainView::Files;
             }
+            navigation_tabs(ui, &mut self.view);
         });
     }
 
@@ -1507,18 +1360,12 @@ impl ConverterApp {
             self.apply_profile(&profile);
         }
         if ui
-            .small_button(tr(
-                "Salva queste opzioni come profilo…",
-                "Save these options as a profile…",
-            ))
+            .small_button(tr("Salva profilo…", "Save profile…"))
             .clicked()
         {
-            self.profile_dialog = Some(ProfileDialog {
-                id: None,
-                name: String::new(),
-                show_in_menu: true,
-                settings: self.saved.settings.clone(),
-            });
+            self.profile_manager
+                .new_profile(self.saved.settings.clone());
+            self.view = MainView::Profiles;
         }
         if let Some(path) = self
             .items
@@ -1579,9 +1426,10 @@ impl ConverterApp {
             .link(tr("Scegli i formati di uscita…", "Choose output formats…"))
             .clicked()
         {
-            self.show_tools = true;
+            self.view = MainView::Settings;
         }
         if before != self.saved.settings.format {
+            self.saved.settings.media_options.clear();
             self.saved
                 .settings
                 .select_output_format(self.saved.settings.format);
@@ -1680,14 +1528,6 @@ impl ConverterApp {
                     self.settings_dirty = true;
                 }
             }
-            ui.label(
-                RichText::new(tr(
-                    "Gli originali e i risultati già presenti restano al sicuro.",
-                    "Originals and existing results are preserved.",
-                ))
-                .size(theme::CAPTION)
-                .color(colors.secondary),
-            );
         });
         ui.add_space(6.0);
         theme::show_card(ui, |ui| {
@@ -1730,7 +1570,7 @@ impl ConverterApp {
                 .button(tr("Configura strumenti…", "Configure tools…"))
                 .clicked()
             {
-                self.show_tools = true;
+                self.view = MainView::Settings;
             }
         }
     }
@@ -2282,13 +2122,6 @@ impl ConverterApp {
                         tr("Trascina qui i tuoi file", "Drop your files here"),
                         theme::SUBTITLE,
                     ));
-                    ui.label(
-                        RichText::new(tr(
-                            "Audio, video, immagini e documenti.",
-                            "Audio, video, images and documents.",
-                        ))
-                        .color(colors.secondary),
-                    );
                     ui.add_space(16.0);
                     if ui
                         .add(
@@ -2305,14 +2138,6 @@ impl ConverterApp {
                         self.add_files(paths);
                     }
                     ui.add_space(18.0);
-                    ui.label(
-                        RichText::new(tr(
-                            "Puoi anche usare il tasto destro in Esplora file.",
-                            "You can also use the right-click menu in File Explorer.",
-                        ))
-                        .size(theme::CAPTION)
-                        .color(colors.secondary),
-                    );
                 });
             });
             return;
@@ -2540,73 +2365,39 @@ impl ConverterApp {
         }
     }
 
-    fn session_history(&mut self, ui: &mut egui::Ui) {
-        let count = self
-            .items
-            .iter()
-            .filter(|item| {
-                matches!(
-                    item.state,
-                    JobState::Complete(_) | JobState::Failed(_) | JobState::Cancelled
-                )
-            })
-            .count();
-        if count == 0 {
-            return;
+    fn record_history(&mut self, index: usize) {
+        let mut job = session_job(&self.items[index], index, self.conversion_format);
+        job.id = format!(
+            "gui-{}-{index}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos()
+        );
+        self.gui_jobs.insert(0, job.clone());
+        self.gui_jobs.truncate(300);
+        if let Some(path) = crate::gui_history::path()
+            && let Err(error) = crate::gui_history::record_async(path, job)
+        {
+            self.history_error = Some(format!("{error:#}"));
         }
-        egui::CollapsingHeader::new(theme::heading(
-            trf!(
-                "Questa sessione · {count} file",
-                "This session · Files: {count}"
-            ),
-            theme::BODY,
-        ))
-        .id_salt("completed_session")
-        .default_open(false)
-        .show(ui, |ui| {
-            egui::ScrollArea::vertical()
-                .id_salt("session_history")
-                .max_height(200.0)
-                .show(ui, |ui| {
-                    for item in self.items.iter().filter(|item| {
-                        matches!(
-                            item.state,
-                            JobState::Complete(_) | JobState::Failed(_) | JobState::Cancelled
-                        )
-                    }) {
-                        theme::show_card(ui, |ui| {
-                            ui.horizontal(|ui| {
-                                file_icon(ui, &mut self.file_icons, &item.path);
-                                ui.add(
-                                    egui::Label::new(theme::heading(
-                                        item.path.file_name().unwrap_or_default().to_string_lossy(),
-                                        theme::BODY,
-                                    ))
-                                    .truncate(),
-                                );
-                            });
-                            match &item.state {
-                                JobState::Complete(outputs) => {
-                                    ui.label(
-                                        RichText::new(trf!(
-                                            "Completato · {} file creati",
-                                            "Completed · Output files: {}",
-                                            outputs.len()
-                                        ))
-                                        .color(theme::palette(ui.ctx()).success),
-                                    );
-                                }
-                                JobState::Failed(error) => info_bar(ui, error, InfoKind::Error),
-                                JobState::Cancelled => {
-                                    ui.label(tr("Annullato", "Cancelled"));
-                                }
-                                _ => {}
-                            }
-                        });
-                        ui.add_space(6.0);
-                    }
-                });
-        });
+    }
+
+    fn refresh_history(&mut self) {
+        if let Some(history) = &self.gui_history {
+            if self
+                .history_refresh
+                .is_none_or(|last| last.elapsed() >= QUEUE_REFRESH)
+            {
+                self.history_refresh = Some(std::time::Instant::now());
+                history.refresh();
+            }
+            if let Some(snapshot) = history.snapshot_after(self.history_revision) {
+                self.history_revision = snapshot.revision;
+                self.gui_jobs = snapshot.jobs;
+                self.history_error = snapshot.error;
+            }
+        }
     }
 
     fn quick_report_panel(&mut self, ui: &mut egui::Ui) {
@@ -2698,7 +2489,7 @@ impl ConverterApp {
                         "Completed: {done} · Errors: {failed}"
                     )
                 } else if self.items.is_empty() {
-                    tr("Pronto quando vuoi", "Ready when you are").into()
+                    tr("0 file", "0 files").into()
                 } else {
                     trf!(
                         "{} file · {}",
@@ -2708,14 +2499,6 @@ impl ConverterApp {
                     )
                 };
                 ui.label(theme::heading(summary, theme::BODY));
-                ui.label(
-                    RichText::new(tr(
-                        "Conversioni locali · originali conservati",
-                        "Local conversions · originals preserved",
-                    ))
-                    .size(theme::CAPTION)
-                    .color(colors.secondary),
-                );
             });
             if self.running || !self.conversion_elapsed.is_zero() {
                 let elapsed = self
@@ -2799,166 +2582,74 @@ impl ConverterApp {
 
     fn tools_window(&mut self, ctx: &egui::Context) {
         egui::CentralPanel::default().frame(egui::Frame::new().fill(theme::palette(ctx).canvas).inner_margin(24)).show(ctx, |ui| {
-            if let Some(notice)=self.notice.clone() {
-                info_bar(ui,&notice,InfoKind::Warning);
-                if ui.small_button(tr("Chiudi avviso", "Dismiss notice")).clicked() { self.notice=None; }
-            }
-            centered_column(ui, 1000.0, |ui| {
-                ui.label(RichText::new(tr("Immagini e PDF da immagini, subito disponibili.", "Images and PDFs from images are ready to use.")).family(egui::FontFamily::Name(theme::SEMIBOLD_FAMILY.into())));
-                ui.label(tr("Audio, video, pagine PDF e documenti Office usano motori opzionali. Puoi installare FFmpeg e Poppler con un clic oppure selezionare programmi già presenti.", "Audio, video, PDF pages and Office documents use optional engines. You can install FFmpeg and Poppler with one click or select existing programs."));
-                ui.label(tr("Convert Here è gratuito, senza abbonamenti, acquisti in-app o costi a consumo.", "Convert Here is free, with no subscriptions, in-app purchases or usage-based charges."));
-                ui.label(RichText::new(tr("Le conversioni avvengono sul PC con i motori locali. I documenti HTML possono caricare risorse collegate; i siti ufficiali si aprono nel browser.", "Conversions run on your PC with local engines. HTML documents may load linked resources; official websites open in your browser.")).small().weak());
-                ui.add_space(5.0);
-                egui::ScrollArea::vertical().id_salt("tools_scroll").max_height((ui.available_height()-60.0).max(120.0)).show(ui, |ui| {
-                    ui.add_enabled_ui(!self.running, |ui| self.output_format_settings(ui));
-                    ui.add_space(8.0);
-                    ui.add_enabled_ui(!self.running, |ui| self.profile_settings(ui));
-                    ui.add_space(8.0);
-                    theme::show_card(ui, |ui| {
-                        ui.label(theme::heading(tr("Lingua", "Language"), theme::SUBTITLE));
-                        ui.label(tr(
-                            "Segui la lingua di Windows o scegli la lingua dell’app e del menu di Esplora file.",
-                            "Follow the Windows language or choose the language of the app and File Explorer menu.",
-                        ));
-                        let mut language = if i18n::has_language_override() {
-                            i18n::current_language()
-                        } else {
-                            self.saved.ui_language
-                        };
-                        ui.horizontal(|ui| {
+            egui::ScrollArea::vertical().id_salt("settings_page").show(ui, |ui| {
+                self.output_format_settings(ui);
+                ui.add_space(24.0);
+                if let Some(action) = settings_ui::engines(ui, &self.tools, &self.saved.overrides, self.runtime_install.is_some()) {
+                    match action {
+                        EngineAction::Install(engines) => self.pending_runtime_install = Some(engines),
+                        EngineAction::Select(key) => {
+                            if let Some(path) = rfd::FileDialog::new().set_title(trf!("Seleziona {key}.exe", "Select {key}.exe")).set_file_name(format!("{key}.exe")).add_filter("EXE", &["exe"]).pick_file() {
+                                if path.is_file() && path.extension().is_some_and(|extension| extension.eq_ignore_ascii_case("exe")) {
+                                    self.saved.overrides.insert(key.into(), path);
+                                    self.tools = ToolPaths::configured(&self.saved.overrides);
+                                    self.settings_dirty = true;
+                                } else { self.notice = Some(tr("Seleziona un programma .exe esistente.", "Select an existing .exe program.").into()); }
+                            }
+                        }
+                        EngineAction::Reset(keys) => {
+                            for key in keys { self.saved.overrides.remove(*key); }
+                            self.tools = ToolPaths::configured(&self.saved.overrides);
+                            self.settings_dirty = true;
+                        }
+                        EngineAction::Website(url) => { if let Err(error) = platform::open_website(url) { self.notice = Some(format!("{error:#}")); } }
+                        EngineAction::Detect => self.tools = ToolPaths::configured(&self.saved.overrides),
+                        EngineAction::OpenFolder => {
+                            if let Some(path) = the_converter::tools::user_tools_dir()
+                                && let Err(error) = platform::open_folder(&path) { self.notice = Some(format!("{error:#}"));
+                            }
+                        }
+                    }
+                }
+                self.runtime_install_progress(ui);
+                ui.add_space(16.0);
+                ui.columns(2, |columns| {
+                    theme::show_card(&mut columns[0], |ui| {
+                        ui.label(theme::heading(tr("Lingua", "Language"), theme::BODY));
+                        let mut language = if i18n::has_language_override() { i18n::current_language() } else { self.saved.ui_language };
+                        egui::ComboBox::from_id_salt("ui_language").selected_text(language.label()).show_ui(ui, |ui| {
                             for choice in [Language::System, Language::Italian, Language::English] {
-                                let response = ui.radio_value(&mut language, choice, choice.label());
-                                if response.changed()
-                                    || (response.clicked() && self.saved.ui_language != language)
-                                {
+                                if ui.selectable_value(&mut language, choice, choice.label()).changed() {
                                     self.saved.ui_language = language;
                                     i18n::set_language(language);
                                     self.settings_dirty = true;
                                     self.language_dirty = true;
-                                    ui.ctx().request_repaint();
                                 }
                             }
                         });
-                        ui.label(RichText::new(tr(
-                            "La lingua OCR si sceglie separatamente nelle opzioni di conversione.",
-                            "Choose the OCR language separately in the conversion options.",
-                        )).small().weak());
                     });
-                    ui.add_space(8.0);
-                    theme::show_card(ui, |ui| {
-                        ui.label(theme::heading(tr("Aspetto", "Appearance"),theme::SUBTITLE));
-                        ui.label(RichText::new(tr("Segui Windows oppure prova un tema.", "Follow Windows or choose a theme.")).color(theme::palette(ui.ctx()).secondary));
+                    theme::show_card(&mut columns[1], |ui| {
+                        ui.label(theme::heading(tr("Aspetto", "Appearance"), theme::BODY));
                         let mut preference=ui.ctx().options(|options| options.theme_preference);
-                        ui.horizontal(|ui| {
+                        let label=match preference { egui::ThemePreference::System => tr("Sistema", "System"), egui::ThemePreference::Light => tr("Chiaro", "Light"), egui::ThemePreference::Dark => tr("Scuro", "Dark") };
+                        egui::ComboBox::from_id_salt("ui_theme").selected_text(label).show_ui(ui, |ui| {
                             for (value,label) in [(egui::ThemePreference::System,tr("Sistema", "System")),(egui::ThemePreference::Light,tr("Chiaro", "Light")),(egui::ThemePreference::Dark,tr("Scuro", "Dark"))] {
-                                if ui.radio_value(&mut preference,value,label).changed() { ui.ctx().set_theme(preference); }
-                            }
-                        });
-                    });
-                    ui.add_space(8.0);
-                    ui.label(theme::heading(tr("Motori di conversione", "Conversion engines"), theme::SUBTITLE));
-                    ui.label(tr("FFmpeg include FFprobe; Poppler include gli strumenti per immagini, testo e conteggio pagine PDF.", "FFmpeg includes FFprobe; Poppler includes tools for PDF images, text and page counts."));
-                    if ui.add_enabled(self.runtime_install.is_none(), egui::Button::new(tr("Installa FFmpeg e Poppler…", "Install FFmpeg and Poppler…"))).clicked() {
-                        self.pending_runtime_install = Some(vec![RuntimeEngine::Ffmpeg, RuntimeEngine::Poppler]);
-                    }
-                    self.runtime_install_progress(ui);
-                    ui.add_space(8.0);
-                    for (key, label, description, website) in [
-                        ("ffmpeg", "FFmpeg", tr("Necessario per audio, video e GIF da video.", "Required for audio, video and GIFs from video."), "https://ffmpeg.org/download.html"),
-                        ("ffprobe", "FFprobe", tr("Opzionale: durata dei media e avanzamento più preciso. Di solito è accanto a ffmpeg.exe.", "Optional: media duration and more accurate progress. Usually located next to ffmpeg.exe."), "https://ffmpeg.org/ffprobe.html"),
-                        ("pdftoppm", tr("Poppler · immagini", "Poppler · images"), tr("Necessario per esportare ogni pagina PDF in PNG o JPEG. Seleziona pdftoppm.exe.", "Required to export PDF pages as PNG or JPEG. Select pdftoppm.exe."), "https://poppler.freedesktop.org/"),
-                        ("pdfinfo", tr("Poppler · conteggio pagine", "Poppler · page count"), tr("Usa lo stesso motore Poppler per contare le pagine prima di accodare le immagini PDF. Di solito è accanto a pdftoppm.exe.", "Uses the same Poppler engine to count pages before queuing PDF images. Usually located next to pdftoppm.exe."), "https://poppler.freedesktop.org/"),
-                        ("pdftotext", tr("Poppler · testo", "Poppler · text"), tr("Necessario per PDF in TXT, Word e HTML (solo testo). Seleziona pdftotext.exe. Il riconoscimento OCR non è incluso.", "Required for PDF to TXT, Word and HTML (text only). Select pdftotext.exe. OCR is not included."), "https://poppler.freedesktop.org/"),
-                        ("soffice", "LibreOffice", tr("Necessario per Office e HTML in PDF ed Excel ↔ CSV. Seleziona soffice.exe nella cartella program di LibreOffice.", "Required for Office and HTML to PDF and Excel ↔ CSV. Select soffice.exe in the LibreOffice program folder."), "https://www.libreoffice.org/download/download-libreoffice/"),
-                        ("tesseract", tr("Tesseract · OCR locale", "Tesseract · local OCR"), tr("Necessario per immagini in TXT e scansioni PDF in TXT, Word e HTML. Mantieni la cartella tessdata con le lingue accanto al programma.", "Required for images to TXT and scanned PDFs to TXT, Word and HTML. Keep the tessdata language folder next to the program."), "https://tesseract-ocr.github.io/tessdoc/Installation.html"),
-                        ("heif-enc", tr("libheif · HEIC/AVIF in uscita", "libheif · HEIC/AVIF output"), tr("Crea HEIC e AVIF. Mantieni DLL e plugin accanto agli strumenti; la build deve includere gli encoder HEVC e AV1.", "Creates HEIC and AVIF. Keep DLLs and plugins next to the tools; the build must include HEVC and AV1 encoders."), "https://github.com/strukturag/libheif"),
-                        ("heif-dec", tr("libheif · HEIC/AVIF in ingresso", "libheif · HEIC/AVIF input"), tr("Legge HEIC, HEIF e AVIF; viene convertita la prima immagine. Mantieni DLL e plugin accanto agli strumenti.", "Reads HEIC, HEIF and AVIF; converts the first image. Keep DLLs and plugins next to the tools."), "https://github.com/strukturag/libheif"),
-                    ] {
-                        theme::show_card(ui, |ui| {
-                            let path = self.saved.overrides.get(key).cloned().or_else(|| get_tool(&self.tools, key));
-                            let valid = path.as_ref().is_some_and(|path| executable_available(path));
-                            ui.horizontal_wrapped(|ui| {
-                                ui.label(RichText::new(label).family(egui::FontFamily::Name(theme::SEMIBOLD_FAMILY.into())));
-                                ui.label(RichText::new(if valid { tr("Disponibile", "Available") } else { tr("Non configurato", "Not configured") }).small().color(if valid { theme::palette(ui.ctx()).success } else { ui.visuals().weak_text_color() }));
-                            });
-                            ui.add(egui::Label::new(RichText::new(description).small().weak()).wrap());
-                            if let Some(path) = path {
-                                egui::CollapsingHeader::new(tr("Percorso del programma", "Program path")).id_salt(("tool_path",key)).default_open(false).show(ui,|ui| { ui.add(egui::Label::new(RichText::new(display_path(&path)).small()).wrap()); });
-                                if !valid {
-                                    ui.colored_label(ui.visuals().error_fg_color, tr("Il percorso salvato non è un programma .exe disponibile. Seleziona di nuovo lo strumento.", "The saved path is not an available .exe program. Select the tool again."));
-                                }
-                            }
-                            ui.horizontal_wrapped(|ui| {
-                                let engine = match key {
-                                    "ffmpeg" => Some(RuntimeEngine::Ffmpeg),
-                                    "pdftoppm" => Some(RuntimeEngine::Poppler),
-                                    _ => None,
-                                };
-                                if let Some(engine) = engine
-                                    && ui.add_enabled(self.runtime_install.is_none(), egui::Button::new(tr("Scarica e installa…", "Download and install…"))).clicked()
-                                {
-                                    self.pending_runtime_install = Some(vec![engine]);
-                                }
-                                if ui.small_button(tr("Seleziona programma…", "Select program…")).clicked()
-                                    && let Some(path) = rfd::FileDialog::new()
-                                        .set_title(trf!("Seleziona {key}.exe già installato", "Select an installed {key}.exe"))
-                                        .set_file_name(format!("{key}.exe"))
-                                        .add_filter(tr("Programmi Windows", "Windows programs"), &["exe"])
-                                        .pick_file()
-                                {
-                                    if executable_available(&path) {
-                                        self.saved.overrides.insert(key.into(), path);
-                                        self.tools = ToolPaths::configured(&self.saved.overrides);
-                                        self.settings_dirty = true;
-                                    } else {
-                                        self.notice = Some(tr("Seleziona un programma esistente con estensione .exe.", "Select an existing program with an .exe extension.").into());
-                                    }
-                                }
-                                if self.saved.overrides.contains_key(key)
-                                    && ui.small_button(tr("Usa rilevamento automatico", "Use automatic detection")).clicked()
-                                {
-                                    self.saved.overrides.remove(key);
-                                    self.tools = ToolPaths::configured(&self.saved.overrides);
-                                    self.settings_dirty = true;
-                                }
-                                if ui.link(tr("Sito ufficiale", "Official website")).on_hover_text(website).clicked()
-                                    && let Err(error) = platform::open_website(website)
-                                {
-                                    self.notice = Some(format!("{error:#}"));
-                                }
-                            });
-                        });
-                    }
-                    egui::CollapsingHeader::new(tr("Cartella personale degli strumenti", "Personal tools folder")).id_salt("personal_tools_folder").show(ui, |ui| {
-                        ui.label(RichText::new(tr("I download vengono installati qui. Puoi anche aggiungere strumenti già presenti, mantenendo le rispettive DLL e licenze. Non occorre modificare la cartella dell’app.", "Downloads are installed here. You can also add existing tools, keeping their DLLs and licenses. You do not need to modify the app folder.")).small().weak());
-                        if let Some(path) = the_converter::tools::user_tools_dir() {
-                            ui.add(egui::Label::new(RichText::new(display_path(&path)).small()).wrap());
-                            if ui.small_button(tr("Copia percorso", "Copy path")).clicked() { ui.ctx().copy_text(display_path(&path)); }
-                        }
-                        ui.label(RichText::new(tr("Sono riconosciute anche le cartelle bin, ffmpeg/bin e poppler/Library/bin. Le DLL necessarie devono restare insieme ai rispettivi programmi.", "The bin, ffmpeg/bin and poppler/Library/bin folders are also recognized. Required DLLs must stay with their programs.")).small().weak());
-                    });
-                    ui.add_space(8.0);
-                    theme::show_card(ui, |ui| {
-                        ui.label(theme::heading(tr("Informazioni e licenze", "About and licenses"), theme::SUBTITLE));
-                        ui.label(format!("Convert Here {} · © 2026 Salvatore Corsi", env!("CARGO_PKG_VERSION")));
-                        ui.label(tr("Software libero, GPL-3.0-only. Puoi usare, modificare e redistribuire il programma secondo la licenza. Il software è fornito senza garanzie, nei limiti consentiti dalla legge.", "Free software, GPL-3.0-only. You may use, modify and redistribute the program under the license. The software is provided without warranty, to the extent permitted by law."));
-                        ui.label(tr("Questa licenza riguarda il programma, non i file convertiti. Dipendenze e motori mantengono le rispettive licenze.", "This license applies to the program, not to converted files. Dependencies and engines retain their own licenses."));
-                        ui.horizontal_wrapped(|ui| {
-                            if ui.button(tr("Leggi la licenza", "Read the license")).clicked() {
-                                self.show_license = true;
-                            }
-                            if ui.link(tr("Codice sorgente", "Source code")).clicked() {
-                                let url = format!("https://github.com/salvatorecorsi/convert-here/releases/tag/v{}", env!("CARGO_PKG_VERSION"));
-                                if let Err(error) = platform::open_website(&url) {
-                                    self.notice = Some(format!("{error:#}"));
-                                }
+                                if ui.selectable_value(&mut preference,value,label).changed() { ui.ctx().set_theme(preference); }
                             }
                         });
                     });
                 });
-                ui.separator();
-                if ui.button(tr("Rileva strumenti installati", "Detect installed tools")).clicked() {
-                    self.tools = ToolPaths::configured(&self.saved.overrides);
+                ui.add_space(16.0);
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new(format!("Convert Here {} · Salvatore Corsi", env!("CARGO_PKG_VERSION"))).color(theme::palette(ui.ctx()).secondary));
+                    if ui.button("GPL-3.0").clicked() { self.show_license=true; }
+                    if settings_ui::tool_button(ui,FluentIcon::Raw,tr("Sorgenti", "Source"),true).clicked()
+                        && let Err(error)=platform::open_website(&format!("https://github.com/salvatorecorsi/convert-here/releases/tag/v{}", env!("CARGO_PKG_VERSION"))) {self.notice=Some(format!("{error:#}"));
+                    }
+                });
+                if let Some(notice)=self.notice.clone() {
+                    info_bar(ui,&notice,InfoKind::Warning);
+                    if settings_ui::tool_button(ui,FluentIcon::Cancel,tr("Chiudi avviso", "Dismiss notice"),true).clicked() {self.notice=None;}
                 }
             });
         });
@@ -2977,6 +2668,7 @@ impl eframe::App for ConverterApp {
 
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         self.receive_runtime_events();
+        self.refresh_history();
         if let Some(task) = &self.runtime_install
             && ctx.input(|input| input.viewport().close_requested())
         {
@@ -3045,7 +2737,6 @@ impl eframe::App for ConverterApp {
             if !dropped.is_empty() {
                 self.add_files(dropped);
                 self.view = MainView::Files;
-                self.show_tools = false;
             }
         }
         let colors = theme::palette(ctx);
@@ -3056,10 +2747,30 @@ impl eframe::App for ConverterApp {
                     .inner_margin(egui::Margin::symmetric(20, 12)),
             )
             .show(ctx, |ui| self.header(ui));
-        if self.show_tools {
+        if self.view == MainView::Settings {
             self.tools_window(ctx);
+        } else if self.view == MainView::Profiles {
+            let mut action = None;
+            egui::CentralPanel::default()
+                .frame(egui::Frame::new().fill(colors.canvas).inner_margin(24))
+                .show(ctx, |ui| {
+                    egui::ScrollArea::vertical()
+                        .id_salt("profiles_scroll")
+                        .show(ui, |ui| {
+                            action = self.profile_manager.show(
+                                ui,
+                                &self.saved.conversion_profiles,
+                                self.saved.default_profile_id.as_deref(),
+                                &self.saved.enabled_output_formats,
+                                &self.tools,
+                            );
+                        });
+                });
+            if let Some(action) = action {
+                self.profile_manager_action(action);
+            }
         } else {
-            if self.view == MainView::Files || self.running {
+            if self.view == MainView::Files {
                 egui::TopBottomPanel::bottom("footer")
                     .frame(
                         egui::Frame::new()
@@ -3101,23 +2812,39 @@ impl eframe::App for ConverterApp {
                     }
                     match self.view {
                         MainView::Files => self.queue_panel(ui),
-                        MainView::QuickQueue => {
-                            self.quick_queue.show(ui, false, &mut self.file_icons)
-                        }
                         MainView::History => {
-                            ui.label(theme::heading(tr("Cronologia", "History"), theme::TITLE));
-                            ui.label(
-                                RichText::new(tr(
-                                    "Risultati delle conversioni rapide e dell’ultima sessione.",
-                                    "Results from quick conversions and the last session.",
-                                ))
-                                .color(colors.secondary),
-                            );
-                            ui.add_space(12.0);
-                            self.session_history(ui);
-                            self.quick_report_panel(ui);
-                            self.quick_queue.show(ui, true, &mut self.file_icons);
+                            egui::ScrollArea::vertical()
+                                .id_salt("unified_history")
+                                .show(ui, |ui| {
+                                    if let Some(error) = &self.history_error {
+                                        info_bar(ui, error, InfoKind::Error);
+                                    }
+                                    let mut local = self.gui_jobs.clone();
+                                    if self.running {
+                                        local.extend(
+                                            self.items
+                                                .iter()
+                                                .enumerate()
+                                                .filter(|(_, item)| {
+                                                    matches!(
+                                                        item.state,
+                                                        JobState::Waiting | JobState::Running(..)
+                                                    )
+                                                })
+                                                .map(|(index, item)| {
+                                                    session_job(item, index, self.conversion_format)
+                                                }),
+                                        );
+                                    }
+                                    if self.quick_queue.jobs.is_empty() && local.is_empty() {
+                                        self.quick_report_panel(ui);
+                                    }
+                                    if self.quick_queue.show(ui, &mut self.file_icons, &local) {
+                                        self.cancel.store(true, Ordering::Relaxed);
+                                    }
+                                });
                         }
+                        MainView::Settings | MainView::Profiles => {}
                     }
                 });
         }
@@ -3126,7 +2853,6 @@ impl eframe::App for ConverterApp {
         }
         self.runtime_install_confirmation(ctx);
         self.license_dialog(ctx);
-        self.profile_dialog(ctx);
         if self.running {
             ctx.request_repaint_after(std::time::Duration::from_millis(100));
         }
@@ -3167,12 +2893,70 @@ impl eframe::App for ConverterApp {
                 .into(),
             );
         }
+        if let Some((message, _)) = crate::gui_history::guard_close(
+            ctx,
+            self.running || self.runtime_install.is_some(),
+            false,
+        ) {
+            self.notice = Some(message);
+        }
     }
 }
 
 impl Drop for ConverterApp {
     fn drop(&mut self) {
         self.cancel.store(true, Ordering::Relaxed);
+    }
+}
+
+fn select_format_defaults(settings: &mut ConversionSettings, format: OutputFormat) {
+    if settings.format != format {
+        settings.media_options.clear();
+    }
+    settings.select_output_format(format);
+}
+
+fn session_job(item: &QueueItem, index: usize, format: OutputFormat) -> QueueJob {
+    let (state, progress, message, outputs, error) = match &item.state {
+        JobState::Waiting => (QuickJobState::Queued, 0.0, String::new(), Vec::new(), None),
+        JobState::Running(progress, message) => (
+            QuickJobState::Running,
+            *progress,
+            message.clone(),
+            Vec::new(),
+            None,
+        ),
+        JobState::Complete(outputs) => (
+            QuickJobState::Completed,
+            1.0,
+            String::new(),
+            outputs.clone(),
+            None,
+        ),
+        JobState::Failed(error) => (
+            QuickJobState::Failed,
+            0.0,
+            String::new(),
+            Vec::new(),
+            Some(error.clone()),
+        ),
+        JobState::Cancelled => (
+            QuickJobState::Cancelled,
+            0.0,
+            String::new(),
+            Vec::new(),
+            None,
+        ),
+    };
+    QueueJob {
+        id: format!("session-{index}"),
+        input: item.path.clone(),
+        format: format.label().into(),
+        outputs,
+        state,
+        progress,
+        message,
+        error,
     }
 }
 
@@ -3273,169 +3057,98 @@ impl QuickQueueView {
         }
     }
 
-    fn show(&mut self, ui: &mut egui::Ui, history: bool, icons: &mut FileIcons) {
-        let colors = theme::palette(ui.ctx());
-        if !history {
-            ui.label(theme::heading(
-                tr("Coda rapida", "Quick queue"),
-                theme::TITLE,
-            ));
-            ui.label(
-                RichText::new(tr(
-                    "I lavori proseguono anche chiudendo questa finestra.",
-                    "Jobs keep running when you close this window.",
-                ))
-                .color(colors.secondary),
-            );
-            ui.add_space(12.0);
-        }
+    fn show(&mut self, ui: &mut egui::Ui, icons: &mut FileIcons, local: &[QueueJob]) -> bool {
         for warning in &self.warnings {
             info_bar(ui, warning, InfoKind::Warning);
         }
         for error in self.error.iter().chain(self.action_error.iter()) {
             info_bar(ui, error, InfoKind::Error);
         }
+        let mut jobs: Vec<_> = self.jobs.iter().chain(local.iter()).collect();
+        jobs.sort_by_key(|job| match job.state {
+            QuickJobState::Running => 0,
+            QuickJobState::Queued => 1,
+            _ => 2,
+        });
         let mut cancel = None;
-        let jobs: Vec<_> = if history {
-            self.jobs
-                .iter()
-                .filter(|job| !quick_job_active(job))
-                .take(50)
-                .collect()
-        } else {
-            self.jobs
-                .iter()
-                .rev()
-                .filter(|job| quick_job_active(job))
-                .take(50)
-                .collect()
-        };
-        if jobs.is_empty() {
-            info_bar(
-                ui,
-                if history {
-                    tr(
-                        "Nessuna conversione rapida conclusa.",
-                        "No completed quick conversions.",
-                    )
-                } else {
-                    tr(
-                        "Nessuna conversione rapida in attesa o in corso.",
-                        "No quick conversions are queued or running.",
-                    )
-                },
-                InfoKind::Info,
-            );
-        }
-        egui::ScrollArea::vertical()
-            .id_salt(("quick_jobs", history))
-            .auto_shrink([false, false])
-            .show(ui, |ui| {
-                for job in jobs {
-                    theme::show_card(ui, |ui| {
-                        ui.horizontal(|ui| {
-                            file_icon(ui, icons, &job.input);
-                            ui.allocate_ui_with_layout(
-                                egui::vec2((ui.available_width() - 160.0).max(100.0), 42.0),
-                                egui::Layout::top_down(egui::Align::Min),
-                                |ui| {
-                                    ui.add(
-                                        egui::Label::new(theme::heading(
-                                            job.input
-                                                .file_name()
-                                                .unwrap_or_default()
-                                                .to_string_lossy(),
-                                            theme::BODY,
-                                        ))
-                                        .truncate(),
-                                    )
-                                    .on_hover_text(display_path(&job.input));
-                                    ui.label(
-                                        RichText::new(format!(
-                                            "{} · {}",
-                                            job.format,
-                                            quick_state_label(&job.state)
-                                        ))
-                                        .size(theme::CAPTION)
-                                        .color(quick_state_color(&job.state, ui)),
-                                    );
-                                },
-                            );
-                            ui.with_layout(
-                                egui::Layout::right_to_left(egui::Align::Center),
-                                |ui| {
-                                    if quick_job_active(job)
-                                        && icon_button(
-                                            ui,
-                                            FluentIcon::Cancel,
-                                            tr("Annulla conversione", "Cancel conversion"),
-                                        )
-                                        .clicked()
-                                    {
-                                        cancel = Some(job.id.clone());
-                                    }
-                                    if icon_button(
-                                        ui,
-                                        FluentIcon::Folder,
-                                        tr("Apri cartella di destinazione", "Open output folder"),
-                                    )
-                                    .clicked()
-                                    {
-                                        self.action_error = open_job_folder(job)
-                                            .err()
-                                            .map(|error| format!("{error:#}"));
-                                    }
-                                },
-                            );
-                        });
-                        if matches!(job.state, QuickJobState::Running) {
-                            progress_display(ui, job.progress, &job.message);
-                        } else if !job.message.is_empty() {
+        for job in jobs {
+            theme::show_card(ui, |ui| {
+                ui.horizontal(|ui| {
+                    file_icon(ui, icons, &job.input);
+                    ui.allocate_ui_with_layout(
+                        egui::vec2((ui.available_width() - 110.0).max(160.0), 42.0),
+                        egui::Layout::top_down(egui::Align::Min),
+                        |ui| {
                             ui.add(
-                                egui::Label::new(
-                                    RichText::new(&job.message)
-                                        .size(theme::CAPTION)
-                                        .color(colors.secondary),
-                                )
-                                .wrap(),
-                            );
-                        }
-                        if let Some(path) = job.outputs.first() {
-                            ui.add(
-                                egui::Label::new(
-                                    RichText::new(display_path(path))
-                                        .size(theme::CAPTION)
-                                        .color(colors.secondary),
-                                )
+                                egui::Label::new(theme::heading(
+                                    job.input.file_name().unwrap_or_default().to_string_lossy(),
+                                    theme::BODY,
+                                ))
                                 .truncate(),
                             )
-                            .on_hover_text(
-                                job.outputs
-                                    .iter()
-                                    .map(|path| display_path(path))
-                                    .collect::<Vec<_>>()
-                                    .join("\n"),
+                            .on_hover_text(display_path(&job.input));
+                            ui.label(
+                                RichText::new(format!(
+                                    "{} · {}",
+                                    job.format,
+                                    quick_state_label(&job.state)
+                                ))
+                                .color(quick_state_color(&job.state, ui)),
                             );
-                        }
-                        if let Some(error) = &job.error {
-                            info_bar(ui, error, InfoKind::Error);
-                            if ui.small_button(tr("Copia errore", "Copy error")).clicked() {
-                                ui.ctx().copy_text(error.clone());
-                            }
-                        }
-                    });
-                    ui.add_space(8.0);
+                        },
+                    );
+                    if quick_job_active(job)
+                        && settings_ui::tool_button(
+                            ui,
+                            FluentIcon::Cancel,
+                            tr("Annulla", "Cancel"),
+                            true,
+                        )
+                        .clicked()
+                    {
+                        cancel = Some(job.id.clone());
+                    }
+                    if settings_ui::tool_button(
+                        ui,
+                        FluentIcon::Folder,
+                        tr("Apri cartella", "Open folder"),
+                        true,
+                    )
+                    .clicked()
+                    {
+                        self.action_error =
+                            open_job_folder(job).err().map(|error| format!("{error:#}"));
+                    }
+                });
+                if matches!(job.state, QuickJobState::Running) {
+                    progress_display(ui, job.progress, &job.message);
+                }
+                if let Some(error) = &job.error {
+                    info_bar(ui, error, InfoKind::Error);
+                    if settings_ui::tool_button(
+                        ui,
+                        FluentIcon::Copy,
+                        tr("Copia errore", "Copy error"),
+                        true,
+                    )
+                    .clicked()
+                    {
+                        ui.ctx().copy_text(error.clone());
+                    }
                 }
             });
+            ui.add_space(8.0);
+        }
         if let Some(id) = cancel {
-            self.action_error = queue::cancel_job(&id).err().map(|error| {
-                trf!(
-                    "Impossibile annullare: {error:#}",
-                    "Unable to cancel: {error:#}"
-                )
-            });
+            if id.starts_with("session-") {
+                return true;
+            }
+            self.action_error = queue::cancel_job(&id)
+                .err()
+                .map(|error| format!("{error:#}"));
             self.last_refresh = None;
         }
+        false
     }
 }
 
@@ -3707,42 +3420,46 @@ fn settings_path() -> Option<PathBuf> {
     i18n::preferences_path()
 }
 
-fn centered_column<R>(
-    ui: &mut egui::Ui,
-    maximum: f32,
-    contents: impl FnOnce(&mut egui::Ui) -> R,
-) -> egui::InnerResponse<R> {
-    let width = ui.available_width().min(maximum);
-    let inset = ((ui.available_width() - width) * 0.5).max(0.0);
-    ui.horizontal_top(|ui| {
-        ui.add_space(inset);
-        ui.allocate_ui_with_layout(
-            egui::vec2(width, ui.available_height()),
-            egui::Layout::top_down(egui::Align::Min),
-            |ui| {
-                ui.set_width(width);
-                contents(ui)
-            },
-        )
-        .inner
-    })
-}
-
-fn navigation_tabs(ui: &mut egui::Ui, selected: &mut MainView) -> [egui::Rect; 3] {
-    let mut rectangles = [egui::Rect::NOTHING; 3];
+fn navigation_tabs(ui: &mut egui::Ui, selected: &mut MainView) -> [egui::Rect; 4] {
+    let mut rectangles = [egui::Rect::NOTHING; 4];
     let colors = theme::palette(ui.ctx());
-    for (index, (view, label)) in [
+    for (index, (view, label, icon)) in [
         (
             MainView::Files,
             tr("File da convertire", "Files to convert"),
+            FluentIcon::Folder,
         ),
-        (MainView::QuickQueue, tr("Coda rapida", "Quick queue")),
-        (MainView::History, tr("Cronologia", "History")),
+        (
+            MainView::History,
+            tr("Cronologia", "History"),
+            FluentIcon::History,
+        ),
+        (
+            MainView::Settings,
+            tr("Impostazioni", "Settings"),
+            FluentIcon::Settings,
+        ),
+        (
+            MainView::Profiles,
+            tr("Profili", "Profiles"),
+            FluentIcon::Profiles,
+        ),
     ]
     .into_iter()
     .enumerate()
     {
-        let response = ui.add(egui::Button::new(theme::heading(label, theme::BODY)).frame(false));
+        let response = ui.add(
+            egui::Button::new(theme::button_text(
+                icon,
+                label,
+                if *selected == view {
+                    colors.accent
+                } else {
+                    colors.text
+                },
+            ))
+            .frame(false),
+        );
         rectangles[index] = response.rect;
         if response.clicked() {
             *selected = view;
@@ -3826,12 +3543,8 @@ fn setting_card(
                 egui::vec2(left, 40.0),
                 egui::Layout::top_down(egui::Align::Min),
                 |ui| {
-                    ui.label(theme::heading(title, theme::BODY));
-                    ui.label(
-                        RichText::new(detail)
-                            .size(theme::CAPTION)
-                            .color(theme::palette(ui.ctx()).secondary),
-                    );
+                    ui.label(theme::heading(title, theme::BODY))
+                        .on_hover_text(detail);
                 },
             );
             ui.allocate_ui_with_layout(
@@ -3941,43 +3654,6 @@ fn width_setting(ui: &mut egui::Ui, id: &str, width: &mut Option<u32>) {
     );
 }
 
-fn profile_summary(profile: &ConversionProfile) -> String {
-    let mut summary = profile.settings.format.label().to_owned();
-    if let Some(edit) = &profile.settings.image.edit {
-        if let Some(bytes) = edit.max_bytes {
-            summary.push_str(&trf!(
-                " · massimo {:.0} kB",
-                " · up to {:.0} kB",
-                bytes as f64 / 1000.0
-            ));
-        }
-        if edit.allow_downsize {
-            summary.push_str(tr(
-                " · riduzione dimensioni consentita",
-                " · resizing allowed",
-            ));
-        }
-        if edit.crop.is_some() {
-            summary.push_str(tr(" · ritaglio", " · crop"));
-        }
-        if let Some(canvas) = &edit.canvas {
-            summary.push_str(&trf!(
-                " · tela {} × {}",
-                " · canvas {} × {}",
-                canvas.width,
-                canvas.height
-            ));
-        }
-    }
-    if let Some(page) = &profile.settings.image.page {
-        summary.push_str(match page.paper {
-            the_converter::page_layout::PaperSize::A4 => " · A4",
-            the_converter::page_layout::PaperSize::A5 => " · A5",
-        });
-    }
-    summary
-}
-
 fn quality_applicable(format: OutputFormat) -> bool {
     matches!(
         format,
@@ -4021,21 +3697,6 @@ fn optional_seconds(ui: &mut egui::Ui, label: &str, value: &mut Option<f64>, def
             );
         }
     });
-}
-
-fn get_tool(tools: &ToolPaths, key: &str) -> Option<PathBuf> {
-    match key {
-        "ffmpeg" => tools.ffmpeg.clone(),
-        "ffprobe" => tools.ffprobe.clone(),
-        "pdftoppm" => tools.pdftoppm.clone(),
-        "pdfinfo" => tools.pdfinfo.clone(),
-        "pdftotext" => tools.pdftotext.clone(),
-        "soffice" => tools.soffice.clone(),
-        "tesseract" => tools.tesseract.clone(),
-        "heif-enc" => tools.heif_enc.clone(),
-        "heif-dec" => tools.heif_dec.clone(),
-        _ => None,
-    }
 }
 
 #[cfg(test)]
@@ -4248,7 +3909,7 @@ mod fluent_ui_tests {
         let ctx = egui::Context::default();
         theme::configure(&ctx);
         let mut selected = MainView::Files;
-        let mut rectangles = [egui::Rect::NOTHING; 3];
+        let mut rectangles = [egui::Rect::NOTHING; 4];
         let input = |events| egui::RawInput {
             screen_rect: Some(egui::Rect::from_min_size(
                 egui::Pos2::ZERO,
@@ -4263,8 +3924,9 @@ mod fluent_ui_tests {
             });
         });
         for (index, expected) in [
-            (1, MainView::QuickQueue),
-            (2, MainView::History),
+            (1, MainView::History),
+            (2, MainView::Settings),
+            (3, MainView::Profiles),
             (0, MainView::Files),
         ] {
             let point = rectangles[index].center();

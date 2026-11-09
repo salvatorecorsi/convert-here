@@ -1,6 +1,6 @@
 [package]
 name = "the-converter-shell"
-version = "0.6.0"
+version = "0.7.0"
 license = "GPL-3.0-only"
 edition = "2021"
 publish = false
@@ -15,6 +15,7 @@ crate-type = ["cdylib"]
 serde_json = "1"
 
 [dev-dependencies]
+anyhow = "1"
 serde = { version = "1", features = ["derive"] }
 
 # This crate can be built on its own, outside the main application's workspace.

@@ -153,38 +153,65 @@ pub fn convert(
         "Unable to create the output folder",
     ))?;
     let out_dir = fs::canonicalize(out_dir)?;
+    // Every converter may publish only into this owned same-volume stage while
+    // a common cap is active. Check all outputs before exposing any of them.
+    let limited_stage = if settings.limits.max_bytes.is_some() {
+        let stage = tempfile::Builder::new()
+            .prefix(".the-converter-limits-")
+            .tempdir_in(&out_dir)?;
+        set_hidden(stage.path())?;
+        Some(stage)
+    } else {
+        None
+    };
+    let conversion_dir = limited_stage
+        .as_ref()
+        .map_or(out_dir.as_path(), |stage| stage.path());
     on_progress(Progress {
         fraction: 0.0,
         message: crate::i18n::tr("Preparazione…", "Preparing…").into(),
     });
+    let mut conversion_progress = |mut update: Progress| {
+        if limited_stage.is_some() {
+            update.fraction *= 0.95;
+        }
+        on_progress(update);
+    };
     let outputs = match kind {
         MediaKind::Audio | MediaKind::Video => vec![convert_media(
             &input,
-            &out_dir,
+            conversion_dir,
             settings,
             tools,
             cancel,
-            &mut on_progress,
+            &mut conversion_progress,
         )?],
         MediaKind::Image if settings.format == OutputFormat::Txt => {
             vec![crate::ocr::convert_image_text(
                 &input,
-                &out_dir,
+                conversion_dir,
                 settings,
                 tools,
                 cancel,
-                &mut on_progress,
+                &mut conversion_progress,
             )?]
         }
         MediaKind::Image => vec![convert_image(
             &input,
-            &out_dir,
+            conversion_dir,
             settings,
             tools,
             cancel,
-            &mut on_progress,
+            &mut conversion_progress,
         )?],
-        MediaKind::Pdf => convert_pdf(&input, &out_dir, settings, tools, cancel, &mut on_progress)?,
+        MediaKind::Pdf => convert_pdf(
+            &input,
+            conversion_dir,
+            settings,
+            tools,
+            cancel,
+            &mut conversion_progress,
+        )?,
         MediaKind::Document
             if settings.format == OutputFormat::Pdf
                 && settings.image.page.is_some()
@@ -194,23 +221,35 @@ pub fn convert(
         {
             vec![crate::page_layout::convert_text_pdf(
                 &input,
-                &out_dir,
+                conversion_dir,
                 settings,
                 cancel,
-                &mut on_progress,
+                &mut conversion_progress,
             )?]
         }
         MediaKind::Document | MediaKind::Spreadsheet | MediaKind::Html => {
             vec![crate::documents::convert_office(
                 &input,
-                &out_dir,
+                conversion_dir,
                 settings,
                 tools,
                 cancel,
-                &mut on_progress,
+                &mut conversion_progress,
             )?]
         }
         _ => bail!(crate::trf!("Formato non supportato", "Unsupported format")),
+    };
+    let outputs = if let Some(stage) = &limited_stage {
+        publish_limited_outputs(
+            outputs,
+            stage.path(),
+            &out_dir,
+            settings,
+            cancel,
+            &mut on_progress,
+        )?
+    } else {
+        outputs
     };
     on_progress(Progress {
         fraction: 1.0,
@@ -221,6 +260,76 @@ pub fn convert(
         ),
     });
     Ok(outputs)
+}
+
+fn publish_limited_outputs(
+    sources: Vec<PathBuf>,
+    stage: &Path,
+    directory: &Path,
+    settings: &ConversionSettings,
+    cancel: &AtomicBool,
+    progress: &mut impl FnMut(Progress),
+) -> Result<Vec<PathBuf>> {
+    // Retain the exact files whose lengths were checked, then move their inodes.
+    // No prefix of a split/batch result is published if any member exceeds its cap.
+    let mut checked = Vec::with_capacity(sources.len());
+    for source in sources {
+        cancelled(cancel)?;
+        let temporary = staged_temporary(&source, stage)?;
+        settings
+            .limits
+            .check_bytes(temporary.as_file().metadata()?.len())?;
+        let extension = source
+            .extension()
+            .and_then(|value| value.to_str())
+            .context(tr(
+                "Estensione del risultato non valida",
+                "Invalid output extension",
+            ))?
+            .to_owned();
+        checked.push((temporary, stem(&source), extension));
+    }
+    let total = checked.len();
+    let mut published = Vec::with_capacity(total);
+    let result = (|| -> Result<()> {
+        for (index, (temporary, name, extension)) in checked.into_iter().enumerate() {
+            cancelled(cancel)?;
+            settings
+                .limits
+                .check_bytes(temporary.as_file().metadata()?.len())?;
+            let retained = temporary.as_file().try_clone()?;
+            let output = commit(temporary, directory, &name, &extension)?;
+            published.push((output, retained));
+            progress(Progress {
+                fraction: 0.95 + 0.04 * (index + 1) as f32 / total as f32,
+                message: crate::trf!(
+                    "Salvato {} di {} entro il limite",
+                    "Saved {} of {} within the size limit",
+                    index + 1,
+                    total
+                ),
+            });
+        }
+        cancelled(cancel)
+    })();
+    if let Err(error) = result {
+        for (path, retained) in &published {
+            if let Ok(current) = fs::File::open(path)
+                && matches!((file_identity(retained), file_identity(&current)), (Ok(a), Ok(b)) if a == b)
+            {
+                let _ = fs::remove_file(path);
+            }
+        }
+        return Err(error);
+    }
+    Ok(published.into_iter().map(|(path, _)| path).collect())
+}
+
+fn minimum_limit<T: PartialOrd>(left: Option<T>, right: Option<T>) -> Option<T> {
+    match (left, right) {
+        (Some(left), Some(right)) => Some(if left < right { left } else { right }),
+        (left, right) => left.or(right),
+    }
 }
 
 /// A merge is a single operation over an ordered group, not a per-file conversion.
@@ -265,6 +374,8 @@ pub fn merge_pdfs(
 }
 
 pub(crate) fn validate(s: &ConversionSettings) -> Result<()> {
+    s.limits.validate()?;
+    crate::media_options::validate(&s.media_options)?;
     if !(8..=512).contains(&s.audio.bitrate_kbps) {
         bail!(crate::trf!(
             "Il bitrate deve essere tra 8 e 512 kbps",
@@ -356,6 +467,12 @@ fn validate_for_input(input: &Path, settings: &ConversionSettings) -> Result<()>
         ));
     }
     validate(settings)?;
+    if !settings.media_options.is_empty() && !matches!(kind, MediaKind::Audio | MediaKind::Video) {
+        bail!(tr(
+            "Le opzioni avanzate FFmpeg richiedono una sorgente audio o video; rimuovile per usare una sorgente immagine o documento",
+            "Advanced FFmpeg options require an audio or video source; remove them to use an image or document source"
+        ));
+    }
     if kind == MediaKind::Image {
         if let Some(edit) = &settings.image.edit {
             crate::image_edit::validate(edit)?;
@@ -549,7 +666,14 @@ fn convert_image(
     cancel: &AtomicBool,
     progress: &mut impl FnMut(Progress),
 ) -> Result<PathBuf> {
-    if s.image.edit.is_some() || s.format == OutputFormat::Pdf && s.image.page.is_some() {
+    if s.image.edit.is_some()
+        || s.format == OutputFormat::Pdf && s.image.page.is_some()
+        || s.limits.max_bytes.is_some()
+            && matches!(
+                s.format,
+                OutputFormat::Png | OutputFormat::Jpg | OutputFormat::Webp
+            )
+    {
         return convert_edited_image(input, dir, s, tools, cancel, progress);
     }
     let modern_workspace = if crate::modern_images::is_modern_input(input) {
@@ -708,6 +832,7 @@ fn convert_edited_image(
         });
     })?;
     let mut edit = settings.image.edit.clone().unwrap_or_default();
+    edit.max_bytes = minimum_limit(edit.max_bytes, settings.limits.max_bytes);
     // Existing width remains effective when page layout is used without an edit recipe.
     if settings.image.edit.is_none()
         && let Some(width) = settings.image.width
@@ -970,10 +1095,10 @@ fn parse_pdf_page_count(stdout: &[u8]) -> Result<usize> {
 }
 
 #[derive(Debug)]
-struct PdfProbeOutput {
-    status: ExitStatus,
-    stdout: Vec<u8>,
-    stderr: Vec<u8>,
+pub(crate) struct PdfProbeOutput {
+    pub(crate) status: ExitStatus,
+    pub(crate) stdout: Vec<u8>,
+    pub(crate) stderr: Vec<u8>,
 }
 
 fn read_probe_tail(mut reader: impl Read, limit: usize) -> std::io::Result<Vec<u8>> {
@@ -996,7 +1121,7 @@ fn read_probe_tail(mut reader: impl Read, limit: usize) -> std::io::Result<Vec<u
 
 /// Drain both pipes while polling the process. Reading only after exit can
 /// deadlock on large PDF metadata; retaining only tails keeps memory bounded.
-fn run_pdf_probe(
+pub(crate) fn run_pdf_probe(
     mut command: Command,
     cancel: &AtomicBool,
     timeout: Duration,
@@ -1172,11 +1297,14 @@ fn convert_media(
     };
     cancelled(cancel)?;
     let start = s.video.trim_start.unwrap_or(0.);
-    if let Some(end) = s.video.trim_end {
-        duration = Some(end - start);
-    } else {
-        duration = duration.map(|d| (d - start).max(0.));
-    }
+    let requested_duration = minimum_limit(
+        s.video.trim_end.map(|end| end - start),
+        s.limits.max_duration,
+    );
+    duration = minimum_limit(
+        duration.map(|value| (value - start).max(0.)),
+        requested_duration,
+    );
     let mut cmd = Command::new(tools.ffmpeg.as_ref().context(crate::i18n::tr(
         "FFmpeg non trovato",
         "FFmpeg was not found",
@@ -1198,8 +1326,9 @@ fn convert_media(
     cmd.args(["-protocol_whitelist", "file,pipe"])
         .arg("-i")
         .arg(input);
-    if let Some(end) = s.video.trim_end {
-        cmd.args(["-t", &(end - start).to_string()]);
+    if let Some(duration) = requested_duration {
+        // -t is a relative output duration, never the absolute trim-end timestamp.
+        cmd.args(["-t", &duration.to_string()]);
     }
     if s.format.kind() == MediaKind::Audio {
         cmd.args(["-map", "0:a:0", "-vn"]);
@@ -1360,6 +1489,7 @@ fn convert_media(
             cmd.args(["-f", "mp4"]);
         }
     }
+    crate::media_options::append_args(&mut cmd, s, tools, cancel)?;
     cmd.arg(temp.path());
     run_process(cmd, cancel, duration, progress).map_err(|error| {
         if extracting_audio

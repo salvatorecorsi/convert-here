@@ -24,6 +24,15 @@ use the_converter::{i18n::tr, trf};
 
 pub fn launch(files: Vec<PathBuf>, startup_warning: Option<String>) -> eframe::Result {
     let (settings, tools) = crate::app::quick_configuration();
+    launch_with_settings(files, settings, tools, startup_warning)
+}
+
+pub fn launch_with_settings(
+    files: Vec<PathBuf>,
+    settings: ConversionSettings,
+    tools: ToolPaths,
+    startup_warning: Option<String>,
+) -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Convert Here · PDF Merge")
@@ -48,6 +57,46 @@ pub fn launch(files: Vec<PathBuf>, startup_warning: Option<String>) -> eframe::R
     )
 }
 
+fn record_merge_history(
+    history: Option<PathBuf>,
+    input: PathBuf,
+    result: &Result<Vec<PathBuf>, String>,
+    cancelled: bool,
+) -> anyhow::Result<()> {
+    use anyhow::Context;
+    use the_converter::queue::{JobState, QueueJob};
+    let path = history.context(tr(
+        "Cartella della cronologia non disponibile",
+        "History folder unavailable",
+    ))?;
+    let (state, outputs, error) = match result {
+        Ok(paths) => (JobState::Completed, paths.clone(), None),
+        Err(_) if cancelled => (JobState::Cancelled, vec![], None),
+        Err(error) => (JobState::Failed, vec![], Some(error.clone())),
+    };
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    crate::gui_history::record_async(
+        path,
+        QueueJob {
+            id: format!("merge-{}-{stamp}", std::process::id()),
+            input,
+            format: "PDF".into(),
+            outputs,
+            state,
+            progress: if state == JobState::Completed {
+                1.0
+            } else {
+                0.0
+            },
+            message: String::new(),
+            error,
+        },
+    )
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Work {
     Preparing,
@@ -61,9 +110,12 @@ enum Event {
     Finished {
         prepared: PreparedPdfMerge,
         result: Result<Vec<PathBuf>, String>,
+        history_warning: Option<String>,
     },
     Failed(String),
-    Cancelled,
+    Cancelled {
+        history_warning: Option<String>,
+    },
     Cleaned,
 }
 
@@ -162,7 +214,9 @@ impl PdfMergeApp {
                 });
             let event = if cancel.load(Ordering::Relaxed) {
                 drop(result);
-                Event::Cancelled
+                Event::Cancelled {
+                    history_warning: None,
+                }
             } else {
                 match result {
                     Ok(prepared) => Event::Prepared(prepared),
@@ -186,6 +240,8 @@ impl PdfMergeApp {
         };
         let pages = editor.ordered_pages().to_vec();
         let settings = self.settings.clone();
+        let input = self.files.first().cloned().unwrap_or_default();
+        let history = crate::gui_history::path();
         self.error = None;
         self.output = None;
         self.progress = Progress {
@@ -198,13 +254,21 @@ impl PdfMergeApp {
                     let _ = sender.try_send(Event::Progress(progress));
                 })
                 .map_err(|error| format!("{error:#}"));
+            let history_warning =
+                record_merge_history(history, input, &result, cancel.load(Ordering::Relaxed))
+                    .err()
+                    .map(|error| format!("{error:#}"));
             let event = if cancel.load(Ordering::Relaxed) && result.is_err() {
                 drop(prepared);
-                Event::Cancelled
+                Event::Cancelled { history_warning }
             } else {
                 // A completed commit remains a success even if cancellation was
                 // requested just after the final output was published.
-                Event::Finished { prepared, result }
+                Event::Finished {
+                    prepared,
+                    result,
+                    history_warning,
+                }
             };
             let _ = sender.send(event);
         });
@@ -250,7 +314,14 @@ impl PdfMergeApp {
                     )
                     .into();
                 }
-                Event::Finished { prepared, result } => {
+                Event::Finished {
+                    prepared,
+                    result,
+                    history_warning,
+                } => {
+                    if let Some(warning) = history_warning {
+                        self.startup_warning = Some(warning);
+                    }
                     self.prepared = Some(prepared);
                     self.work = None;
                     self.receiver = None;
@@ -279,7 +350,10 @@ impl PdfMergeApp {
                     self.receiver = None;
                     self.error = Some(error);
                 }
-                Event::Cancelled => {
+                Event::Cancelled { history_warning } => {
+                    if let Some(warning) = history_warning {
+                        self.startup_warning = Some(warning);
+                    }
                     self.work = None;
                     self.receiver = None;
                     self.editor = None;
@@ -508,6 +582,15 @@ impl eframe::App for PdfMergeApp {
         if self.is_busy() {
             ctx.request_repaint_after(std::time::Duration::from_millis(100));
         }
+        if let Some((message, error)) =
+            crate::gui_history::guard_close(ctx, self.is_busy(), self.close_when_idle)
+        {
+            if error {
+                self.error = Some(message);
+            } else {
+                self.startup_warning = Some(message);
+            }
+        }
     }
 }
 
@@ -585,6 +668,54 @@ fn progress(ui: &mut egui::Ui, progress: &Progress) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn merge_attempt_outcomes_reach_shared_history_and_commits_win_over_late_cancel() {
+        use the_converter::queue::JobState;
+        let directory = tempfile::tempdir().unwrap();
+        let history = directory.path().join("history.json");
+        let input = directory.path().join("first.pdf");
+        let output = directory.path().join("merged.pdf");
+        record_merge_history(
+            Some(history.clone()),
+            input.clone(),
+            &Ok(vec![output.clone()]),
+            true,
+        )
+        .unwrap();
+        record_merge_history(
+            Some(history.clone()),
+            input.clone(),
+            &Err("merge failed".into()),
+            false,
+        )
+        .unwrap();
+        record_merge_history(Some(history.clone()), input, &Err("cancelled".into()), true).unwrap();
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        let jobs = loop {
+            let jobs = crate::gui_history::load(&history).unwrap();
+            if jobs.len() == 3 {
+                break jobs;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "history worker did not finish"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        };
+        let completed = jobs
+            .iter()
+            .find(|job| job.state == JobState::Completed)
+            .unwrap();
+        assert_eq!(completed.outputs.as_slice(), std::slice::from_ref(&output));
+        assert_eq!(completed.format, "PDF");
+        assert!(completed.id.starts_with("merge-"));
+        assert!(jobs.iter().any(
+            |job| job.state == JobState::Failed && job.error.as_deref() == Some("merge failed")
+        ));
+        assert!(jobs.iter().any(|job| job.state == JobState::Cancelled));
+        assert!(!output.exists());
+    }
     use the_converter::model::CsvDelimiter;
 
     #[test]

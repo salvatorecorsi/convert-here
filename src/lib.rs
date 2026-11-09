@@ -5,6 +5,7 @@ pub mod engine;
 pub mod i18n;
 pub mod image_edit;
 pub(crate) mod language_shared;
+pub mod media_options;
 pub mod model;
 pub mod modern_images;
 pub mod ocr;

@@ -42,8 +42,14 @@ Example settings JSON; omitted fields use their defaults:
 {
   "format": "Mp3",
   "audio": { "bitrate_kbps": 256, "sample_rate": 48000, "channels": 2, "normalize": true },
-  "video": { "trim_start": 5.0, "trim_end": 35.0 }
+  "video": { "trim_start": 5.0, "trim_end": 35.0 },
+  "limits": { "max_bytes": 3000000, "max_duration": 30.0 },
+  "media_options": { "threads": "1" }
 }
 ```
+
+Common limits and `media_options` are part of the new 0.7.0. `max_bytes` limits each output; an oversized result is not published. `max_duration` limits audio/video inputs after `trim_start`, combined with any `trim_end`; it does not change images or text. FFmpeg options are typed catalogue values, not arbitrary arguments. Active `media_options` reject non-audio/video inputs, including native image-to-GIF. Browse the available catalogue in **Profiles → Advanced**.
+
+To use a saved recipe, `--quick --profile <id> --profile-revision <revision> --files ...` uses the current profile only when its revision matches and inputs are allowed. Explorer supplies these values automatically. Normal profiles queue a settings snapshot; PDF Merge profiles require at least two files and open page ordering. `--custom-settings` opens the compatible editor or window options without starting a conversion. Profile import/export belongs to the **Profiles** tab; its portable JSON differs from the individual `settings.json` shown above.
 
 [Back to README](../README.en.md)

@@ -40,8 +40,14 @@ Esempio di impostazioni JSON (i campi omessi usano i default):
 {
   "format": "Mp3",
   "audio": { "bitrate_kbps": 256, "sample_rate": 48000, "channels": 2, "normalize": true },
-  "video": { "trim_start": 5.0, "trim_end": 35.0 }
+  "video": { "trim_start": 5.0, "trim_end": 35.0 },
+  "limits": { "max_bytes": 3000000, "max_duration": 30.0 },
+  "media_options": { "threads": "1" }
 }
 ```
+
+I limiti comuni e `media_options` appartengono alla nuova 0.7.0. `max_bytes` è il limite per ogni risultato: un output oltre il limite non viene pubblicato. `max_duration` limita gli ingressi audio/video dopo `trim_start`, insieme all'eventuale `trim_end`; non cambia immagini o testo. Le opzioni FFmpeg sono valori tipizzati del catalogo, non argomenti arbitrari. Un ingresso non audio/video con `media_options` attive viene rifiutato, anche per immagine → GIF. Il catalogo disponibile si trova in **Profili → Avanzate**.
+
+Per usare una ricetta già salvata, `--quick --profile <id> --profile-revision <revisione> --files ...` usa il profilo corrente solo se la revisione coincide e gli ingressi sono ammessi. Il menu Explorer passa questi valori automaticamente. I profili normali accodano una copia delle impostazioni; un profilo PDF Merge richiede almeno due file e apre l'ordinamento pagine. `--custom-settings` apre l'editor compatibile o le opzioni della finestra senza avviare una conversione. Importazione ed esportazione dei profili avvengono dalla scheda **Profili**; il loro JSON portabile è distinto dal singolo `settings.json` di questo esempio.
 
 [Torna al README](../README.md)

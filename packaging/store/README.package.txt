@@ -1,6 +1,10 @@
 Convert Here
 Developed and published by Salvatore Corsi
 
+Requires Windows 10 version 2004 (build 19041) or later, x64, including Windows 11.
+The packaged Explorer command uses the classic context menu on Windows 10 and
+the modern context menu on Windows 11.
+
 Converts images locally and integrates compatible conversions into the Windows
 File Explorer context menu. Choose a format to start a queued conversion with
 your saved settings. Custom settings opens the application's options window.

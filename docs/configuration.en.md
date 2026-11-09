@@ -56,15 +56,23 @@ Choices are saved and the menu rereads them without restarting Explorer. **Custo
 
 For appearance, follow the Windows theme or select **Light** or **Dark**.
 
-## Personal profiles — 0.6.0 candidate
+## Personal profiles
 
-Save named editor settings as a recipe. Up to 32 profiles can be stored, with 8 visible in **Convert to** when their output format is enabled and all selected inputs are compatible. The profiles section in Settings lets you apply, update, rename, delete and choose a default profile. Reopen the Explorer menu after modifying a profile; already queued jobs keep their own recipe.
+The new **Profiles** tab creates, edits, duplicates, renames and deletes recipes and selects a default. Store up to **32 profiles**, with **8 visible in Convert to** when their output is enabled and every selected input is compatible. Allow all compatible inputs or restrict a recipe to selected extensions; this does not change the app's 93 recognized input extensions. Reopen the Explorer menu after changing a profile. Already queued jobs retain their recipe. PDF Merge profiles require at least two files and open page ordering.
 
-Profiles save parameters and an optional destination folder, without the sample image, typed text or previews. A profile name is user-defined text and does not change when the interface language changes. [Complete guide](image-editor-profiles.en.md).
+**Import JSON…**, **Export…** and **Export all…** transfer recipes. JSON contains parameters, input filters, visibility and an optional output folder, without engine paths or sample content. Import is atomic, creates new copies and never overwrites profiles. Recipes beyond the eight visible entries are imported hidden; files over 256 KiB or imports exceeding 32 total profiles are rejected. User-defined names are not translated. [Complete guide and JSON example](image-editor-profiles.en.md).
+
+### Size, duration and Advanced
+
+The common **maximum size per file** is checked before publishing each output. Older image limits remain supported; when both exist, the smaller one wins. The JPEG/WebP editor can find a suitable quality and resize only with permission. Other routes fail if their output remains too large; audio/video limits do not promise automatic bitrate adjustment.
+
+**Maximum audio/video duration** applies to audio/video sources, including audio extraction and GIF, after the selected start and combined with the trim end. It does not change images or text.
+
+**Advanced** provides searchable typed codec, filter, metadata and performance controls. Encoder-specific options are discovered from configured local FFmpeg, not an online service. Availability depends on the build, codec and container; incompatible or unverifiable options produce an error. Recipes with FFmpeg options require audio/video inputs, including for GIF output. The catalogue accepts no free-form commands, scripts or executable paths.
 
 ## Preferences and reports
 
-Preferences and the last quick report are in `%APPDATA%\SalvatoreCorsi\TheConverter\config`, in `preferences.json` and `report-last.json`. Reports include local paths and errors and are not transmitted. Interactive conversions keep their own results in the current queue.
+Preferences and the last quick report are in `%APPDATA%\SalvatoreCorsi\TheConverter\config`, in `preferences.json` and `report-last.json`. `history.json` retains up to 300 completed window, editor and PDF Merge attempts within 1 MiB; **History** combines them with quick-queue jobs. These local files contain paths and errors and are not transmitted. History writes run in the background; unreadable history is reported and preserved.
 
 With MSIX installations, Windows may redirect paths into private package data. The app does not encrypt preferences and state: Windows account and device protections apply. [Privacy statement](privacy.md).
 

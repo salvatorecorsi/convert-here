@@ -1,5 +1,11 @@
 # Materiale visivo Store
 
+## 0.7.0 in preparazione
+
+Le [catture native 0.7.0](0.7.0/README.md) documentano la nuova finestra a quattro schede dalla build debug locale del 9 novembre 2026: [Impostazioni](0.7.0/01-impostazioni-it.jpg) e [Profili](0.7.0/02-profili-it.jpg), entrambe JPEG **1722 × 959**. Il registro conserva provenienza e SHA-256. Non attestano distribuzione release, installazione del candidato Store, WACK o collaudo Windows 10.
+
+## Catture precedenti
+
 - `store-icon-300.png`: icona prodotto PNG trasparente 300 × 300, riproducibile dalla sorgente `assets/app.svg` con `scripts/render-app-icon.ps1`.
 - [0.4.0/01-conversione-immagini.png](0.4.0/01-conversione-immagini.png): conversione locale di due PNG in JPEG completata nell'interfaccia nativa 0.4.0.
 - [0.3.1/02-pdf-merge.png](0.3.1/02-pdf-merge.png): ordinamento delle singole pagine in PDF Merge, PNG 1538 × 911, riusato per la 0.4.0 con interfaccia invariata.

@@ -17,7 +17,7 @@
   <Logo>Assets\StoreLogo.png</Logo>
  </Properties>
  <Resources><Resource Language="it-it"/><Resource Language="en-us"/></Resources>
- <Dependencies><TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.22000.0" MaxVersionTested="10.0.26100.0"/></Dependencies>
+ <Dependencies><TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0"/></Dependencies>
  <Applications>
   <Application Id="TheConverter" Executable="the-converter.exe" uap10:TrustLevel="mediumIL" uap10:RuntimeBehavior="packagedClassicApp" uap10:SupportsMultipleInstances="true">
    <uap:VisualElements AppListEntry="default" DisplayName="Convert Here Store Preview" Description="Local audio, video, image and document conversion" BackgroundColor="transparent" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png"/>

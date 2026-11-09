@@ -17,7 +17,7 @@ use the_converter::{
         self, CanvasAnchor, CanvasFit, CanvasSettings, EncodedImage, ImageEditSettings,
         NormalizedCrop, ResizeSettings,
     },
-    model::{ConversionSettings, MediaKind, OutputFormat, PdfAction},
+    model::{ConversionLimits, ConversionSettings, MediaKind, OutputFormat, PdfAction},
     page_layout::{
         self, ImageFit, PageInput, PageLayoutSettings, PageOrientation, PaperSize,
         PreparedPageDocument, TextAlign,
@@ -74,7 +74,11 @@ enum WorkOutput {
     LoadedText(String),
     Preview(PreviewData, RgbaImage),
     Page(usize, RgbaImage),
-    Saved(PathBuf),
+    SaveFinished {
+        result: Result<PathBuf, String>,
+        cancelled: bool,
+        history_warning: Option<String>,
+    },
 }
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum WorkKind {
@@ -250,10 +254,14 @@ impl ImageEditor {
             && self.preview_revision == self.revision
             && !self.dirty
             && self.formats.contains(&self.settings.format)
-            && self
-                .preview
-                .as_ref()
-                .is_some_and(|preview| preview.target_met())
+            && self.preview.as_ref().is_some_and(|preview| {
+                preview.target_met()
+                    && self
+                        .settings
+                        .limits
+                        .check_bytes(preview.bytes().len() as u64)
+                        .is_ok()
+            })
     }
     fn source_dimensions(&self) -> Option<(u32, u32)> {
         match &self.content {
@@ -364,8 +372,24 @@ impl ImageEditor {
                 self.preview_texture = Some(Self::texture(ctx, "editor_preview_page", &thumb));
                 self.shown_page = page;
             }
-            Ok(WorkOutput::Saved(path)) => {
-                self.notice = Some((trf!("Salvato: {}", "Saved: {}", display_path(&path)), false))
+            Ok(WorkOutput::SaveFinished {
+                result,
+                cancelled,
+                history_warning,
+            }) => {
+                let (mut message, mut error) = match result {
+                    Ok(path) => (trf!("Salvato: {}", "Saved: {}", display_path(&path)), false),
+                    Err(_) if cancelled => {
+                        (tr("Salvataggio annullato", "Save cancelled").into(), false)
+                    }
+                    Err(error) => (error, true),
+                };
+                if let Some(warning) = history_warning {
+                    message.push('\n');
+                    message.push_str(&warning);
+                    error = true;
+                }
+                self.notice = Some((message, error));
             }
             Err(error)
                 if !task.cancel.load(Ordering::Relaxed)
@@ -435,58 +459,8 @@ impl ImageEditor {
             let settings = self.settings.clone();
             self.dirty = false;
             self.spawn(WorkKind::Preview, ctx, move |cancel| {
-                if let Some(text) = text {
-                    let page = settings
-                        .image
-                        .page
-                        .as_ref()
-                        .context(tr("Scegli un formato pagina", "Choose a page format"))?;
-                    let pdf = page_layout::prepare(
-                        &[PageInput::Text(text)],
-                        page,
-                        settings.image.quality,
-                        &cancel,
-                        |_| {},
-                    )?;
-                    let thumb = pdf.preview(0, PREVIEW_SIDE, &cancel)?;
-                    Ok(WorkOutput::Preview(PreviewData::Pdf(pdf, None), thumb))
-                } else {
-                    let recipe = settings.image.edit.as_ref().context(tr(
-                        "Impostazioni immagine mancanti",
-                        "Missing image settings",
-                    ))?;
-                    let pixels =
-                        image_edit::render(&pixels.expect("image source"), recipe, &cancel)?;
-                    if settings.format == OutputFormat::Pdf {
-                        let page = settings.image.page.as_ref().context(tr(
-                            "Scegli A4 o A5 per il PDF",
-                            "Choose A4 or A5 for the PDF",
-                        ))?;
-                        let pdf = page_layout::prepare(
-                            &[PageInput::Image(Arc::new(pixels))],
-                            page,
-                            settings.image.quality,
-                            &cancel,
-                            |_| {},
-                        )?;
-                        let thumb = pdf.preview(0, PREVIEW_SIDE, &cancel)?;
-                        Ok(WorkOutput::Preview(
-                            PreviewData::Pdf(pdf, recipe.max_bytes),
-                            thumb,
-                        ))
-                    } else {
-                        let encoded = image_edit::encode(
-                            &pixels,
-                            settings.format,
-                            settings.image.quality,
-                            recipe,
-                            &cancel,
-                            |_| {},
-                        )?;
-                        let thumb = thumbnail(&encoded.decoded_preview);
-                        Ok(WorkOutput::Preview(PreviewData::Image(encoded), thumb))
-                    }
-                }
+                let (preview, thumb) = prepare_preview(pixels, text, &settings, &cancel)?;
+                Ok(WorkOutput::Preview(preview, thumb))
             });
             return;
         }
@@ -529,13 +503,9 @@ impl ImageEditor {
                     if ui
                         .add_enabled(
                             !saving,
-                            egui::Button::new(theme::button_text(
-                                FluentIcon::Back,
-                                tr("Indietro", "Back"),
-                                theme::palette(ctx).text,
-                            ))
-                            .frame(false),
+                            egui::Button::new(theme::icon(FluentIcon::Back, 16.0)).frame(false),
                         )
+                        .on_hover_text(tr("Indietro", "Back"))
                         .clicked()
                     {
                         action = Some(EditorAction::Back);
@@ -586,7 +556,6 @@ impl ImageEditor {
                                 changed = true;
                                 if self.settings.format == OutputFormat::Pdf {
                                     self.settings.image.page.get_or_insert_with(PageLayoutSettings::default);
-                                    if let Some(edit) = &mut self.settings.image.edit { edit.max_bytes = None; }
                                 }
                             }
                         }
@@ -594,29 +563,36 @@ impl ImageEditor {
                             ui.colored_label(theme::palette(ctx).error, tr("Abilita questo formato nelle Impostazioni del programma per salvare.", "Enable this format in the app Settings to save."));
                         }
                         if !self.is_text() && matches!(self.settings.format, OutputFormat::Jpg | OutputFormat::Webp | OutputFormat::Pdf) {
-                            let adaptive=self.settings.format!=OutputFormat::Pdf&&self.settings.image.edit.as_ref().is_some_and(|edit|edit.max_bytes.is_some());
+                            let adaptive=self.settings.format!=OutputFormat::Pdf&&effective_byte_limit(&self.settings).is_some();
                             changed |= ui.add(egui::Slider::new(&mut self.settings.image.quality, 1..=100).text(if adaptive{tr("Qualità massima", "Maximum quality")}else{tr("Qualità", "Quality")})).changed();
                         } else if !self.is_text() {
                             ui.label(tr("PNG conserva i pixel senza perdita.", "PNG preserves pixels losslessly."));
                         }
-                        if let Some(edit) = &mut self.settings.image.edit {
-                            let mut limited = edit.max_bytes.is_some();
+                        {
+                            let mut byte_limit = effective_byte_limit(&self.settings);
+                            let mut limited = byte_limit.is_some();
                             if ui.checkbox(&mut limited, tr("Peso massimo", "Maximum file size")).changed() {
-                                edit.max_bytes = limited.then_some(300_000); changed = true;
+                                byte_limit = limited.then_some(300_000);
+                                set_byte_limit(&mut self.settings, byte_limit);
+                                changed = true;
                             }
-                            if let Some(max_bytes) = edit.max_bytes.as_mut() {
-                                let mut kb = *max_bytes as f64 / 1000.0;
+                            if let Some(max_bytes) = byte_limit {
+                                let mut kb = max_bytes as f64 / 1000.0;
                                 if ui.add(egui::DragValue::new(&mut kb).range(0.1..=1_000_000.0).speed(1.0).suffix(" kB")).changed() {
-                                    *max_bytes = (kb * 1000.0).round() as u64; changed = true;
+                                    set_byte_limit(&mut self.settings, Some((kb * 1000.0).round() as u64)); changed = true;
                                 }
                                 if self.settings.format==OutputFormat::Pdf {
                                     ui.label(tr("1 kB = 1.000 byte. Per rientrare nel limite PDF regola qualità, dimensioni o DPI.", "1 kB = 1,000 bytes. Adjust quality, dimensions or DPI to meet the PDF limit."));
                                 } else if self.settings.format==OutputFormat::Png {
                                     ui.label(tr("PNG è senza perdita. Per ridurre il peso abilita la riduzione delle dimensioni.", "PNG is lossless. Allow smaller dimensions to reduce the file size."));
-                                    changed |= ui.checkbox(&mut edit.allow_downsize, tr("Riduci anche le dimensioni se necessario", "Also reduce dimensions if necessary")).changed();
+                                    if let Some(edit) = &mut self.settings.image.edit {
+                                        changed |= ui.checkbox(&mut edit.allow_downsize, tr("Riduci anche le dimensioni se necessario", "Also reduce dimensions if necessary")).changed();
+                                    }
                                 } else {
                                     ui.label(tr("1 kB = 1.000 byte. La qualità viene adattata al limite.", "1 kB = 1,000 bytes. Quality is adjusted to meet the limit."));
-                                    changed |= ui.checkbox(&mut edit.allow_downsize, tr("Riduci anche le dimensioni se necessario", "Also reduce dimensions if necessary")).changed();
+                                    if let Some(edit) = &mut self.settings.image.edit {
+                                        changed |= ui.checkbox(&mut edit.allow_downsize, tr("Riduci anche le dimensioni se necessario", "Also reduce dimensions if necessary")).changed();
+                                    }
                                 }
                             }
                         }
@@ -645,7 +621,6 @@ impl ImageEditor {
                         if ui.add(egui::Button::new(tr("Usa come impostazioni predefinite", "Use as default settings")).wrap()).clicked() {
                             action = Some(EditorAction::SetDefaults(self.settings.clone()));
                         }
-                        ui.label(RichText::new(tr("Il profilo conserva le opzioni. Immagine e testo di prova restano fuori dal profilo.", "The profile stores the options. The sample image and text are not included.")).small().weak());
                     });
                 });
             });
@@ -698,6 +673,11 @@ impl ImageEditor {
                 false,
             ));
         }
+        if let Some(notice) =
+            crate::gui_history::guard_close(ctx, self.task.is_some(), self.closing)
+        {
+            self.notice = Some(notice);
+        }
         action
     }
 
@@ -726,6 +706,11 @@ impl ImageEditor {
                     tr("Apri TXT…", "Open TXT…")
                 } else {
                     tr("Apri immagine…", "Open image…")
+                })
+                .on_hover_text(if self.is_text() {
+                    tr("I file TXT devono essere UTF-8.", "TXT files must use UTF-8.")
+                } else {
+                    tr("Per immagini animate o multipagina viene usata solo la prima immagine o il primo fotogramma.", "For animated or multipage images, only the first image or frame is used.")
                 })
                 .clicked()
             {
@@ -773,16 +758,6 @@ impl ImageEditor {
                 if edited {
                     self.changed();
                 }
-                ui.label(
-                    RichText::new(tr(
-                        "I file TXT devono essere UTF-8. L’originale viene conservato.",
-                        "TXT files must be UTF-8. The original is preserved.",
-                    ))
-                    .small()
-                    .weak(),
-                );
-            } else {
-                ui.label(RichText::new(tr("L’editor usa la prima immagine o fotogramma. Il file originale non cambia.", "The editor uses the first image or frame. The original file is unchanged.")).small().weak());
             }
         });
     }
@@ -839,7 +814,23 @@ impl ImageEditor {
                 }
             });
             if !preview.target_met() && fresh {
-                ui.colored_label(theme::palette(ui.ctx()).error, tr("Il risultato supera il limite. Riduci dimensioni o abilita la riduzione automatica; Salva resta disattivato.", "The result exceeds the limit. Reduce dimensions or allow automatic downsizing; Save remains disabled."));
+                let message = if self.is_text() {
+                    tr(
+                        "Il PDF supera il limite. Riduci il contenuto o modifica le opzioni pagina; Salva resta disattivato.",
+                        "The PDF exceeds the limit. Reduce the content or adjust page settings; Save remains disabled.",
+                    )
+                } else if self.settings.format == OutputFormat::Pdf {
+                    tr(
+                        "Il PDF supera il limite. Regola qualità, dimensioni o DPI; Salva resta disattivato.",
+                        "The PDF exceeds the limit. Adjust quality, dimensions or DPI; Save remains disabled.",
+                    )
+                } else {
+                    tr(
+                        "Il risultato supera il limite. Riduci dimensioni o abilita la riduzione automatica; Salva resta disattivato.",
+                        "The result exceeds the limit. Reduce dimensions or allow automatic downsizing; Save remains disabled.",
+                    )
+                };
+                ui.colored_label(theme::palette(ui.ctx()).error, message);
             }
             if preview.pages() > 1 {
                 ui.horizontal(|ui| {
@@ -1182,6 +1173,14 @@ impl ImageEditor {
         if !preview.target_met() {
             return;
         }
+        if let Err(error) = self
+            .settings
+            .limits
+            .check_bytes(preview.bytes().len() as u64)
+        {
+            self.notice = Some((error.to_string(), true));
+            return;
+        }
         let extension = self.settings.format.extension();
         let stem = self
             .input
@@ -1229,10 +1228,27 @@ impl ImageEditor {
                 return;
             }
             let input = self.input.clone();
+            let limits = self.settings.limits;
+            let format = self.settings.format;
+            let history = crate::gui_history::path();
             self.spawn(WorkKind::Save, ctx, move |cancel| {
-                let path =
-                    image_edit::save_bytes(input.as_deref(), &output, preview.bytes(), &cancel)?;
-                Ok(WorkOutput::Saved(path))
+                let result = save_preview(input.as_deref(), &output, &preview, limits, &cancel)
+                    .map_err(|error| format!("{error:#}"));
+                let cancelled = cancel.load(Ordering::Relaxed);
+                let history_warning = record_editor_history(
+                    history,
+                    input.unwrap_or(output),
+                    format,
+                    &result,
+                    cancelled,
+                )
+                .err()
+                .map(|error| format!("{error:#}"));
+                Ok(WorkOutput::SaveFinished {
+                    result,
+                    cancelled,
+                    history_warning,
+                })
             });
         }
     }
@@ -1246,6 +1262,139 @@ impl Drop for ImageEditor {
 }
 
 use anyhow::Context as _;
+
+fn effective_byte_limit(settings: &ConversionSettings) -> Option<u64> {
+    match (
+        settings.limits.max_bytes,
+        settings.image.edit.as_ref().and_then(|edit| edit.max_bytes),
+    ) {
+        (Some(common), Some(legacy)) => Some(common.min(legacy)),
+        (common, legacy) => common.or(legacy),
+    }
+}
+
+fn set_byte_limit(settings: &mut ConversionSettings, limit: Option<u64>) {
+    settings.limits.max_bytes = limit;
+    if let Some(edit) = &mut settings.image.edit {
+        edit.max_bytes = None;
+    }
+}
+
+fn prepare_preview(
+    pixels: Option<Arc<RgbaImage>>,
+    text: Option<Arc<str>>,
+    settings: &ConversionSettings,
+    cancel: &AtomicBool,
+) -> anyhow::Result<(PreviewData, RgbaImage)> {
+    if let Some(text) = text {
+        let page = settings
+            .image
+            .page
+            .as_ref()
+            .context(tr("Scegli un formato pagina", "Choose a page format"))?;
+        let pdf = page_layout::prepare(
+            &[PageInput::Text(text)],
+            page,
+            settings.image.quality,
+            cancel,
+            |_| {},
+        )?;
+        let thumb = pdf.preview(0, PREVIEW_SIDE, cancel)?;
+        return Ok((PreviewData::Pdf(pdf, settings.limits.max_bytes), thumb));
+    }
+    let mut recipe = settings.image.edit.clone().context(tr(
+        "Impostazioni immagine mancanti",
+        "Missing image settings",
+    ))?;
+    recipe.max_bytes = effective_byte_limit(settings);
+    let source = pixels.context(tr("Apri un’immagine", "Open an image"))?;
+    let pixels = image_edit::render(&source, &recipe, cancel)?;
+    if settings.format == OutputFormat::Pdf {
+        let page = settings.image.page.as_ref().context(tr(
+            "Scegli A4 o A5 per il PDF",
+            "Choose A4 or A5 for the PDF",
+        ))?;
+        let pdf = page_layout::prepare(
+            &[PageInput::Image(Arc::new(pixels))],
+            page,
+            settings.image.quality,
+            cancel,
+            |_| {},
+        )?;
+        let thumb = pdf.preview(0, PREVIEW_SIDE, cancel)?;
+        Ok((PreviewData::Pdf(pdf, recipe.max_bytes), thumb))
+    } else {
+        let encoded = image_edit::encode(
+            &pixels,
+            settings.format,
+            settings.image.quality,
+            &recipe,
+            cancel,
+            |_| {},
+        )?;
+        let thumb = thumbnail(&encoded.decoded_preview);
+        Ok((PreviewData::Image(encoded), thumb))
+    }
+}
+
+fn save_preview(
+    input: Option<&Path>,
+    output: &Path,
+    preview: &PreviewData,
+    limits: ConversionLimits,
+    cancel: &AtomicBool,
+) -> anyhow::Result<PathBuf> {
+    limits.check_bytes(preview.bytes().len() as u64)?;
+    anyhow::ensure!(
+        preview.target_met(),
+        tr(
+            "Il risultato supera il peso massimo",
+            "The output exceeds the size limit"
+        )
+    );
+    image_edit::save_bytes(input, output, preview.bytes(), cancel)
+}
+
+fn record_editor_history(
+    history: Option<PathBuf>,
+    input: PathBuf,
+    format: OutputFormat,
+    result: &Result<PathBuf, String>,
+    cancelled: bool,
+) -> anyhow::Result<()> {
+    use the_converter::queue::{JobState, QueueJob};
+    let path = history.context(tr(
+        "Cartella della cronologia non disponibile",
+        "History folder unavailable",
+    ))?;
+    let (state, outputs, error) = match result {
+        Ok(path) => (JobState::Completed, vec![path.clone()], None),
+        Err(_) if cancelled => (JobState::Cancelled, vec![], None),
+        Err(error) => (JobState::Failed, vec![], Some(error.clone())),
+    };
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    crate::gui_history::record_async(
+        path,
+        QueueJob {
+            id: format!("editor-{}-{stamp}", std::process::id()),
+            input,
+            format: format.label().into(),
+            outputs,
+            state,
+            progress: if state == JobState::Completed {
+                1.0
+            } else {
+                0.0
+            },
+            message: String::new(),
+            error,
+        },
+    )
+}
+
 fn thumbnail(image: &RgbaImage) -> RgbaImage {
     if image.width().max(image.height()) <= PREVIEW_SIDE {
         return image.clone();
@@ -1628,6 +1777,186 @@ fn page_controls(ui: &mut egui::Ui, page: &mut PageLayoutSettings, text: bool) -
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn pixels() -> Arc<RgbaImage> {
+        Arc::new(RgbaImage::from_pixel(2, 2, image::Rgba([20, 60, 180, 255])))
+    }
+
+    #[test]
+    fn common_and_legacy_limits_use_the_minimum_until_the_size_control_is_edited() {
+        let mut settings = ConversionSettings::default();
+        settings.image.edit = Some(ImageEditSettings {
+            max_bytes: Some(200_000),
+            ..Default::default()
+        });
+        assert_eq!(effective_byte_limit(&settings), Some(200_000));
+        settings.limits.max_bytes = Some(300_000);
+        assert_eq!(effective_byte_limit(&settings), Some(200_000));
+        settings.limits.max_bytes = Some(100_000);
+        assert_eq!(effective_byte_limit(&settings), Some(100_000));
+        set_byte_limit(&mut settings, Some(400_000));
+        assert_eq!(settings.limits.max_bytes, Some(400_000));
+        assert_eq!(settings.image.edit.as_ref().unwrap().max_bytes, None);
+        set_byte_limit(&mut settings, None);
+        assert_eq!(effective_byte_limit(&settings), None);
+    }
+
+    #[test]
+    fn image_previews_send_the_common_limit_to_the_encoder_and_keep_legacy_stricter() {
+        let mut settings = ConversionSettings {
+            format: OutputFormat::Png,
+            ..Default::default()
+        };
+        settings.image.edit = Some(ImageEditSettings::default());
+        let cancel = AtomicBool::new(false);
+        for (common, legacy) in [
+            (Some(1), None),
+            (Some(100_000), Some(1)),
+            (Some(1), Some(100_000)),
+        ] {
+            settings.limits.max_bytes = common;
+            settings.image.edit.as_mut().unwrap().max_bytes = legacy;
+            let (preview, _) = prepare_preview(Some(pixels()), None, &settings, &cancel).unwrap();
+            assert!(!preview.target_met());
+            assert!(preview.bytes().len() > 1);
+            assert_eq!(settings.image.edit.as_ref().unwrap().max_bytes, legacy);
+        }
+    }
+
+    #[test]
+    fn image_and_text_pdf_previews_apply_common_caps_without_audio_duration_rules() {
+        let mut settings = ConversionSettings {
+            format: OutputFormat::Pdf,
+            ..Default::default()
+        };
+        settings.image.edit = Some(ImageEditSettings::default());
+        settings.image.page = Some(PageLayoutSettings::default());
+        settings.limits.max_bytes = Some(1);
+        settings.limits.max_duration = Some(0.1);
+        for text in [
+            None,
+            Some(Arc::<str>::from("Documento di prova per il limite PDF.")),
+        ] {
+            let (preview, _) =
+                prepare_preview(Some(pixels()), text, &settings, &AtomicBool::new(false)).unwrap();
+            assert!(!preview.target_met());
+            let PreviewData::Pdf(pdf, limit) = preview else {
+                panic!("PDF preview expected");
+            };
+            assert_eq!(limit, Some(1));
+            let exact = pdf.exact_bytes();
+            assert!(exact > 1);
+            assert!(PreviewData::Pdf(pdf, Some(exact)).target_met());
+        }
+    }
+
+    #[test]
+    fn save_worker_rechecks_common_bytes_and_preserves_originals_and_exact_previews() {
+        let cancel = AtomicBool::new(false);
+        // An already prepared preview may have been encoded without a common cap.
+        let encoded = image_edit::encode(
+            &pixels(),
+            OutputFormat::Png,
+            90,
+            &ImageEditSettings::default(),
+            &cancel,
+            |_| {},
+        )
+        .unwrap();
+        let preview = PreviewData::Image(encoded);
+        assert!(preview.target_met());
+        let directory = tempfile::tempdir().unwrap();
+        let original = directory.path().join("original.png");
+        let output = directory.path().join("edited.png");
+        std::fs::write(&original, preview.bytes()).unwrap();
+        let original_bytes = std::fs::read(&original).unwrap();
+        let mut limits = ConversionLimits {
+            max_bytes: Some(preview.bytes().len() as u64 - 1),
+            max_duration: Some(0.1),
+        };
+        assert!(save_preview(Some(&original), &output, &preview, limits, &cancel).is_err());
+        assert!(!output.exists());
+        assert_eq!(std::fs::read(&original).unwrap(), original_bytes);
+        let mut editor = ImageEditor::new(
+            None,
+            false,
+            ConversionSettings {
+                format: OutputFormat::Png,
+                limits,
+                ..Default::default()
+            },
+            ToolPaths::default(),
+            vec![OutputFormat::Png],
+        );
+        editor.preview = Some(Arc::new(preview));
+        editor.preview_revision = editor.revision;
+        editor.dirty = false;
+        assert!(!editor.can_save());
+        limits.max_bytes = Some(original_bytes.len() as u64);
+        let preview = editor.preview.as_ref().unwrap();
+        save_preview(Some(&original), &output, preview, limits, &cancel).unwrap();
+        assert_eq!(std::fs::read(&output).unwrap(), original_bytes);
+        assert!(save_preview(Some(&original), &output, preview, limits, &cancel).is_err());
+        assert_eq!(std::fs::read(&output).unwrap(), original_bytes);
+    }
+
+    #[test]
+    fn actual_save_outcomes_enqueue_terminal_history_without_reclassifying_committed_outputs() {
+        use the_converter::queue::JobState;
+        let directory = tempfile::tempdir().unwrap();
+        let history = directory.path().join("history.json");
+        let input = directory.path().join("original.png");
+        let output = directory.path().join("result.png");
+        record_editor_history(
+            Some(history.clone()),
+            input.clone(),
+            OutputFormat::Png,
+            &Ok(output.clone()),
+            true,
+        )
+        .unwrap();
+        record_editor_history(
+            Some(history.clone()),
+            input.clone(),
+            OutputFormat::Png,
+            &Err("encoder failed".into()),
+            false,
+        )
+        .unwrap();
+        record_editor_history(
+            Some(history.clone()),
+            input,
+            OutputFormat::Png,
+            &Err("cancelled".into()),
+            true,
+        )
+        .unwrap();
+        let deadline = Instant::now() + Duration::from_secs(2);
+        let jobs = loop {
+            let jobs = crate::gui_history::load(&history).unwrap();
+            if jobs.len() == 3 {
+                break jobs;
+            }
+            assert!(Instant::now() < deadline, "history worker did not finish");
+            std::thread::sleep(Duration::from_millis(10));
+        };
+        let completed = jobs
+            .iter()
+            .find(|job| job.state == JobState::Completed)
+            .unwrap();
+        assert_eq!(completed.outputs.as_slice(), std::slice::from_ref(&output));
+        assert!(completed.id.starts_with("editor-"));
+        assert_eq!(completed.format, "PNG");
+        assert!(
+            jobs.iter().any(|job| job.state == JobState::Failed
+                && job.error.as_deref() == Some("encoder failed"))
+        );
+        assert!(
+            jobs.iter()
+                .any(|job| job.state == JobState::Cancelled && job.outputs.is_empty())
+        );
+        assert!(!output.exists());
+    }
 
     #[test]
     fn changing_txt_source_discards_previous_content() {

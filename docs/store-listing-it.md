@@ -1,16 +1,16 @@
 # Scheda Microsoft Store — italiano (it-IT)
 
-Bozza per Convert Here **0.6.0**, pacchetto Store candidato **1.0.5.0**. Editore e sviluppatore: **Salvatore Corsi**. Testi pronti con 20 funzionalità; catture, URL versionati e caricamento vanno verificati sul candidato finale. Questo documento non attesta pubblicazione, invio o approvazione della 0.6.0. Il record della precedente 0.4.0 resta nello storico. Non copiare questo preambolo nei campi pubblici.
+Bozza per Convert Here **0.7.0**, pacchetto Store candidato **1.0.6.0**. Editore e sviluppatore: **Salvatore Corsi**. Testi pronti con 20 funzionalità; catture, URL versionati e caricamento vanno verificati sul candidato finale. Questo documento non attesta pubblicazione, invio o approvazione della 0.7.0. Il record della precedente 0.4.0 resta nello storico. Non copiare questo preambolo nei campi pubblici.
 
 ## Descrizione breve
 
-Conversioni locali, editor immagini con peso esatto, fogli A4/A5 e profili dal tasto destro di Windows 11. Motori opzionali per altri formati e OCR.
+Conversioni locali per Windows 10 e 11, editor immagini, fogli A4/A5 e profili per audio, video e PDF. Motori opzionali per altri formati e OCR.
 
 ## Descrizione
 
 Le immagini nei formati nativi e le immagini in PDF funzionano subito, come compressione, divisione e unione dei PDF. Audio/video richiedono FFmpeg; esportazione PDF richiede Poppler; Office, Excel/CSV e HTML in PDF richiedono LibreOffice. HEIC/HEIF e AVIF richiedono libheif; OCR richiede Tesseract e i modelli delle lingue, oltre a Poppler per le scansioni PDF. Questi motori opzionali non sono inclusi. Da Impostazioni → Motori puoi richiedere il download di FFmpeg, Poppler o entrambi, con conferma di origine, versione, dimensioni, licenze e cartella. Internet serve per questo download facoltativo; conversioni e OCR restano locali.
 
-Convert Here porta le conversioni nella cartella in cui lavori. Dal menu contestuale di Windows 11 scegli Converti in e il formato desiderato: il lavoro entra in coda con le impostazioni salvate, senza aprire ogni volta la finestra delle opzioni.
+Convert Here porta le conversioni nella cartella in cui lavori, su Windows 10 versione 2004 o successivo (build 19041), x64, e Windows 11. Dal menu contestuale classico di Windows 10 o moderno di Windows 11 scegli Converti in e il formato desiderato: il lavoro entra in coda con le impostazioni salvate, senza aprire ogni volta la finestra delle opzioni.
 
 Un segnaposto con icona di attesa mostra subito dove comparira il risultato. Puoi aprirlo per vedere lo stato o annullare il lavoro. Quando la conversione termina, il file pronto prende il suo posto. Per impostazione predefinita i risultati sono accanto agli originali; se un nome esiste gia viene aggiunto un numero.
 
@@ -20,7 +20,13 @@ Apri Modifica… nella riga di un'immagine per ritagliare, ridimensionare o crea
 
 Impagina immagini, testo scritto in Nuovo foglio… o file TXT UTF-8 su A4/A5, in verticale o orizzontale, con margini scelti. Il testo semplice offre dimensione, interlinea, allineamento e pagine automatiche, con Ubuntu Light incorporato e testo selezionabile nel PDF. I caratteri non supportati producono un errore esplicito. Questo percorso è nativo e non richiede LibreOffice; i documenti Word mantengono la conversione Office esistente.
 
-Salva le mie impostazioni crea profili con nome: fino a 32 salvati e 8 visibili in Converti in. Riusa ritaglio relativo, dimensioni, tela, qualità, peso e opzioni pagina senza salvare l'immagine di prova o il testo digitato. I miei profili nelle Impostazioni permette di applicare e aggiornare le ricette. Nel menu compaiono soltanto i profili abilitati con formato attivo e ingressi compatibili; la coda conserva le opzioni con cui ogni lavoro è stato creato.
+Salva le mie impostazioni crea profili con nome: fino a 32 salvati e 8 visibili in Converti in. Riusa ritaglio relativo, dimensioni, tela, qualità, peso e opzioni pagina senza salvare l'immagine di prova o il testo digitato. La pagina Profili permette di applicare e aggiornare le ricette. Nel menu compaiono soltanto i profili abilitati con formato attivo e ingressi compatibili; la coda conserva le opzioni con cui ogni lavoro è stato creato.
+
+La gestione Profili offre categorie Audio, Video, Immagini e Documenti. Crea, modifica, duplica, rinomina o elimina ricette, scegli il predefinito, importa ed esporta JSON e limita le estensioni di ingresso di ciascun profilo. Le opzioni pertinenti includono bitrate, frequenza, canali, codec, taglio, pagine e operazioni PDF. Un profilo PDF Merge apre l'editor dell'ordine pagine; i lavori già accodati conservano lo snapshot originale anche dopo aggiornamento o eliminazione del profilo.
+
+Puoi imporre un peso massimo per file e una durata massima audio/video, combinata con l'intervallo di taglio più breve. Il peso viene verificato prima della pubblicazione; per PDF divisi vale su ogni pagina. Audio, video e PDF non promettono un adattamento automatico al peso: se il risultato supera il limite, non viene pubblicato un file sovradimensionato. Per immagini JPEG/WebP restano la ricerca della qualità e la riduzione delle dimensioni facoltativa.
+
+La sezione Avanzate espone controlli FFmpeg tipizzati per encoder, preset compatibili, colore, GOP, bitrate, campioni audio, filtri numerici e metadati. Le opzioni numeriche, booleane ed enumerate degli encoder installati vengono lette dal motore locale e verificate prima della conversione. Non è una riga di comando libera. Le opzioni FFmpeg riguardano sorgenti audio/video, comprese le GIF create da video; non vengono applicate alle conversioni immagini native.
 
 Con libheif puoi leggere HEIC/HEIF e AVIF e crearli dalle immagini supportate. Configura heif-dec.exe e heif-enc.exe in Impostazioni → Motori, mantenendo insieme DLL e plugin della build. La disponibilita dipende dai decoder e dagli encoder HEVC/AV1 installati. Puoi scegliere qualita e larghezza; viene usata la prima immagine del contenitore, senza conservare sequenze o animazioni.
 
@@ -47,26 +53,26 @@ Limiti: non e disponibile la modifica libera del contenuto delle pagine PDF. OCR
 Inserire ciascuna riga in un campo separato, senza il trattino iniziale:
 
 ```text
-Menu Converti in direttamente in Esplora file su Windows 11
-Conversioni rapide in coda senza aprire ogni volta le opzioni
-Segnaposto nella cartella di destinazione e stato del lavoro su richiesta
-Immagini in PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR e PNM
-Immagini e testo semplice su PDF A4/A5 con orientamento e margini scelti
-Editor locale: ritaglio, scala e tela con risoluzione, sfondo e ancoraggio
-Audio e video con FFmpeg opzionale selezionato dall'utente
-PDF in immagini, TXT, Word DOCX e HTML di solo testo con Poppler opzionale
-Excel in CSV del primo foglio e CSV UTF-8 in XLSX, con quattro separatori e LibreOffice opzionale
-Word e HTML semplici in PDF con LibreOffice opzionale; JavaScript non eseguito
-HEIC/HEIF e AVIF in ingresso e HEIC/AVIF in uscita con libheif opzionale
-OCR locale di immagini e scansioni PDF con Tesseract e modelli delle lingue opzionali
-PDF Bulk separati o PDF Merge unico con trascinamento delle singole pagine
-File originali conservati e nomi numerati in caso di conflitto
-Conversioni di formato elaborate sul PC senza un account nell'app
-Scegli le uscite visibili: otto formati predefiniti e 93 estensioni in ingresso riconosciute
-Download facoltativo di FFmpeg e Poppler con conferma, verifica SHA-256 e licenze conservate
+Converti in nel menu classico di Windows 10 e moderno di Windows 11, da build 19041 x64
+Coda rapida con segnaposto e stato del lavoro su richiesta
+44 destinazioni e 93 estensioni in ingresso, con otto uscite visibili per default
+Conversioni immagini native, HEIC/AVIF con libheif opzionale e audio/video con FFmpeg opzionale
+Editor immagini con ritaglio, scala, tela, sfondo e ancoraggio
 Anteprima e peso esatto per PNG/JPEG/WebP/PDF; salvataggio degli stessi byte preparati
-Fino a 32 profili personali, con 8 scorciatoie nel menu Converti in per file compatibili
-Testo scritto nell'app o TXT UTF-8 in PDF con font incorporato e testo selezionabile
+Immagini, testo scritto e TXT UTF-8 su PDF A4/A5 con font incorporato
+Gestione profili per Audio, Video, Immagini e Documenti: 32 salvati, 8 nel menu
+Importa/esporta profili JSON e scegli le estensioni di ingresso compatibili
+Peso massimo per file e durata massima audio/video combinata con il taglio
+Opzioni FFmpeg avanzate tipizzate, con parametri degli encoder installati verificati nel core
+Audio/video: bitrate, codec, frequenza, canali, normalizzazione, FPS e intervallo temporale
+PDF in immagini, TXT, Word DOCX e HTML di solo testo con Poppler opzionale
+Excel/CSV con quattro separatori e Word/HTML in PDF con LibreOffice opzionale
+OCR locale con Tesseract e modelli delle lingue; scansioni PDF anche con Poppler
+Comprimi e dividi PDF, oppure PDF Bulk separati e PDF Merge con pagine trascinabili
+Originali conservati e nomi numerati in caso di conflitto
+Profili accodati conservano la ricetta anche dopo modifica o eliminazione
+Elaborazione locale, nessun account, abbonamento o pagamento richiesto per continuare l'uso
+Download facoltativo FFmpeg/Poppler con conferma, SHA-256 e licenze conservate
 ```
 
 ## Termini di ricerca
@@ -86,7 +92,7 @@ coda conversioni
 ## Requisiti aggiuntivi
 
 ```text
-Windows 11 x64 per il menu contestuale moderno
+Windows 10 versione 2004 (build 19041) o successivo, x64; menu classico su Windows 10, moderno su Windows 11
 FFmpeg per audio/video; Poppler per esportare PDF; LibreOffice per Office/HTML in PDF ed Excel/CSV. Motori opzionali non inclusi. Download facoltativo di FFmpeg/Poppler da Impostazioni → Motori; richiede Internet.
 libheif con heif-dec.exe, heif-enc.exe, DLL e plugin per HEIC/AVIF; Tesseract con i modelli delle lingue per OCR, oltre a Poppler per i PDF. Non inclusi.
 ```
@@ -94,7 +100,7 @@ libheif con heif-dec.exe, heif-enc.exe, DLL e plugin per HEIC/AVIF; Tesseract co
 ## Novita
 
 ```text
-Modifica immagini con ritaglio, scala e tela personalizzata; esporta PNG, JPEG, WebP o PDF con anteprima e peso effettivo. Regola la qualità e imposta un peso massimo, con riduzione delle dimensioni soltanto se autorizzata. Impagina immagini, testo scritto nell'app o TXT UTF-8 su A4/A5. Salva fino a 32 profili, con 8 scorciatoie nel menu Converti in. Elaborazione sul PC, 44 destinazioni e 93 estensioni riconosciute. Gratuito: nessun pagamento richiesto per continuare a usarlo.
+Nuova gestione profili per Audio, Video, Immagini e Documenti: crea, duplica e scambia ricette JSON, scegli gli ingressi e fino a 8 scorciatoie nel menu. Aggiunti peso massimo per file, durata audio/video e opzioni FFmpeg avanzate verificate sugli encoder locali. Il pacchetto Store richiede ora Windows 10 build 19041 o successivo, x64, con menu classico su Windows 10 e moderno su Windows 11. Restano editor immagini, testo A4/A5, 44 destinazioni e 93 estensioni. Elaborazione locale e gratuita, senza pagamenti richiesti per continuare l'uso.
 ```
 
 ## Didascalie delle schermate
@@ -106,7 +112,7 @@ Modifica immagini con ritaglio, scala e tela personalizzata; esporta PNG, JPEG, 
 
 Catture 1, 3 e 4 della 0.4.0; la 2 riusa PDF Merge della 0.3.1 con interfaccia invariata. [Percorsi delle catture](store-assets/README.md).
 
-Per la candidata 0.6.0 sono da aggiungere catture native dell'editor e dei profili, con didascalie da abbinare soltanto dopo la verifica dell'immagine: «Ritaglia e regola qualità e peso sul risultato preparato»; «Impagina un testo su A4 o A5»; «Salva le opzioni e riusale nei tuoi profili». Non attribuire queste nuove funzioni alle catture storiche.
+Per la candidata 0.7.0 sono da aggiungere catture native dell'editor e dei profili, con didascalie da abbinare soltanto dopo la verifica dell'immagine: «Ritaglia e regola qualità e peso sul risultato preparato»; «Impagina un testo su A4 o A5»; «Salva le opzioni e riusale nei tuoi profili». Non attribuire queste nuove funzioni alle catture storiche.
 
 ## Copyright e termini di licenza aggiuntivi
 
@@ -116,18 +122,18 @@ Copyright:
 Copyright (C) 2026 Salvatore Corsi.
 ```
 
-URL previsto per Additional license terms, da verificare dopo la pubblicazione del tag 0.6.0 e prima del salvataggio nel portale; collega il testo integrale della GPLv3:
+URL previsto per Additional license terms, da verificare dopo la pubblicazione del tag 0.7.0 e prima del salvataggio nel portale; collega il testo integrale della GPLv3:
 
 ```text
-https://github.com/salvatorecorsi/convert-here/blob/v0.6.0/LICENSE
+https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/LICENSE
 ```
 
-La scelta del progetto è GPL-3.0-only. Per la candidata è previsto `ConvertHere-0.6.0-source.zip` con sorgenti, dipendenze Cargo vendorizzate e istruzioni di build offline. Queste istruzioni dei campi non fanno parte della descrizione pubblica.
+La scelta del progetto è GPL-3.0-only. Per la candidata è previsto `ConvertHere-0.7.0-source.zip` con sorgenti, dipendenze Cargo vendorizzate e istruzioni di build offline. Queste istruzioni dei campi non fanno parte della descrizione pubblica.
 
 ## Riferimenti submission
 
-Titolare e sviluppatore: **Salvatore Corsi**; editore: **Salvatore Corsi**. Contatto privacy e supporto: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Privacy della candidata 0.6.0](https://github.com/salvatorecorsi/convert-here/blob/v0.6.0/docs/privacy.md), URL da verificare dopo il tag. Nome riservato: **Convert Here**. Per licenza, identità e stato operativo vedere la [procedura di submission](store-submission.md).
+Titolare e sviluppatore: **Salvatore Corsi**; editore: **Salvatore Corsi**. Contatto privacy e supporto: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Privacy della candidata 0.7.0](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/privacy.md), URL da verificare dopo il tag. Nome riservato: **Convert Here**. Per licenza, identità e stato operativo vedere la [procedura di submission](store-submission.md).
 
-Queste sono bozze locali 0.6.0, non campi già salvati nel portale. Le evidenze della 0.4.0 e delle altre versioni restano nello storico. [Istruzioni di test della candidata](store-testing-0.6.0.md).
+Queste sono bozze locali 0.7.0, non campi già salvati nel portale. Le evidenze della 0.4.0 e delle altre versioni restano nello storico. [Istruzioni di test della candidata](store-testing-0.7.0.md).
 
 Descrizione entro 10.000 caratteri; breve entro 1.000 (qui meno di 270); massimo 20 funzionalita da 200 caratteri; novita massimo 1.500, vuote alla prima submission. [Limiti ufficiali dei campi MSIX](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).

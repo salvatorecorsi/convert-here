@@ -205,6 +205,20 @@ pub enum FluentIcon {
     Back,
     Document,
     Info,
+    Audio,
+    Video,
+    Image,
+    Raw,
+    Profiles,
+    Edit,
+    Import,
+    Export,
+    Copy,
+    Download,
+    Refresh,
+    ExternalLink,
+    More,
+    History,
 }
 
 impl FluentIcon {
@@ -222,6 +236,104 @@ impl FluentIcon {
             Self::Back => '\u{E72B}',
             Self::Document => '\u{E8A5}',
             Self::Info => '\u{E946}',
+            Self::Audio => '\u{E8D6}',
+            Self::Video => '\u{E714}',
+            Self::Image => '\u{E8B9}',
+            Self::Raw => '\u{E943}',
+            Self::Profiles => '\u{E8F1}',
+            Self::Edit => '\u{E70F}',
+            Self::Import => '\u{E8B5}',
+            Self::Export => '\u{EDE1}',
+            Self::Copy => '\u{E8C8}',
+            Self::Download => '\u{E896}',
+            Self::Refresh => '\u{E72C}',
+            Self::ExternalLink => '\u{E8A7}',
+            Self::More => '\u{E712}',
+            Self::History => '\u{E81C}',
+        }
+    }
+}
+
+/// UI groupings; these never narrow the engine's accepted input extensions.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FormatFamily {
+    Audio,
+    Video,
+    Images,
+    Documents,
+    Raw,
+}
+
+impl FormatFamily {
+    pub const ALL: [Self; 5] = [
+        Self::Audio,
+        Self::Video,
+        Self::Images,
+        Self::Documents,
+        Self::Raw,
+    ];
+
+    pub fn label(self) -> &'static str {
+        use the_converter::i18n::tr;
+        match self {
+            Self::Audio => "Audio",
+            Self::Video => "Video",
+            Self::Images => tr("Immagini", "Images"),
+            Self::Documents => tr("Documenti", "Documents"),
+            Self::Raw => "Raw",
+        }
+    }
+
+    pub fn icon(self) -> FluentIcon {
+        match self {
+            Self::Audio => FluentIcon::Audio,
+            Self::Video => FluentIcon::Video,
+            Self::Images => FluentIcon::Image,
+            Self::Documents => FluentIcon::Document,
+            Self::Raw => FluentIcon::Raw,
+        }
+    }
+
+    pub fn color(self, ctx: &egui::Context) -> Color32 {
+        let dark = ctx.style().visuals.dark_mode;
+        match (self, dark) {
+            (Self::Audio, false) => Color32::from_rgb(121, 65, 186),
+            (Self::Video, false) => Color32::from_rgb(196, 55, 110),
+            (Self::Images, false) => Color32::from_rgb(16, 124, 95),
+            (Self::Documents, false) => Color32::from_rgb(0, 95, 184),
+            (Self::Raw, false) => Color32::from_rgb(162, 87, 21),
+            (Self::Audio, true) => Color32::from_rgb(192, 156, 245),
+            (Self::Video, true) => Color32::from_rgb(246, 156, 198),
+            (Self::Images, true) => Color32::from_rgb(114, 218, 173),
+            (Self::Documents, true) => Color32::from_rgb(96, 205, 255),
+            (Self::Raw, true) => Color32::from_rgb(245, 190, 129),
+        }
+    }
+
+    pub fn of_output(format: the_converter::model::OutputFormat) -> Self {
+        use the_converter::model::{MediaKind, OutputFormat};
+        match format {
+            OutputFormat::Txt | OutputFormat::Html | OutputFormat::Csv => Self::Raw,
+            _ => match format.kind() {
+                MediaKind::Audio => Self::Audio,
+                MediaKind::Video => Self::Video,
+                MediaKind::Image => Self::Images,
+                _ => Self::Documents,
+            },
+        }
+    }
+
+    pub fn of_input_extension(extension: &str) -> Self {
+        use the_converter::model::MediaKind;
+        let extension = extension.trim_start_matches('.').to_ascii_lowercase();
+        if matches!(extension.as_str(), "html" | "htm" | "txt" | "csv") {
+            return Self::Raw;
+        }
+        match MediaKind::from_path(std::path::Path::new(&format!("input.{extension}"))) {
+            MediaKind::Audio => Self::Audio,
+            MediaKind::Video => Self::Video,
+            MediaKind::Image => Self::Images,
+            _ => Self::Documents,
         }
     }
 }
