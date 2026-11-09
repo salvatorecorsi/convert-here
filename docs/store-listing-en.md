@@ -1,10 +1,10 @@
 # Microsoft Store listing — English (en-US)
 
-Convert Here **0.4.0** listings, Store package **1.0.3.0** uploaded and Validated in **In certification** Submission 2. Publisher and developer: **Salvatore Corsi**, account Active and verification Authorized. Both listings were saved and reloaded with 17 features and four screenshots each. The update is not yet approved or live in the Store. The app UI is Italian. Do not copy this preamble into public listing fields.
+Draft for Convert Here **0.6.0**, candidate Store package **1.0.5.0**. Publisher and developer: **Salvatore Corsi**. Copy is ready with 20 features; screenshots, versioned URLs and upload must be verified against the final candidate. This document does not attest publication, submission or approval of 0.6.0. Earlier 0.4.0 evidence remains historical. The app UI is Italian. Do not copy this preamble into public listing fields.
 
 ## Short description
 
-Convert files from the Windows 11 context menu with a queue, custom settings and local OCR. External engines enable more formats. App UI is Italian.
+Local file conversion, an image editor with exact size, A4/A5 pages and profiles in the Windows 11 context menu. Optional engines add formats and OCR. UI is Italian.
 
 ## Description
 
@@ -15,6 +15,12 @@ Convert Here brings conversion to the folder where you work. In the Windows 11 c
 A placeholder with a pending icon immediately shows where the result will appear. Open it to check progress or cancel the job. When conversion finishes, the completed file replaces the placeholder. Outputs are saved beside their originals by default; numbered names preserve files that already exist.
 
 There are 44 destination formats and 93 recognized input extensions across compatible categories. Native image conversions cover PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR and PNM, plus a separate A4 PDF for each source image. Adjust JPEG quality and image width. Choose which outputs appear in the GUI and Explorer menu in Impostazioni: defaults are MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4. Other outputs can be enabled; all 93 input extensions remain recognized, and the menu refreshes without restarting Explorer.
+
+Open Modifica… beside an image to crop, resize or create a canvas with a custom resolution, background, position and anchor. Export PNG, JPEG, WebP or PDF with a preview of the prepared result and its actual encoded byte size. JPEG and WebP offer adjustable quality: a size limit searches for a suitable quality; 300 kB is 300000 bytes. Further dimension reduction requires explicit permission. For PDFs, adjust quality, dimensions and DPI to change the size. If the limit cannot be met, saving is disabled and quick conversion does not publish an oversized file. Salva con nome writes those same prepared bytes and preserves existing files.
+
+Lay out images, text written in Nuovo foglio… or UTF-8 TXT files on A4/A5 pages in portrait or landscape with custom margins. Plain text supports font size, line spacing, alignment and automatic pages, with embedded Ubuntu Light and selectable PDF text. Unsupported characters produce an explicit error. This native path does not require LibreOffice; Word documents keep the existing Office conversion workflow.
+
+Salva le mie impostazioni creates named profiles: up to 32 saved, with 8 visible in Converti in. Reuse relative crop, dimensions, canvas, quality, byte limits and page settings without storing the sample image or typed text. I miei profili in Impostazioni lets you apply and update recipes. Menu profiles appear only when enabled, their output format is active and selected inputs are compatible. Queue jobs retain the settings with which they were created.
 
 With libheif, read HEIC/HEIF and AVIF files or create HEIC and AVIF from supported images. Configure heif-dec.exe and heif-enc.exe in Impostazioni > Motori, keeping the build's DLLs and plugins together. Availability depends on installed HEVC/AV1 decoders and encoders. Choose output quality and width. Only the first image in a container is converted; image sequences and animations are not preserved.
 
@@ -45,8 +51,8 @@ Converti in command directly in the Windows 11 File Explorer context menu
 Quick conversions join a queue without opening the options window each time
 Output-folder placeholders with job status available on demand
 Images in PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR and PNM
-Create a separate A4 PDF for each source image
-Adjust JPEG quality, image width and output folder
+Images and plain text on A4/A5 PDF pages with custom orientation and margins
+Local image editor: crop, resize and canvas with custom resolution, background and anchor
 Audio and video conversion with optional user-selected FFmpeg
 PDF to images, TXT, text-only Word DOCX and HTML with optional Poppler
 Excel to first-sheet CSV and UTF-8 CSV to XLSX, with four delimiters and optional LibreOffice
@@ -58,6 +64,9 @@ Preserve original files and use numbered output names for existing files
 Format conversion processed on your PC without an in-app account
 Choose visible outputs: eight defaults and 93 recognized input extensions
 Optional FFmpeg and Poppler downloads with confirmation, SHA-256 verification and retained licenses
+Preview and exact byte size for PNG/JPEG/WebP/PDF; save the same prepared bytes
+Up to 32 personal profiles, with 8 Converti in menu shortcuts for compatible inputs
+Typed text or UTF-8 TXT to PDF with embedded font and selectable text
 ```
 
 ## Search terms
@@ -85,7 +94,7 @@ libheif with heif-dec.exe, heif-enc.exe, DLLs and plugins for HEIC/AVIF; Tessera
 ## What's new
 
 ```text
-Choose visible formats in Impostazioni: eight default outputs, with all 93 input extensions still recognized. Download FFmpeg and Poppler only on request, with confirmation and SHA-256 verification. Original code is GPL-3.0-only with public source.
+Edit images with crop, resize and custom canvas; export PNG, JPEG, WebP or PDF with preview and actual byte size. Adjust quality and set a size limit, with dimension reduction only when permitted. Lay out images, typed text or UTF-8 TXT on A4/A5 pages. Save up to 32 profiles with 8 Converti in menu shortcuts. Processing stays on your PC, with 44 outputs and 93 recognized input extensions. Free: no payment is required to keep using it.
 ```
 
 ## Screenshot captions
@@ -97,6 +106,8 @@ Choose visible formats in Impostazioni: eight default outputs, with all 93 input
 
 Screenshots 1, 3 and 4 show 0.4.0; screenshot 2 reuses the unchanged PDF Merge UI from 0.3.1. [Screenshot paths](store-assets/README.md).
 
+Native editor and profile screenshots remain to be captured for the 0.6.0 candidate. Match captions only after verifying the image: “Crop and adjust quality and size on the prepared result”; “Lay out text on A4 or A5”; “Save settings and reuse your profiles”. The app UI is Italian. Do not attribute these new functions to historical screenshots.
+
 ## Copyright and additional license terms
 
 Copyright:
@@ -105,18 +116,18 @@ Copyright:
 Copyright (C) 2026 Salvatore Corsi.
 ```
 
-For Additional license terms, this single public URL is verified. The Store displays it as a link to the complete GPLv3 text:
+Planned Additional license terms URL, to be verified after the 0.6.0 tag is published and before saving it in the portal. It links to the complete GPLv3 text:
 
 ```text
-https://github.com/salvatorecorsi/convert-here/blob/v0.4.0/LICENSE
+https://github.com/salvatorecorsi/convert-here/blob/v0.6.0/LICENSE
 ```
 
-The project uses GPL-3.0-only. The public `ConvertHere-0.4.0-source.zip` asset includes source code, vendored Cargo dependencies and offline build instructions. These field-entry instructions are not part of the public description.
+The project uses GPL-3.0-only. The candidate plans `ConvertHere-0.6.0-source.zip` with source code, vendored Cargo dependencies and offline build instructions. These field-entry instructions are not part of the public description.
 
 ## Submission references
 
-Data controller and developer: **Salvatore Corsi**; publisher: **Salvatore Corsi**. Privacy and support contact: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Verified public 0.4.0 privacy statement](https://github.com/salvatorecorsi/convert-here/blob/v0.4.0/docs/privacy.md). Reserved name: **Convert Here**. See the [submission procedure](store-submission.md) for licensing, identity and current status.
+Data controller and developer: **Salvatore Corsi**; publisher: **Salvatore Corsi**. Privacy and support contact: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Candidate 0.6.0 privacy statement](https://github.com/salvatorecorsi/convert-here/blob/v0.6.0/docs/privacy.md), to be verified after the tag is published. Reserved name: **Convert Here**. See the [submission procedure](store-submission.md) for licensing, identity and current status.
 
-Both listings and GPL terms were saved and reloaded for 0.4.0. Submission 2 has been submitted and is In certification; previous-version evidence remains historical.
+These are local 0.6.0 drafts, not fields already saved in the portal. Evidence for 0.4.0 and other earlier versions remains historical. [Candidate testing instructions](store-testing-0.6.0.md).
 
 Description: 10,000 characters maximum; short description: 1,000 maximum (this draft is below 270); up to 20 features of 200 characters each; release notes: 1,500 maximum, empty for the first submission. [Official MSIX listing limits](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).

@@ -148,6 +148,47 @@ public static class ConverterShellSmokeV2 {
     static void Expect(string label, string[] actual, string[] expected) {
         if (String.Join("|", actual) != String.Join("|", expected)) throw new Exception(label + ": " + String.Join(", ", actual));
     }
+    static string ProfilePreferences(ulong revision) {
+        return "{\"enabled_output_formats\":[\"png\",\"webp\",\"pdf\"],\"conversion_profiles\":[{\"id\":\"0123456789abcdef0123456789abcdef\",\"revision\":" + revision + ",\"name\":\"Salva per web & città\",\"show_in_menu\":true,\"output_extension\":\"webp\",\"input_policy\":\"images\",\"settings\":{\"format\":\"Webp\",\"image\":{\"edit\":{}}}},{\"id\":\"1123456789abcdef0123456789abcdef\",\"revision\":71,\"name\":\"Editor PNG\",\"show_in_menu\":true,\"output_extension\":\"png\",\"input_policy\":\"images\",\"settings\":{\"format\":\"Png\",\"image\":{\"edit\":{}}}},{\"id\":\"2123456789abcdef0123456789abcdef\",\"revision\":71,\"name\":\"Pagina A4\",\"show_in_menu\":true,\"output_extension\":\"pdf\",\"input_policy\":\"images_or_text\",\"settings\":{\"format\":\"Pdf\",\"image\":{\"page\":{}},\"pdf\":{\"action\":\"Compress\"}}}]}";
+    }
+    static void ValidateProfiles(IntPtr parent, string image, string pdf, string audio, string text, string document, string preferences) {
+        string previous = System.IO.File.ReadAllText(preferences);
+        const string custom = "Impostazioni personalizzate…";
+        try {
+            System.IO.File.WriteAllText(preferences, ProfilePreferences(71));
+            Expect("Profili immagini", Visible(parent, image), new string[]{"PNG", "WebP", "PDF", "Salva per web & città · WEBP", "Editor PNG · PNG", "Pagina A4 · PDF", custom});
+            Expect("Editor nascosto per PDF", Visible(parent, pdf), new string[]{"PNG", "PDF · comprimi", custom});
+            Expect("Pagina TXT nativa", Visible(parent, text), new string[]{"PDF", "Pagina A4 · PDF", custom});
+            Expect("Pagina esclusa Word", Visible(parent, document), new string[]{"PDF", custom});
+            Expect("Profili esclusi batch immagini e PDF", Visible(parent, image, pdf), new string[]{"PNG", "PDF (Bulk)", "PDF (Merge)", custom});
+            WithSelection(new string[]{image}, delegate(IntPtr selection) {
+                uint state; Check(((GetState)Slot(parent, 7, typeof(GetState)))(parent, selection, 1, out state));
+                IntPtr enumerator = IntPtr.Zero, profile = IntPtr.Zero;
+                try {
+                    Check(((EnumCommands)Slot(parent, 10, typeof(EnumCommands)))(parent, out enumerator));
+                    var next = (NextCommand)Slot(enumerator, 3, typeof(NextCommand));
+                    for (;;) {
+                        IntPtr child; uint fetched; Check(next(enumerator, 1, out child, out fetched));
+                        if (fetched == 0) break;
+                        if (Title(child) == "Salva per web & città · WEBP") { profile = child; break; }
+                        Marshal.Release(child);
+                    }
+                    if (profile == IntPtr.Zero) throw new Exception("Profilo dinamico mancante");
+                    Guid canonical; Check(((GetCanonical)Slot(profile, 6, typeof(GetCanonical)))(profile, out canonical));
+                    if (canonical != new Guid("d61a4567-89ab-cdef-0123-456789abcdef")) throw new Exception("GUID profilo non stabile");
+                    foreach (string replacement in new string[]{ProfilePreferences(72), "{\"enabled_output_formats\":[\"webp\"]}", ProfilePreferences(71).Replace("[\"png\",\"webp\",\"pdf\"]", "[]")}) {
+                        System.IO.File.WriteAllText(preferences, replacement);
+                        Check(((GetState)Slot(profile, 7, typeof(GetState)))(profile, selection, 1, out state));
+                        if (state != 2 || ((InvokeCommand)Slot(profile, 8, typeof(InvokeCommand)))(profile, selection, IntPtr.Zero) >= 0) throw new Exception("Profilo obsoleto/eliminato/disabilitato eseguibile");
+                    }
+                    System.IO.File.WriteAllText(preferences, ProfilePreferences(71));
+                    WithSelection(new string[]{audio}, delegate(IntPtr incompatible) {
+                        if (((InvokeCommand)Slot(profile, 8, typeof(InvokeCommand)))(profile, incompatible, IntPtr.Zero) >= 0) throw new Exception("Profilo ignora selezione modificata");
+                    });
+                } finally { if (profile != IntPtr.Zero) Marshal.Release(profile); if (enumerator != IntPtr.Zero) Marshal.Release(enumerator); }
+            });
+        } finally { System.IO.File.WriteAllText(preferences, previous); }
+    }
     static void WithSelection(string[] files, Action<IntPtr> action) {
         IntPtr[] pidls = new IntPtr[files.Length];
         IntPtr array = IntPtr.Zero;
@@ -251,6 +292,7 @@ public static class ConverterShellSmokeV2 {
                 string title = Title(child);
                 if ((requested == "mp3" && title == "MP3") ||
                     (requested == "custom" && title == "Impostazioni personalizzate…") ||
+                    (requested == "profile" && title == "Salva per web & città · WEBP") ||
                     (requested == "pdf-bulk" && title == "PDF (Bulk)") ||
                     (requested == "pdf-merge" && title == "PDF (Merge)")) break;
                 if (index >= 127) throw new Exception("Troppi sottocomandi");
@@ -329,6 +371,7 @@ public static class ConverterShellSmokeV2 {
             Expect("HEIF", Visible(command, heif), Visible(command, supported));
             Expect("Sconosciuto", Visible(command, unsupported), new string[]{});
             ValidatePdfActions(command, supported, pdf, audio, preferences);
+            ValidateProfiles(command, supported, pdf, audio, text, document, preferences);
             Marshal.Release(command); command = IntPtr.Zero;
             Marshal.Release(factory); factory = IntPtr.Zero;
             if (unload() != 0) throw new Exception("Oggetti COM non rilasciati");
@@ -385,11 +428,15 @@ try {
     if ($InvokeCaptureFile) {
         foreach ($case in @(
             @{ Command = 'mp3'; Files = @($audio, $video); Prefix = @('--quick', '--target', 'mp3', '--selection-file') },
-            @{ Command = 'custom'; Files = @($audio, $video); Prefix = @('--selection-file') },
+            @{ Command = 'custom'; Files = @($audio, $video); Prefix = @('--custom-settings', '--selection-file') },
             @{ Command = 'pdf-bulk'; Files = @($document, $supported, $pdf); Prefix = @('--quick', '--target', 'pdf', '--pdf-batch', 'bulk', '--selection-file') },
-            @{ Command = 'pdf-merge'; Files = @($pdf, $supported, $document); Prefix = @('--target', 'pdf', '--pdf-batch', 'merge', '--selection-file') }
+            @{ Command = 'pdf-merge'; Files = @($pdf, $supported, $document); Prefix = @('--target', 'pdf', '--pdf-batch', 'merge', '--selection-file') },
+            @{ Command = 'profile'; Files = @($supported); Prefix = @('--quick', '--profile', '0123456789abcdef0123456789abcdef', '--profile-revision', '71', '--selection-file') }
         )) {
             if (Test-Path -LiteralPath $InvokeCaptureFile) { throw 'Il file di cattura deve essere assente prima del test.' }
+            if ($case.Command -ceq 'profile') {
+                [IO.File]::WriteAllText($preferences, '{"enabled_output_formats":["webp"],"conversion_profiles":[{"id":"0123456789abcdef0123456789abcdef","revision":71,"name":"Salva per web & città","show_in_menu":true,"output_extension":"webp","input_policy":"images","settings":{"format":"Webp","image":{"edit":{}}}}]}')
+            }
             [ConverterShellSmokeV2]::CaptureInvoke($library, $InvokeCaptureFile, [string[]]$case.Files, $case.Command)
             $captured = [IO.File]::ReadAllLines($InvokeCaptureFile)
             if ($captured.Count -ne $case.Prefix.Count + 1) { throw ('Numero argomenti Invoke non valido: ' + $case.Command) }
@@ -398,7 +445,7 @@ try {
             }
             $request = $captured[-1]
             try {
-                $selection = [IO.File]::ReadAllText($request) | ConvertFrom-Json
+                $selection = @([IO.File]::ReadAllText($request) | ConvertFrom-Json)
                 if ($selection.Count -ne $case.Files.Count) { throw 'Numero file batch non conservato.' }
                 for ($index = 0; $index -lt $case.Files.Count; $index++) {
                     if ($selection[$index] -cne $case.Files[$index]) { throw 'Ordine o percorso batch non conservato.' }
@@ -408,7 +455,7 @@ try {
                 Remove-Item -LiteralPath $InvokeCaptureFile -Force
             }
         }
-        Write-Output 'Invoke smoke test OK: MP3 e PDF Bulk rapidi; PDF Merge apre GUI senza --quick; personalizzate e ordine/percorso JSON conservati.'
+        Write-Output 'Invoke smoke test OK: conversioni rapide/profilo ID-revisione; PDF Merge GUI; personalizzate con --custom-settings; ordine/percorso JSON conservati.'
     }
 } finally {
     [Environment]::SetEnvironmentVariable('APPDATA', $previousAppData, 'Process')

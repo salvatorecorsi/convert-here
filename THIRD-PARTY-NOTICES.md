@@ -1,6 +1,14 @@
 # Licenza del progetto e componenti di terze parti
 
-Il codice originale di Convert Here e distribuito sotto **GPL-3.0-only**, Copyright (C) 2026 Salvatore Corsi. Il testo integrale e in [LICENSE](LICENSE), i [sorgenti del progetto](https://github.com/salvatorecorsi/convert-here) sono pubblici. La release 0.4.0 in preparazione prevede anche `ConvertHere-0.4.0-source.zip`, con il commit corrispondente, entrambi i lockfile, dipendenze Cargo vendorizzate e istruzioni di build offline. Dipendenze, font e motori esterni mantengono i propri copyright e le proprie licenze; la GPL del codice originale non sostituisce questi avvisi.
+Il codice originale di Convert Here e distribuito sotto **GPL-3.0-only**, Copyright (C) 2026 Salvatore Corsi. Il testo integrale e in [LICENSE](LICENSE), i [sorgenti del progetto](https://github.com/salvatorecorsi/convert-here) sono pubblici. La release 0.4.0 include `ConvertHere-0.4.0-source.zip`, con il commit corrispondente, entrambi i lockfile, dipendenze Cargo vendorizzate e istruzioni di build offline. Il ramo di sviluppo aggiunge l'editor e i profili; una nuova release non e ancora attestata. Dipendenze, font e motori esterni mantengono i propri copyright e le proprie licenze; la GPL del codice originale non sostituisce questi avvisi.
+
+## Codec WebP integrato nel ramo di sviluppo
+
+L'editor usa [libwebp-sys 0.14.4](https://crates.io/crates/libwebp-sys/0.14.4), collegato staticamente alla libreria C **libwebp 1.6.0** contenuta nel pacchetto, per la codifica WebP con qualita regolabile. Non e un motore da scaricare: la codifica avviene nel processo locale e non invia immagini a un servizio remoto.
+
+Il pacchetto Cargo dichiara **MIT** per il wrapper Rust. L'archivio pubblicato non include un avviso MIT autonomo del wrapper: il collector conserva gli autori dichiarati, l'URL del pacchetto esatto e il commit VCS, e aggiunge il [testo standard SPDX della licenza dichiarata](release-support/licenses/README.md), identificato esplicitamente come tale. Non attribuisce un anno o un titolare di copyright ai segnaposto del testo standard.
+
+La libreria C mantiene i file originali `vendor/COPYING` (BSD a tre clausole, copyright Google) e `vendor/PATENTS` (concessione aggiuntiva dei diritti sui brevetti); entrambi sono inclusi negli avvisi raccolti. Anche `glob`, dipendenza di compilazione, conserva la propria licenza. L'inventario e generato dai lockfile effettivi, senza dedurre il numero dei componenti da questa descrizione.
 
 ## Motori esterni
 

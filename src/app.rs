@@ -1,5 +1,6 @@
 use crate::{
     file_icons::FileIcons,
+    image_editor::{self, EditorAction, ImageEditor},
     theme::{self, FluentIcon},
 };
 use eframe::egui::{self, Color32, RichText};
@@ -13,6 +14,7 @@ use std::sync::{
 };
 use the_converter::platform::display_path;
 use the_converter::{
+    conversion_profiles::{ConversionProfile, ConversionProfiles, MAX_PREFERENCES_BYTES},
     engine,
     model::{
         ConversionSettings, CsvDelimiter, MediaKind, OutputFormat, PdfAction, VideoCodec,
@@ -32,6 +34,23 @@ pub fn launch(
     target: Option<OutputFormat>,
     startup_warning: Option<String>,
 ) -> eframe::Result {
+    launch_mode(files, target, startup_warning, false)
+}
+
+pub fn launch_custom(
+    files: Vec<PathBuf>,
+    target: Option<OutputFormat>,
+    startup_warning: Option<String>,
+) -> eframe::Result {
+    launch_mode(files, target, startup_warning, true)
+}
+
+fn launch_mode(
+    files: Vec<PathBuf>,
+    target: Option<OutputFormat>,
+    startup_warning: Option<String>,
+    custom: bool,
+) -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Convert Here")
@@ -48,6 +67,12 @@ pub fn launch(
         Box::new(move |cc| {
             configure_style(&cc.egui_ctx);
             let mut app = ConverterApp::new(files, target);
+            if custom {
+                app.advanced = true;
+                if app.items.len() == 1 && image_editor::editable(&app.items[0].path) {
+                    app.open_editor(Some(app.items[0].path.clone()), None);
+                }
+            }
             if let Some(warning) = startup_warning {
                 app.notice = Some(match app.notice.take() {
                     Some(notice) => format!("{warning}\n{notice}"),
@@ -103,6 +128,8 @@ struct SavedState {
     settings: ConversionSettings,
     overrides: BTreeMap<String, PathBuf>,
     enabled_output_formats: OutputPreferences,
+    conversion_profiles: ConversionProfiles,
+    default_profile_id: Option<String>,
     preset: usize,
 }
 
@@ -116,7 +143,16 @@ struct SavedReport {
 
 fn load_saved() -> SavedState {
     settings_path()
-        .and_then(|path| std::fs::read(path).ok())
+        .and_then(|path| {
+            use std::io::Read;
+            let mut bytes = Vec::new();
+            std::fs::File::open(path)
+                .ok()?
+                .take(MAX_PREFERENCES_BYTES + 1)
+                .read_to_end(&mut bytes)
+                .ok()?;
+            (bytes.len() as u64 <= MAX_PREFERENCES_BYTES).then_some(bytes)
+        })
         .and_then(|bytes| serde_json::from_slice(&bytes).ok())
         .unwrap_or_default()
 }
@@ -141,6 +177,11 @@ fn persist_preferences(
     std::fs::create_dir_all(parent)?;
     use std::io::Write;
     let bytes = serde_json::to_vec_pretty(saved).map_err(std::io::Error::other)?;
+    if bytes.len() as u64 > MAX_PREFERENCES_BYTES {
+        return Err(std::io::Error::other(
+            "Le preferenze superano il limite di 256 KiB. Riduci il numero o la dimensione dei profili.",
+        ));
+    }
     let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
     temporary.write_all(&bytes)?;
     temporary.flush()?;
@@ -152,6 +193,32 @@ pub fn quick_configuration() -> (ConversionSettings, ToolPaths) {
     let saved = load_saved();
     let tools = ToolPaths::configured(&saved.overrides);
     (saved.settings, tools)
+}
+
+pub fn quick_profile_configuration(
+    id: &str,
+    revision: Option<u64>,
+) -> anyhow::Result<(ConversionProfile, ToolPaths)> {
+    profile_configuration(&load_saved(), id, revision)
+}
+
+fn profile_configuration(
+    saved: &SavedState,
+    id: &str,
+    revision: Option<u64>,
+) -> anyhow::Result<(ConversionProfile, ToolPaths)> {
+    let profile = saved.conversion_profiles.resolve(id, revision)?;
+    anyhow::ensure!(
+        profile.show_in_menu,
+        "Il profilo non è attivo nel menu Converti in. Riapri il menu dopo averlo abilitato."
+    );
+    anyhow::ensure!(
+        saved
+            .enabled_output_formats
+            .contains(profile.settings.format),
+        "Il formato di uscita del profilo è disattivato. Abilitalo nelle Impostazioni."
+    );
+    Ok((profile.clone(), ToolPaths::configured(&saved.overrides)))
 }
 
 pub fn report_path() -> Option<PathBuf> {
@@ -170,6 +237,8 @@ impl Default for SavedState {
             settings: ConversionSettings::default(),
             overrides: BTreeMap::new(),
             enabled_output_formats: OutputPreferences::default(),
+            conversion_profiles: ConversionProfiles::default(),
+            default_profile_id: None,
             preset: 1,
         }
     }
@@ -219,8 +288,17 @@ enum MainView {
     History,
 }
 
+struct ProfileDialog {
+    id: Option<String>,
+    name: String,
+    show_in_menu: bool,
+    settings: ConversionSettings,
+}
+
 pub struct ConverterApp {
     pdf_merge: Option<crate::pdf_merge_app::PdfMergeApp>,
+    image_editor: Option<ImageEditor>,
+    profile_dialog: Option<ProfileDialog>,
     view: MainView,
     conversion_started: Option<std::time::Instant>,
     conversion_elapsed: std::time::Duration,
@@ -247,12 +325,29 @@ pub struct ConverterApp {
 impl ConverterApp {
     fn new(files: Vec<PathBuf>, target: Option<OutputFormat>) -> Self {
         let mut saved = load_saved();
+        if target.is_none()
+            && !files.is_empty()
+            && let Some(profile) = saved
+                .default_profile_id
+                .as_deref()
+                .and_then(|id| saved.conversion_profiles.get(id))
+            && saved
+                .enabled_output_formats
+                .contains(profile.settings.format)
+            && profile
+                .validate_for_inputs(files.iter().map(PathBuf::as_path))
+                .is_ok()
+        {
+            saved.settings = profile.settings.clone();
+        }
         if let Some(format) = target {
-            saved.settings.format = format;
+            saved.settings.select_output_format(format);
         }
         let tools = ToolPaths::configured(&saved.overrides);
         let mut app = Self {
             pdf_merge: None,
+            image_editor: None,
+            profile_dialog: None,
             view: MainView::Files,
             conversion_started: None,
             conversion_elapsed: std::time::Duration::ZERO,
@@ -301,6 +396,369 @@ impl ConverterApp {
         }
     }
 
+    fn open_editor(&mut self, input: Option<PathBuf>, profile: Option<ConversionProfile>) {
+        if self.running {
+            return;
+        }
+        let editing_profile = profile.is_some();
+        if profile.as_ref().is_some_and(|profile| {
+            !self
+                .saved
+                .enabled_output_formats
+                .contains(profile.settings.format)
+        }) {
+            self.notice=Some("Il formato di questo profilo è disattivato. Riabilitalo in Formati di uscita prima di modificarne le opzioni.".into());
+            return;
+        }
+        let profile = profile.or_else(|| {
+            let input = input.as_ref()?;
+            self.saved
+                .default_profile_id
+                .as_deref()
+                .and_then(|id| self.saved.conversion_profiles.get(id))
+                .filter(|profile| {
+                    self.saved
+                        .enabled_output_formats
+                        .contains(profile.settings.format)
+                })
+                .filter(|profile| profile.validate_for_inputs([input.as_path()]).is_ok())
+                .cloned()
+        });
+        let text = input.as_ref().is_some_and(|path| {
+            path.extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("txt"))
+        }) || (input.is_none()
+            && profile.as_ref().is_none_or(|profile| {
+                profile.settings.image.page.is_some() && profile.settings.image.edit.is_none()
+            }));
+        let settings = profile.as_ref().map_or_else(
+            || self.saved.settings.clone(),
+            |profile| profile.settings.clone(),
+        );
+        let formats = self
+            .saved
+            .enabled_output_formats
+            .filter(OutputFormat::ALL)
+            .collect();
+        let mut editor = ImageEditor::new(input, text, settings, self.tools.clone(), formats);
+        if editing_profile && let Some(profile) = profile {
+            editor.editing_profile(profile.id, profile.name, profile.show_in_menu);
+        }
+        self.image_editor = Some(editor);
+        self.show_tools = false;
+    }
+
+    fn apply_profile(&mut self, profile: &ConversionProfile) {
+        if !self.items.is_empty()
+            && let Err(error) =
+                profile.validate_for_inputs(self.items.iter().map(|item| item.path.as_path()))
+        {
+            self.notice = Some(format!("{error:#}"));
+            return;
+        }
+        if !self
+            .saved
+            .enabled_output_formats
+            .contains(profile.settings.format)
+        {
+            self.notice =
+                Some("Abilita il formato di uscita del profilo nelle Impostazioni.".into());
+            return;
+        }
+        self.saved.settings = profile.settings.clone();
+        self.saved.preset = 3;
+        self.settings_dirty = true;
+        self.persist_with_force(true);
+    }
+
+    fn editor_action(&mut self, action: EditorAction) {
+        match action {
+            EditorAction::Back => {
+                self.image_editor = None;
+            }
+            EditorAction::SetDefaults(settings) => {
+                self.saved.settings = settings;
+                self.saved.preset = 3;
+                self.saved.default_profile_id = None;
+                self.settings_dirty = true;
+                self.persist_with_force(true);
+                let error = self.settings_dirty;
+                let message = if error {
+                    self.notice
+                        .clone()
+                        .unwrap_or_else(|| "Impossibile salvare le impostazioni.".into())
+                } else {
+                    "Impostazioni predefinite salvate. Gli originali restano invariati.".into()
+                };
+                if let Some(editor) = &mut self.image_editor {
+                    editor.notify(message, error);
+                }
+            }
+            EditorAction::SaveProfile {
+                id,
+                name,
+                show_in_menu,
+                settings,
+            } => {
+                let result = if let Some(id) = id {
+                    self.saved
+                        .conversion_profiles
+                        .update(&id, name.clone(), show_in_menu, settings)
+                        .map(|()| id)
+                } else {
+                    self.saved
+                        .conversion_profiles
+                        .create(name.clone(), show_in_menu, settings)
+                };
+                match result {
+                    Ok(id) => {
+                        self.settings_dirty = true;
+                        self.persist_with_force(true);
+                        let error = self.settings_dirty;
+                        let message = if error {
+                            self.notice
+                                .clone()
+                                .unwrap_or_else(|| "Impossibile salvare il profilo.".into())
+                        } else {
+                            format!(
+                                "Profilo «{}» salvato. Il menu Converti in si aggiorna alla prossima apertura.",
+                                name.trim()
+                            )
+                        };
+                        if let Some(editor) = &mut self.image_editor {
+                            editor.editing_profile(id, name.trim().into(), show_in_menu);
+                            editor.notify(message, error);
+                        }
+                    }
+                    Err(error) => {
+                        if let Some(editor) = &mut self.image_editor {
+                            editor.notify(format!("{error:#}"), true);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn profile_settings(&mut self, ui: &mut egui::Ui) {
+        let profiles: Vec<_> = self.saved.conversion_profiles.iter().cloned().collect();
+        let mut edit = None;
+        let mut apply = None;
+        let mut rename = None;
+        let mut remove = None;
+        let mut update = None;
+        let mut visibility = None;
+        let mut make_default = None;
+        let mut create_web = false;
+        theme::show_card(ui, |ui| {
+            ui.label(theme::heading("I miei profili", theme::SUBTITLE));
+            ui.label("Salva formato, qualità e opzioni. I profili visibili compaiono in «Converti in» ed eseguono subito la conversione.");
+            ui.label(format!(
+                "{} di 32 salvati · massimo 8 nel menu",
+                profiles.len()
+            ));
+            if ui.button("Crea «Salva per web»").clicked() {
+                create_web = true;
+            }
+            ui.label(RichText::new("WebP, massimo 300 kB: adatta qualità e, se necessario, riduce le dimensioni. Potrai modificarlo nell’editor.").small().weak());
+            if profiles.is_empty() {
+                ui.label("Puoi creare altri profili dalle opzioni di conversione o dall’editor.");
+            }
+            for profile in &profiles {
+                ui.separator();
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(theme::heading(&profile.name, theme::BODY));
+                    ui.label(profile_summary(profile));
+                    if self.saved.default_profile_id.as_deref() == Some(profile.id.as_str()) {
+                        ui.label("Predefinito");
+                    }
+                });
+                let mut visible = profile.show_in_menu;
+                if ui.checkbox(&mut visible, "Mostra in Converti in").changed() {
+                    visibility = Some((profile.id.clone(), visible));
+                }
+                if !self
+                    .saved
+                    .enabled_output_formats
+                    .contains(profile.settings.format)
+                {
+                    ui.label(RichText::new("Il formato è disattivato: riabilitalo in Formati di uscita per vedere questo profilo nel menu.").color(theme::palette(ui.ctx()).secondary));
+                }
+                ui.horizontal_wrapped(|ui| {
+                    if ui.button("Applica").clicked() {
+                        apply = Some(profile.clone());
+                    }
+                    if ui.button("Modifica opzioni…").clicked() {
+                        edit = Some(profile.clone());
+                    }
+                    if ui.button("Rinomina…").clicked() {
+                        rename = Some(profile.clone());
+                    }
+                    if ui.button("Aggiorna con le opzioni correnti").clicked() {
+                        update = Some(profile.clone());
+                    }
+                    if ui.button("Usa come predefinito").clicked() {
+                        make_default = Some(profile.clone());
+                    }
+                    if ui.button("Elimina").clicked() {
+                        remove = Some(profile.id.clone());
+                    }
+                });
+            }
+        });
+        if create_web {
+            let mut settings = ConversionSettings {
+                format: OutputFormat::Webp,
+                ..Default::default()
+            };
+            settings.output_dir = self.saved.settings.output_dir.clone();
+            settings.image.quality = 90;
+            settings.image.edit = Some(the_converter::image_edit::ImageEditSettings {
+                max_bytes: Some(300_000),
+                allow_downsize: true,
+                ..Default::default()
+            });
+            match self
+                .saved
+                .conversion_profiles
+                .create("Salva per web".into(), true, settings)
+            {
+                Ok(id) => {
+                    self.settings_dirty = true;
+                    self.persist_with_force(true);
+                    if let Some(profile) = self.saved.conversion_profiles.get(&id).cloned() {
+                        edit = Some(profile);
+                    }
+                }
+                Err(error) => self.notice = Some(format!("{error:#}")),
+            }
+        }
+        if let Some((id, visible)) = visibility {
+            match self
+                .saved
+                .conversion_profiles
+                .set_show_in_menu(&id, visible)
+            {
+                Ok(()) => self.settings_dirty = true,
+                Err(error) => self.notice = Some(format!("{error:#}")),
+            }
+        }
+        if let Some(id) = remove {
+            self.saved.conversion_profiles.remove(&id);
+            if self.saved.default_profile_id.as_deref() == Some(id.as_str()) {
+                self.saved.default_profile_id = None;
+            }
+            self.settings_dirty = true;
+        }
+        if let Some(profile) = update {
+            match self.saved.conversion_profiles.update(
+                &profile.id,
+                profile.name,
+                profile.show_in_menu,
+                self.saved.settings.clone(),
+            ) {
+                Ok(()) => self.settings_dirty = true,
+                Err(error) => self.notice = Some(format!("{error:#}")),
+            }
+        }
+        if let Some(profile) = rename {
+            self.profile_dialog = Some(ProfileDialog {
+                id: Some(profile.id),
+                name: profile.name,
+                show_in_menu: profile.show_in_menu,
+                settings: profile.settings,
+            });
+        }
+        if let Some(profile) = make_default {
+            self.saved.default_profile_id = Some(profile.id.clone());
+            self.saved.settings = profile.settings;
+            self.saved.preset = 3;
+            self.sync_output_choice();
+            self.settings_dirty = true;
+        }
+        if let Some(profile) = apply {
+            self.apply_profile(&profile);
+            self.show_tools = false;
+        }
+        if let Some(profile) = edit {
+            if matches!(
+                profile.settings.format,
+                OutputFormat::Png | OutputFormat::Jpg | OutputFormat::Webp
+            ) || profile.settings.image.edit.is_some()
+                || profile.settings.image.page.is_some()
+            {
+                let input = self
+                    .items
+                    .iter()
+                    .find(|item| {
+                        image_editor::editable(&item.path)
+                            && profile.validate_for_inputs([item.path.as_path()]).is_ok()
+                    })
+                    .map(|item| item.path.clone());
+                self.open_editor(input, Some(profile));
+            } else {
+                self.apply_profile(&profile);
+                self.advanced = true;
+                self.show_tools = false;
+                self.notice =
+                    Some("Modifica le opzioni, poi aggiorna il profilo nelle Impostazioni.".into());
+            }
+        }
+        if self.settings_dirty {
+            self.persist_with_force(true);
+        }
+    }
+
+    fn profile_dialog(&mut self, ctx: &egui::Context) {
+        let Some(mut dialog) = self.profile_dialog.take() else {
+            return;
+        };
+        let mut save = false;
+        let mut close = false;
+        egui::Modal::new(egui::Id::new("save_conversion_profile")).show(ctx,|ui| {
+            ui.set_width(430.0);
+            ui.label(theme::heading(if dialog.id.is_some(){"Aggiorna profilo"}else{"Salva profilo"},theme::SUBTITLE));
+            ui.label(format!("Formato: {}. Le opzioni correnti saranno riutilizzate per ogni conversione del profilo.",dialog.settings.format.label()));
+            ui.add(egui::TextEdit::singleline(&mut dialog.name).hint_text("Nome profilo").char_limit(40));
+            ui.checkbox(&mut dialog.show_in_menu,"Mostra in Converti in");
+            ui.horizontal(|ui|{
+                save=ui.add_enabled(!dialog.name.trim().is_empty(),egui::Button::new("Salva")).clicked();
+                close=ui.button("Annulla").clicked();
+            });
+        });
+        if save {
+            let result = if let Some(id) = &dialog.id {
+                self.saved
+                    .conversion_profiles
+                    .update(
+                        id,
+                        dialog.name.clone(),
+                        dialog.show_in_menu,
+                        dialog.settings.clone(),
+                    )
+                    .map(|()| id.clone())
+            } else {
+                self.saved.conversion_profiles.create(
+                    dialog.name.clone(),
+                    dialog.show_in_menu,
+                    dialog.settings.clone(),
+                )
+            };
+            match result {
+                Ok(_) => {
+                    self.settings_dirty = true;
+                    self.persist_with_force(true);
+                }
+                Err(error) => {
+                    self.notice = Some(format!("{error:#}"));
+                    self.profile_dialog = Some(dialog);
+                }
+            }
+        } else if !close && !ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
+            self.profile_dialog = Some(dialog);
+        }
+    }
+
     fn add_files(&mut self, paths: Vec<PathBuf>) {
         let mut rejected = 0;
         for path in paths {
@@ -325,7 +783,7 @@ impl ConverterApp {
         }
         let common = self.common_formats();
         if !common.is_empty() && !common.contains(&self.saved.settings.format) {
-            self.saved.settings.format = common[0];
+            self.saved.settings.select_output_format(common[0]);
             self.settings_dirty = true;
         }
         if (self.saved.settings.pdf.action == PdfAction::Split
@@ -362,7 +820,7 @@ impl ConverterApp {
         if !available.contains(&self.saved.settings.format)
             && let Some(format) = available.first()
         {
-            self.saved.settings.format = *format;
+            self.saved.settings.select_output_format(*format);
             self.saved.settings.audio.sample_rate = 0;
         }
     }
@@ -892,6 +1350,63 @@ impl ConverterApp {
         let colors = theme::palette(ui.ctx());
         ui.label(theme::heading("Opzioni", theme::SUBTITLE));
         ui.add_space(8.0);
+        let profiles: Vec<_> = self
+            .saved
+            .conversion_profiles
+            .iter()
+            .filter(|profile| {
+                self.saved
+                    .enabled_output_formats
+                    .contains(profile.settings.format)
+                    && (self.items.is_empty()
+                        || profile
+                            .validate_for_inputs(self.items.iter().map(|item| item.path.as_path()))
+                            .is_ok())
+            })
+            .cloned()
+            .collect();
+        let mut selected_profile = None;
+        if !profiles.is_empty() {
+            egui::ComboBox::from_id_salt("conversion_profile_choice")
+                .selected_text("Applica un profilo…")
+                .show_ui(ui, |ui| {
+                    for profile in profiles {
+                        if ui.selectable_label(false, &profile.name).clicked() {
+                            selected_profile = Some(profile);
+                        }
+                    }
+                });
+        }
+        if let Some(profile) = selected_profile {
+            self.apply_profile(&profile);
+        }
+        if ui
+            .small_button("Salva queste opzioni come profilo…")
+            .clicked()
+        {
+            self.profile_dialog = Some(ProfileDialog {
+                id: None,
+                name: String::new(),
+                show_in_menu: true,
+                settings: self.saved.settings.clone(),
+            });
+        }
+        if let Some(path) = self
+            .items
+            .iter()
+            .find(|item| image_editor::editable(&item.path))
+            .map(|item| item.path.clone())
+            && ui
+                .button(if MediaKind::from_path(&path) == MediaKind::Image {
+                    "Modifica immagine…"
+                } else {
+                    "Impagina testo…"
+                })
+                .clicked()
+        {
+            self.open_editor(Some(path), None);
+        }
+        ui.add_space(8.0);
         let formats = self.common_formats();
         let before = self.saved.settings.format;
         setting_card(ui, "Formato", "Scegli il file da creare", |ui| {
@@ -931,6 +1446,9 @@ impl ConverterApp {
             self.show_tools = true;
         }
         if before != self.saved.settings.format {
+            self.saved
+                .settings
+                .select_output_format(self.saved.settings.format);
             self.settings_dirty = true;
             if self
                 .saved
@@ -1489,6 +2007,12 @@ impl ConverterApp {
             ));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if ui
+                    .add_enabled(!self.running, egui::Button::new("Nuovo foglio…"))
+                    .clicked()
+                {
+                    self.open_editor(None, None);
+                }
+                if ui
                     .add_enabled(
                         !self.running,
                         egui::Button::new(theme::button_text(
@@ -1545,6 +2069,7 @@ impl ConverterApp {
             return;
         }
         let mut remove = None;
+        let mut edit_requested = None;
         let mut reorder = None;
         let merging = self.saved.settings.format == OutputFormat::Pdf
             && self.saved.settings.pdf.action == PdfAction::Merge;
@@ -1560,7 +2085,12 @@ impl ConverterApp {
                         ui.horizontal(|ui| {
                             file_icon(ui, icons, &item.path);
                             let name_width = (ui.available_width()
-                                - if merging { 150.0 } else { 105.0 })
+                                - if merging { 150.0 } else { 105.0 }
+                                - if image_editor::editable(&item.path) {
+                                    80.0
+                                } else {
+                                    0.0
+                                })
                             .max(80.0);
                             ui.allocate_ui_with_layout(
                                 egui::vec2(name_width, 42.0),
@@ -1588,6 +2118,16 @@ impl ConverterApp {
                                     );
                                 },
                             );
+                            if image_editor::editable(&item.path)
+                                && ui
+                                    .add_enabled(
+                                        !self.running,
+                                        egui::Button::new("Modifica…").small(),
+                                    )
+                                    .clicked()
+                            {
+                                edit_requested = Some(item.path.clone());
+                            }
                             ui.with_layout(
                                 egui::Layout::right_to_left(egui::Align::Center),
                                 |ui| {
@@ -1715,6 +2255,9 @@ impl ConverterApp {
             });
         if let Some(error) = action_error {
             self.notice = Some(error);
+        }
+        if let Some(path) = edit_requested {
+            self.open_editor(Some(path), None);
         }
         if let Some(index) = remove {
             if index == usize::MAX {
@@ -1980,6 +2523,8 @@ impl ConverterApp {
                 egui::ScrollArea::vertical().id_salt("tools_scroll").max_height((ui.available_height()-60.0).max(120.0)).show(ui, |ui| {
                     ui.add_enabled_ui(!self.running, |ui| self.output_format_settings(ui));
                     ui.add_space(8.0);
+                    ui.add_enabled_ui(!self.running, |ui| self.profile_settings(ui));
+                    ui.add_space(8.0);
                     theme::show_card(ui, |ui| {
                         ui.label(theme::heading("Aspetto",theme::SUBTITLE));
                         ui.label(RichText::new("Segui Windows oppure prova un tema.").color(theme::palette(ui.ctx()).secondary));
@@ -2122,6 +2667,13 @@ impl eframe::App for ConverterApp {
                 false,
             ));
         }
+        if let Some(editor) = &mut self.image_editor {
+            let action = editor.show(ctx);
+            if let Some(action) = action {
+                self.editor_action(action);
+            }
+            return;
+        }
         if self.pdf_merge.is_some() {
             let busy = self.pdf_merge.as_ref().is_some_and(|merge| merge.is_busy());
             let mut go_back = false;
@@ -2237,6 +2789,7 @@ impl eframe::App for ConverterApp {
         }
         self.runtime_install_confirmation(ctx);
         self.license_dialog(ctx);
+        self.profile_dialog(ctx);
         if self.running {
             ctx.request_repaint_after(std::time::Duration::from_millis(100));
         }
@@ -2988,6 +3541,31 @@ fn width_setting(ui: &mut egui::Ui, id: &str, width: &mut Option<u32>) {
     );
 }
 
+fn profile_summary(profile: &ConversionProfile) -> String {
+    let mut summary = profile.settings.format.label().to_owned();
+    if let Some(edit) = &profile.settings.image.edit {
+        if let Some(bytes) = edit.max_bytes {
+            summary.push_str(&format!(" · massimo {:.0} kB", bytes as f64 / 1000.0));
+        }
+        if edit.allow_downsize {
+            summary.push_str(" · riduzione dimensioni consentita");
+        }
+        if edit.crop.is_some() {
+            summary.push_str(" · ritaglio");
+        }
+        if let Some(canvas) = &edit.canvas {
+            summary.push_str(&format!(" · tela {} × {}", canvas.width, canvas.height));
+        }
+    }
+    if let Some(page) = &profile.settings.image.page {
+        summary.push_str(match page.paper {
+            the_converter::page_layout::PaperSize::A4 => " · A4",
+            the_converter::page_layout::PaperSize::A5 => " · A5",
+        });
+    }
+    summary
+}
+
 fn quality_applicable(format: OutputFormat) -> bool {
     matches!(
         format,
@@ -3055,6 +3633,69 @@ fn get_tool(tools: &ToolPaths, key: &str) -> Option<PathBuf> {
 #[cfg(test)]
 mod queue_reader_tests {
     use super::*;
+
+    #[test]
+    fn saved_web_profile_roundtrips_without_losing_legacy_defaults_and_obeys_menu_settings() {
+        let mut saved: SavedState=serde_json::from_str(r#"{"settings":{"format":"Jpg","image":{"quality":73,"width":640}},"overrides":{},"preset":3}"#).unwrap();
+        assert!(saved.conversion_profiles.is_empty());
+        assert_eq!(saved.settings.image.quality, 73);
+        assert_eq!(saved.settings.image.width, Some(640));
+        let mut recipe = ConversionSettings {
+            format: OutputFormat::Webp,
+            ..Default::default()
+        };
+        recipe.image.edit = Some(the_converter::image_edit::ImageEditSettings {
+            max_bytes: Some(300_000),
+            allow_downsize: true,
+            ..Default::default()
+        });
+        let id = saved
+            .conversion_profiles
+            .create("Salva per web".into(), true, recipe)
+            .unwrap();
+        saved.default_profile_id = Some(id.clone());
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("preferences.json");
+        persist_preferences(&path, &saved, &mut None, std::time::Instant::now(), true).unwrap();
+        let mut loaded: SavedState =
+            serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        assert_eq!(loaded.default_profile_id.as_deref(), Some(id.as_str()));
+        let revision = loaded.conversion_profiles.get(&id).unwrap().revision;
+        let (profile, _) = profile_configuration(&loaded, &id, Some(revision)).unwrap();
+        assert_eq!(
+            profile.settings.image.edit.unwrap().max_bytes,
+            Some(300_000)
+        );
+        loaded
+            .enabled_output_formats
+            .set_enabled(OutputFormat::Webp, false);
+        assert!(profile_configuration(&loaded, &id, Some(revision)).is_err());
+        loaded
+            .enabled_output_formats
+            .set_enabled(OutputFormat::Webp, true);
+        loaded
+            .conversion_profiles
+            .set_show_in_menu(&id, false)
+            .unwrap();
+        assert!(profile_configuration(&loaded, &id, None).is_err());
+    }
+
+    #[test]
+    fn oversized_preferences_never_replace_the_last_valid_file() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("preferences.json");
+        let mut saved = SavedState::default();
+        persist_preferences(&path, &saved, &mut None, std::time::Instant::now(), true).unwrap();
+        let previous = std::fs::read(&path).unwrap();
+        saved.overrides.insert(
+            "ffmpeg".into(),
+            PathBuf::from("x".repeat(MAX_PREFERENCES_BYTES as usize)),
+        );
+        assert!(
+            persist_preferences(&path, &saved, &mut None, std::time::Instant::now(), true).is_err()
+        );
+        assert_eq!(std::fs::read(&path).unwrap(), previous);
+    }
 
     #[test]
     fn preference_drag_updates_are_throttled_and_close_flushes_latest_values() {

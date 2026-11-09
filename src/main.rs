@@ -2,6 +2,7 @@
 mod app;
 mod command;
 pub mod file_icons;
+pub mod image_editor;
 pub mod pdf_merge_app;
 pub mod pdf_merge_ui;
 pub mod theme;

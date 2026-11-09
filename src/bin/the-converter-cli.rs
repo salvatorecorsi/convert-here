@@ -4,6 +4,8 @@ mod app;
 mod command;
 #[path = "../file_icons.rs"]
 pub mod file_icons;
+#[path = "../image_editor.rs"]
+pub mod image_editor;
 #[path = "../pdf_merge_app.rs"]
 pub mod pdf_merge_app;
 #[path = "../pdf_merge_ui.rs"]

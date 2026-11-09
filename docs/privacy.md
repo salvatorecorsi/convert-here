@@ -1,6 +1,6 @@
 # Convert Here — informativa sulla privacy / privacy statement
 
-Informativa aggiornata al 4 novembre 2026, relativa alle funzioni di Convert Here 0.4.0.
+Informativa aggiornata al 9 novembre 2026, relativa a Convert Here 0.6.0, versione candidata alla pubblicazione.
 
 | Dato | Valore |
 | --- | --- |
@@ -30,7 +30,9 @@ Compressione, divisione e unione dei PDF avvengono nell'app sul PC, senza un ser
 
 ### Informazioni conservate sul dispositivo
 
-L'app salva preferenze di conversione, elenco dei formati di uscita visibili, lingua e attivazione OCR, separatore CSV, operazione PDF, cartella di destinazione e percorsi degli strumenti nelle proprie cartelle utente. La coda rapida registra nomi e percorsi dei file, destinazioni, formato, impostazioni, motori utilizzati, date, avanzamento ed eventuali errori. L'ultimo resoconto contiene data, formato, risultati e messaggi di errore, che possono includere percorsi o diagnostica dei motori.
+L'app salva preferenze di conversione, elenco dei formati di uscita visibili, lingua e attivazione OCR, separatore CSV, operazione PDF, cartella di destinazione e percorsi degli strumenti nelle proprie cartelle utente. Salva inoltre profili con nome, opzioni, visibilità nel menu e scelta del predefinito: possono includere ritaglio relativo, dimensioni, tela, colore, qualità, limite di peso e impostazioni pagina/testo, oltre all'eventuale cartella di destinazione. I profili non includono il file di prova, il suo contenuto o il testo scritto nell'editor. La coda rapida registra nomi e percorsi dei file, destinazioni, formato, impostazioni, motori utilizzati, date, avanzamento ed eventuali errori. L'ultimo resoconto contiene data, formato, risultati e messaggi di errore, che possono includere percorsi o diagnostica dei motori.
+
+Nell'editor, immagine di lavoro, testo digitato e anteprime codificate sono mantenuti in memoria durante la sessione e non sono salvati automaticamente nelle preferenze o nei profili. Il risultato viene scritto con Salva con nome. PNG, JPEG, WebP e l'impaginazione nativa A4/A5 sono elaborati localmente; il codec WebP integrato non carica immagini su un servizio remoto. Per i formati che richiedono libheif possono essere usati i temporanei del decoder descritti sotto. Non è prevista una cronologia persistente dei contenuti dell'editor.
 
 Questi dati sono memorizzati come file locali, fra cui `preferences.json`, `report-last.json` e i record `job.json`, nelle cartelle dati dell'app sotto `%APPDATA%` e `%LOCALAPPDATA%`. In un'installazione MSIX Windows puo reindirizzare tali percorsi nei dati privati del pacchetto. I file di preferenze, stato e risultato non sono cifrati dall'app: sono soggetti ai permessi e alle protezioni dell'account Windows e del dispositivo.
 
@@ -44,7 +46,7 @@ Preferenze e ultimo resoconto non hanno una scadenza automatica. Per rimuovere m
 
 La sezione **Motori** delle **Impostazioni** contiene collegamenti ai siti di FFmpeg, Poppler, LibreOffice, Tesseract e libheif. Selezionare un collegamento apre il browser configurato, cui si applicano le regole del sito visitato e del browser.
 
-Nella 0.4.0 puoi richiedere esplicitamente il download di FFmpeg e Poppler nelle Impostazioni, anche nell'edizione Store. La conferma mostra origine, versione, dimensioni, licenze e destinazione. Il download usa HTTPS verso le distribuzioni Gyan e Poppler per Windows ospitate su GitHub e i relativi CDN. I destinatari ricevono l'indirizzo IP e i normali dati della richiesta HTTP, fra cui User-Agent e versione dell'app; **non vengono caricati i file scelti per la conversione**. I distributori applicano le proprie regole ai dati delle richieste.
+Dalla versione 0.4.0 puoi richiedere esplicitamente il download di FFmpeg e Poppler nelle Impostazioni, anche nell'edizione Store. La conferma mostra origine, versione, dimensioni, licenze e destinazione. Il download usa HTTPS verso le distribuzioni Gyan e Poppler per Windows ospitate su GitHub e i relativi CDN. I destinatari ricevono l'indirizzo IP e i normali dati della richiesta HTTP, fra cui User-Agent e versione dell'app; **non vengono caricati i file scelti per la conversione**. I distributori applicano le proprie regole ai dati delle richieste.
 
 Gli archivi sono verificati con SHA-256 prima dell'estrazione nella cartella utente `%LOCALAPPDATA%\ConvertHere\tools`, mantenendo licenze e documentazione upstream. I motori restano disponibili per gli avvii successivi; i temporanei di download ed estrazione vengono rimossi normalmente dopo completamento, annullamento o errore, ma un arresto improvviso puo lasciare residui. I percorsi possono essere reindirizzati da Windows nelle installazioni MSIX. Le conversioni e l'OCR continuano a essere locali. Il download non e un aggiornamento automatico dell'app: installazione e aggiornamenti Store sono gestiti da Microsoft. Gli eventuali script della distribuzione EXE separata contattano i distributori soltanto quando avviati.
 
@@ -73,7 +75,9 @@ PDF compression, splitting and merging run in the app on your PC without a remot
 
 ### Information stored on your device
 
-The app stores conversion preferences, the list of visible output formats, OCR language and enablement, CSV delimiter, PDF operation, output-folder and tool paths. Its persistent quick-conversion queue stores source and destination paths, formats, settings, tool paths, timestamps, progress and errors. The latest report stores its date, format, results and error messages, which may contain paths or engine diagnostics.
+The app stores conversion preferences, the list of visible output formats, OCR language and enablement, CSV delimiter, PDF operation, output-folder and tool paths. It also stores named profiles, their options, menu visibility and default selection. Options can include relative crop, dimensions, canvas, color, quality, byte limit and page/text layout, plus a configured output folder. Profiles do not contain the sample file, its content or text written in the editor. The persistent quick-conversion queue stores source and destination paths, formats, settings, tool paths, timestamps, progress and errors. The latest report stores its date, format, results and error messages, which may contain paths or engine diagnostics.
+
+In the editor, the working image, typed text and encoded previews remain in memory during the session and are not automatically written to preferences or profiles. Save as writes the requested output. PNG, JPEG, WebP and native A4/A5 layout are processed locally; the built-in WebP codec does not upload images to a remote service. Formats that need libheif may use the decoder temporary files described below. The app does not keep a persistent history of editor content.
 
 Local files include `preferences.json`, `report-last.json` and `job.json` records in the app's user-data folders under `%APPDATA%` and `%LOCALAPPDATA%`. In an MSIX installation, Windows may redirect these locations into private package data. The app does not encrypt preferences, state or output files; Windows account permissions and device protections apply.
 
@@ -87,7 +91,7 @@ Preferences and the last report have no automatic expiry. To remove local data m
 
 The **Motori** section of **Impostazioni** links to the FFmpeg, Poppler, LibreOffice, Tesseract and libheif websites. Selecting a link opens the configured browser, subject to the browser's and destination site's own policies.
 
-In 0.4.0 you can explicitly request FFmpeg and Poppler downloads in Impostazioni, including in the Store edition. The confirmation shows the source, version, size, licenses and destination. Downloads use HTTPS to the Gyan and Poppler Windows distributions hosted on GitHub and their CDNs. Recipients receive your IP address and normal HTTP request data, including the User-Agent and app version; **files selected for conversion are not uploaded**. Download providers apply their own policies to request data.
+Since version 0.4.0, you can explicitly request FFmpeg and Poppler downloads in Impostazioni, including in the Store edition. The confirmation shows the source, version, size, licenses and destination. Downloads use HTTPS to the Gyan and Poppler Windows distributions hosted on GitHub and their CDNs. Recipients receive your IP address and normal HTTP request data, including the User-Agent and app version; **files selected for conversion are not uploaded**. Download providers apply their own policies to request data.
 
 Archives are verified using SHA-256 before extraction into the user's `%LOCALAPPDATA%\ConvertHere\tools` folder, retaining upstream licenses and documentation. Engines remain available for later use. Download and extraction temporary files are normally removed after completion, cancellation or error; an unexpected shutdown may leave residual files. Windows may redirect paths in MSIX installations. Conversion and OCR remain local. Engine downloads are not automatic application updates: Microsoft manages Store installation and app updates. Separate EXE-distribution scripts contact the providers only when run.
 

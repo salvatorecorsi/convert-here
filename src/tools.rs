@@ -98,6 +98,14 @@ impl ToolPaths {
     /// Prerequisites depend on the source codec and explicit OCR choice.
     pub fn missing_for_input(&self, input: &Path, settings: &ConversionSettings) -> Option<String> {
         let kind = MediaKind::from_path(input);
+        if settings.format == OutputFormat::Pdf
+            && settings.image.page.is_some()
+            && input
+                .extension()
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("txt"))
+        {
+            return None;
+        }
         let modern_input = kind == MediaKind::Image && crate::modern_images::is_modern_input(input);
         if modern_input && !tool_exists(&self.heif_dec) {
             return Some("Per leggere HEIC/HEIF e AVIF serve libheif. Apri Impostazioni → Motori e seleziona heif-dec.exe con le sue DLL e i plugin.".into());

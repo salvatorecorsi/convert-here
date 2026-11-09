@@ -2,7 +2,7 @@
 
 Sviluppato da **Salvatore Corsi**: versione Rust per Windows di [Final Converter](https://github.com/salvatorecorsi/final-converter). Conversioni di formato locali, OCR sul PC, selezioni multiple e integrazione con Esplora file. Convert Here e gratuito, senza abbonamenti, acquisti in-app o costi a consumo. Nessun pagamento richiesto per continuare a usarlo.
 
-Il nome pubblico e **Convert Here**, riservato anche in Microsoft Partner Center; il repository canonico e [salvatorecorsi/convert-here](https://github.com/salvatorecorsi/convert-here). Per compatibilita restano invariati i nomi tecnici degli eseguibili e dei crate, le cartelle dati e gli identificativi COM/MSIX. Le release precedenti possono ancora mostrare il nome The Converter. [Novita della versione 0.4.0](docs/release-notes-0.4.0.md).
+Il nome pubblico e **Convert Here**, riservato anche in Microsoft Partner Center; il repository canonico e [salvatorecorsi/convert-here](https://github.com/salvatorecorsi/convert-here). Per compatibilita restano invariati i nomi tecnici degli eseguibili e dei crate, le cartelle dati e gli identificativi COM/MSIX. Le release precedenti possono ancora mostrare il nome The Converter. La **0.6.0 è candidata alla pubblicazione**: [novità in italiano](docs/release-notes-0.6.0.md) e [release notes in English](docs/release-notes-0.6.0-en.md). La release pubblica precedente è la [0.4.0](docs/release-notes-0.4.0.md).
 
 ## Preparazione Microsoft Store
 
@@ -46,6 +46,10 @@ Il segnaposto è un collegamento Windows temporaneo: Esplora file normalmente ne
 
 Per default i risultati sono accanto agli originali. Se il nome esiste già, viene aggiunto un numero: gli originali e i risultati precedenti non vengono sovrascritti. Le preferenze, inclusa la cartella di destinazione, restano salvate tra gli avvii.
 
+## Editor e profili — candidata 0.6.0
+
+La 0.6.0 aggiunge un editor locale per ritaglio, scala e tela con risoluzione, sfondo e posizione; esporta PNG, JPEG, WebP e PDF con anteprima e peso esatto del risultato. **Modifica…** apre l'editor dalla riga del file. Puoi impaginare immagini o testo semplice scritto nell'app/TXT UTF-8 su A4 o A5 e salvare fino a 32 profili, di cui 8 nel menu **Converti in**. Il limite di peso usa byte reali: 300 kB sono 300000 byte; ridurre anche le dimensioni richiede una scelta esplicita. Il salvataggio riusa il risultato preparato e conserva i file esistenti. È materiale della candidata: i download pubblici indicati sopra restano quelli della 0.4.0 finché la nuova release non viene pubblicata. [Guida all'editor e ai profili](docs/image-editor-profiles.md).
+
 ## Conversioni
 
 Sono disponibili **44 formati di destinazione** e **93 estensioni di ingresso riconosciute**. Nella 0.4.0, in **Impostazioni** scegli quali uscite mostrare nel selettore della GUI e nel menu Explorer, raggruppate per audio, video, immagini e documenti. Il default e **MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4**; puoi abilitare le altre destinazioni, comprese TXT, DOCX, XLSX, HEIC e AVIF. Le scelte restano salvate e il menu le rilegge senza riavviare Explorer. Se non abiliti alcuna uscita, resta accessibile **Impostazioni personalizzate…**. Le 93 estensioni di ingresso e i 44 formati gestiti dal motore non cambiano: CLI, richieste `--quick` esplicite e lavori gia accodati non vengono bloccati dal filtro di visualizzazione. Le destinazioni effettive dipendono dalla categoria del file e dai codec dei motori selezionati.
@@ -64,7 +68,7 @@ Sono disponibili **44 formati di destinazione** e **93 estensioni di ingresso ri
 
 L'estensione determina la categoria proposta; il motore verifica il contenuto durante la conversione. File protetti, corrotti o con codec non disponibili producono un errore leggibile.
 
-Impostazioni disponibili: preset leggero/bilanciato/alta qualità, bitrate, frequenza e canali audio, normalizzazione, H.264/H.265, qualità video, larghezza, FPS, taglio temporale, qualità JPEG, ridimensionamento immagini e DPI dei PDF. L'interfaccia mostra solo i controlli pertinenti. Per WebM si usa VP9/Opus, per AVI MPEG-4/MP3, per MPEG MPEG-2/MP2, per WMV WMV2/WMA2, per FLV FLV1/MP3, per 3GP MPEG-4/AAC, per TS H.264/AAC. M4V e un contenitore MP4 con audio; WAV, AIFF e AU sono PCM 16 bit, CAF usa ALAC senza perdita. I PDF creati da immagini sono A4 con proporzioni mantenute e sfondo bianco.
+Impostazioni disponibili: preset leggero/bilanciato/alta qualità, bitrate, frequenza e canali audio, normalizzazione, H.264/H.265, qualità video, larghezza, FPS, taglio temporale, qualità JPEG, ridimensionamento immagini e DPI dei PDF. L'interfaccia mostra solo i controlli pertinenti. Per WebM si usa VP9/Opus, per AVI MPEG-4/MP3, per MPEG MPEG-2/MP2, per WMV WMV2/WMA2, per FLV FLV1/MP3, per 3GP MPEG-4/AAC, per TS H.264/AAC. M4V e un contenitore MP4 con audio; WAV, AIFF e AU sono PCM 16 bit, CAF usa ALAC senza perdita. Senza una ricetta pagina, i PDF creati da immagini sono A4 con proporzioni mantenute e sfondo bianco; l'editor della 0.6.0 permette anche A5, orientamento e margini personalizzati.
 
 ### Excel, CSV, Word e HTML
 
@@ -104,7 +108,7 @@ La destinazione TXT e disponibile per le immagini tramite OCR locale e per i PDF
 
 - OCR richiede Tesseract e i modelli delle lingue; per i PDF serve anche Poppler. E riconoscimento del testo, senza ricostruzione della grafica o del layout.
 - Le immagini GIF animate e i TIFF multipagina sono letti dal primo fotogramma/pagina. La conversione da video a GIF conserva l'animazione.
-- WebP è codificato senza perdita. La qualità JPEG non influisce sui formati senza perdita.
+- La conversione WebP ordinaria è senza perdita; l'editor della 0.6.0 offre anche WebP con qualità regolabile. La qualità JPEG non influisce sui formati senza perdita.
 - PDF (Bulk) crea un PDF separato per ogni immagine; PDF (Merge) puo unire direttamente immagini e altri file PDF-compatibili, ordinando le singole pagine. Unione e divisione non trasferiscono segnalibri, tag o metadati e rifiutano moduli interattivi. Compressione, divisione e unione rifiutano PDF cifrati o firmati. L'esportazione PDF in PNG/JPEG accetta la sola password proprietario; una password di apertura richiede di sbloccare prima il documento.
 - I documenti Office, i fogli di calcolo, i CSV e HTML in PDF richiedono LibreOffice installato o configurato; l'impaginazione dipende anche dai font disponibili.
 - PDF in DOCX/HTML e una ricostruzione del testo, senza immagini o impaginazione originale. Excel in CSV esporta soltanto il primo foglio e perde formule e formattazione.

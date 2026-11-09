@@ -1,5 +1,5 @@
 use anyhow::{Context, Result, bail};
-use clap::{Parser, ValueEnum};
+use clap::{ArgGroup, Parser, ValueEnum};
 use std::{
     path::{Path, PathBuf},
     sync::{
@@ -20,7 +20,8 @@ use the_converter::{
 #[derive(Parser, Debug)]
 #[command(
     version,
-    about = "Convert Here — audio, video, immagini e PDF sul tuo PC"
+    about = "Convert Here — audio, video, immagini e PDF sul tuo PC",
+    group(ArgGroup::new("quick_destination").args(["target", "profile"]).multiple(false))
 )]
 struct Args {
     /// File da aprire nella finestra. Usa -- prima di nomi che iniziano con un trattino.
@@ -36,8 +37,17 @@ struct Args {
     #[arg(long)]
     convert: bool,
     /// Conversione rapida da Esplora file, con preferenze salvate e resoconto locale.
-    #[arg(long, requires = "target", conflicts_with_all = ["convert", "diagnose"])]
+    #[arg(long, requires = "quick_destination", conflicts_with_all = ["convert", "diagnose", "custom_settings"])]
     quick: bool,
+    /// Esegui una ricetta salvata, mantenendo una copia delle impostazioni in coda.
+    #[arg(long, requires = "quick", value_parser = parse_profile_id, conflicts_with_all = ["target", "settings", "preset", "pdf_batch", "pdf_action", "ocr", "ocr_language", "csv_separator", "install_runtime", "queue_job", "queue_worker", "custom_settings"])]
+    profile: Option<String>,
+    /// Revisione mostrata dal menu; impedisce di avviare una ricetta modificata.
+    #[arg(long, requires = "profile", value_parser = clap::value_parser!(u64).range(1..))]
+    profile_revision: Option<u64>,
+    /// Apri le impostazioni o l'editor compatibile senza avviare conversioni.
+    #[arg(long, conflicts_with_all = ["quick", "convert", "diagnose", "queue_job", "queue_worker", "install_runtime", "settings", "preset", "pdf_batch", "pdf_action", "ocr", "ocr_language", "csv_separator", "profile", "profile_revision"])]
+    custom_settings: bool,
     /// Selezioni PDF multiple: conversione individuale oppure ordine pagine e PDF unico.
     #[arg(long, value_enum, requires = "target", conflicts_with_all = ["convert", "diagnose", "queue_job", "queue_worker"])]
     pdf_batch: Option<PdfBatch>,
@@ -70,7 +80,7 @@ struct Args {
     #[arg(long)]
     diagnose: bool,
     /// Scarica e verifica un motore portabile nella cartella personale ConvertHere/tools.
-    #[arg(long, value_enum, conflicts_with_all = ["files", "selection_file", "target", "convert", "quick", "pdf_batch", "queue_job", "queue_worker", "output_dir", "settings", "preset", "pdf_action", "ocr", "ocr_language", "csv_separator", "diagnose", "input"])]
+    #[arg(long, value_enum, conflicts_with_all = ["files", "selection_file", "target", "convert", "quick", "pdf_batch", "queue_job", "queue_worker", "output_dir", "settings", "preset", "pdf_action", "ocr", "ocr_language", "csv_separator", "diagnose", "input", "profile", "profile_revision", "custom_settings"])]
     install_runtime: Option<RuntimeCommand>,
     /// Percorsi diretti, usabili anche da Apri con.
     #[arg(value_name = "FILE")]
@@ -254,14 +264,24 @@ fn run(args: Args) -> Result<()> {
         }
     }
     if args.quick {
+        if let Some(id) = args.profile {
+            let (profile, tools) =
+                crate::app::quick_profile_configuration(&id, args.profile_revision)?;
+            profile.validate_for_inputs(files.iter().map(PathBuf::as_path))?;
+            return enqueue_quick(files, &profile.settings, &tools);
+        }
         return quick_convert(files, args.target.expect("clap requires target"));
     }
     if !args.convert {
         let warning = queue::ensure_worker()
             .err()
             .map(|error| format!("La coda non è stata avviata: {error:#}"));
-        return crate::app::launch(files, args.target, warning)
-            .map_err(|err| anyhow::anyhow!("{err}"));
+        return if args.custom_settings {
+            crate::app::launch_custom(files, args.target, warning)
+        } else {
+            crate::app::launch(files, args.target, warning)
+        }
+        .map_err(|err| anyhow::anyhow!("{err}"));
     }
     if files.is_empty() {
         bail!("Indica almeno un file con --files")
@@ -404,11 +424,19 @@ fn quick_convert(files: Vec<PathBuf>, format: OutputFormat) -> Result<()> {
         bail!("Nessun file da convertire")
     }
     let (mut settings, tools) = crate::app::quick_configuration();
-    settings.format = format;
+    settings.select_output_format(format);
     if format == OutputFormat::Pdf {
         settings.pdf.action = PdfAction::Compress;
     }
-    let submission = queue::enqueue(&files, &settings, &tools, &std::env::current_exe()?)?;
+    enqueue_quick(files, &settings, &tools)
+}
+
+fn enqueue_quick(
+    files: Vec<PathBuf>,
+    settings: &ConversionSettings,
+    tools: &ToolPaths,
+) -> Result<()> {
+    let submission = queue::enqueue(&files, settings, tools, &std::env::current_exe()?)?;
     if !submission.errors.is_empty() {
         let details = submission
             .errors
@@ -423,6 +451,14 @@ fn quick_convert(files: Vec<PathBuf>, format: OutputFormat) -> Result<()> {
         );
     }
     Ok(())
+}
+
+fn parse_profile_id(value: &str) -> std::result::Result<String, String> {
+    if the_converter::conversion_profiles::valid_profile_id(value) {
+        Ok(value.into())
+    } else {
+        Err("Identificatore profilo non valido (32 cifre esadecimali minuscole)".into())
+    }
 }
 
 pub fn main() {
@@ -445,6 +481,58 @@ pub fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn profiles_and_custom_settings_have_unambiguous_nonconverting_arguments() {
+        let id = "0123456789abcdef0123456789abcdef";
+        let args = Args::try_parse_from([
+            "converter",
+            "--quick",
+            "--profile",
+            id,
+            "--profile-revision",
+            "37",
+            "--selection-file",
+            "files.json",
+        ])
+        .unwrap();
+        assert!(args.quick);
+        assert_eq!(args.profile.as_deref(), Some(id));
+        assert_eq!(args.profile_revision, Some(37));
+        assert!(args.target.is_none());
+        for invalid in [
+            vec!["--profile", id],
+            vec!["--quick"],
+            vec!["--profile-revision", "1"],
+            vec!["--quick", "--profile", "../bad"],
+            vec!["--quick", "--profile", id, "--target", "webp"],
+            vec!["--quick", "--profile", id, "--convert"],
+            vec!["--quick", "--profile", id, "--profile-revision", "0"],
+        ] {
+            assert!(Args::try_parse_from(std::iter::once("converter").chain(invalid)).is_err());
+        }
+        let custom = Args::try_parse_from([
+            "converter",
+            "--custom-settings",
+            "--selection-file",
+            "files.json",
+        ])
+        .unwrap();
+        assert!(custom.custom_settings);
+        assert!(!custom.convert && !custom.quick);
+        for other in [
+            vec!["--quick", "--target", "png"],
+            vec!["--convert", "--target", "png"],
+            vec!["--diagnose"],
+            vec!["--queue-worker"],
+            vec!["--install-runtime", "ffmpeg"],
+        ] {
+            assert!(
+                Args::try_parse_from(["converter", "--custom-settings"].into_iter().chain(other))
+                    .is_err()
+            );
+        }
+    }
 
     #[test]
     fn runtime_install_requires_an_explicit_engine_and_excludes_other_operations() {

@@ -1,0 +1,51 @@
+# Candidata 0.6.0 / Store 1.0.5.0 — istruzioni e prove
+
+Bozza locale pronta per la preparazione della release e della submission. Non attesta build, installazione del candidato MSIX, upload, invio o approvazione Microsoft. I link `v0.6.0` devono essere verificati dopo la pubblicazione del tag e prima di inserirli nel portale.
+
+## Additional Testing Information — English
+
+```text
+Convert Here 0.6.0 / full MSIX 1.0.5.0, Windows 11 x64. Publisher: Salvatore Corsi. The application UI is Italian; the English Store listing describes the same application. No in-app account or login is needed. The app is free, with no subscriptions, in-app purchases or usage charges; no payment is required to keep using it.
+
+Native tests need no external engine: add PNG/JPEG images, choose JPG or PNG and convert to a new file. Open Modifica… in an image row. Try crop, resize and custom pixel canvas/background/anchor, then PNG, JPEG, WebP or PDF output. Adatta fits the preview; Dettaglio 1:1 shows image pixels. JPEG/WebP quality is adjustable. Peso massimo uses decimal kB: 300 kB is 300000 bytes. Extra downsizing is opt-in. If the cap cannot be met, save is disabled; quick conversion fails without publishing an oversized output. Salva con nome… writes the prepared bytes and refuses an existing output name.
+
+For native text PDF, select Nuovo foglio… and type ordinary text, or add a UTF-8 TXT and choose Modifica…. Select A4/A5, orientation, margins, font size, line spacing and alignment. The PDF embeds Ubuntu Light with selectable text. Unsupported characters return an explicit error. This is plain-text/image layout, not a Word or PDF content editor.
+
+Use Salva le mie impostazioni to name a profile and enable Mostra in Converti in. Up to 32 profiles are saved, with 8 visible in the menu. In Impostazioni > I miei profili, apply, update or remove them; Crea «Salva per web» creates a WebP 300 kB example. Profiles contain parameters, not sample images or typed text. In Explorer, select compatible files, reopen Converti in and choose the profile. It queues a job with saved recipe settings. Disabled target formats and incompatible inputs hide the profile. Existing queue jobs keep their settings.
+
+For multiple PDF-compatible images/PDFs, PDF (Bulk) creates separate outputs; PDF (Merge) opens individual pages to drag between sources or move with arrows/Alt+up/down. Create one PDF and check its order. Existing files are preserved with numbered output names. Compress and split existing PDFs also run locally; encrypted/signed PDFs and interactive forms have the documented operation restrictions.
+
+Optional engines are not bundled: FFmpeg for audio/video, Poppler for PDF image/text export, LibreOffice for Office/Excel/HTML, libheif for HEIC/AVIF, Tesseract plus language models for OCR. Native image editing and A4/A5 text layout do not require them. Impostazioni > Motori selects local engines. Explicit FFmpeg/Poppler download requires confirmation of source, size, licenses and folder, uses HTTPS and checks SHA-256. It does not upload conversion files. HTML-linked resources may access local files/network. Conversion and OCR run on the PC.
+
+runFullTrust supports user-selected file access, converted output, packaged COM Explorer integration and launching optional local engines. The native dependency installer writes confirmed FFmpeg/Poppler tools only to the user's tools folder. No system-wide engine installation is required.
+
+Original code: GPL-3.0-only; dependencies/fonts/engines retain their licenses. License and source links are under Impostazioni > Informazioni e licenze. Source release: https://github.com/salvatorecorsi/convert-here/releases/tag/v0.6.0
+Privacy: https://github.com/salvatorecorsi/convert-here/blob/v0.6.0/docs/privacy.md
+License: https://github.com/salvatorecorsi/convert-here/blob/v0.6.0/LICENSE
+Support: salvo@salvatorecorsi.com
+```
+
+## Prove locali eseguite sui sorgenti 0.6.0
+
+- [x] Formattazione e Clippy superati; **265 test app** e **12 test DLL** superati. Un test degli archivi upstream in cache, già separato dalla suite ordinaria, resta ignorato.
+- [x] CLI: un lavoro mantiene lo snapshot del profilo anche dopo aggiornamento ed eliminazione del profilo. Risultato di **220068 byte**, **640 × 498 pixel**, SHA-256 dell'originale invariato.
+- [x] GUI nativa: WebP **900 × 700** da **508858 byte** a **297678 byte**, qualità **44**, limite **300000 byte**. Il file salvato è esattamente di **297678 byte**; con limite **100 byte** il salvataggio è disattivato.
+- [x] Editor nativo: ritaglio trascinato **453 × 349**, scala **300 × 231**, tela bianca con dimensione impostata a **1024 pixel**. Creato e persistito il profilo **«Immagine quadrata»**; resta da verificare il suo riuso dopo riavvio.
+- [x] TXT UTF-8 in PDF **A5**, font **18 pt**, **4 pagine**, **176031 byte**. `pdfinfo` riporta **419.528 × 595.276 pt**; `pdftotext` conserva correttamente accenti e simbolo **€**. Il rendering Poppler è stato ispezionato.
+
+Queste prove riguardano sorgenti, CLI e GUI locale: non attestano installazione del MSIX 1.0.5.0 o registrazione effettiva del menu Explorer. Restano in corso la verifica del riavvio/profili e il controllo della correzione dell'overflow dei controlli della tela.
+
+## Checklist restante per il candidato finale
+
+- [ ] Verificare manifest, identità, versione 1.0.5.0, hash e licenze del MSIX finale; distinguere l'app dal pacchetto GitHub.
+- [ ] Completare le varianti PNG/JPEG/PDF dall'editor e le combinazioni di tela/sfondo; ricontrollare l'overflow dei controlli dopo la correzione.
+- [ ] Verificare esplicitamente riduzione delle dimensioni solo se autorizzata e assenza di risultati oltre il limite nelle ulteriori varianti.
+- [ ] A4/A5 verticale e orizzontale da immagine, testo digitato e TXT UTF-8; verificare pagine, testo estraibile e errore per caratteri non disponibili.
+- [ ] Salvare un profilo, riavviare l'app e verificare parametri/menu; provare un input compatibile e uno incompatibile, un formato disabilitato e un limite di peso nella coda rapida.
+- [ ] Riordinare pagine di almeno un PDF multipagina e un'immagine in PDF Merge; controllare il risultato senza modificare gli originali.
+- [ ] Verificare nome già esistente, originale/collegamento fisico, annullamento e chiusura durante la preparazione.
+- [ ] Confermare che anteprime, immagini di prova e testo digitato non compaiano in preferenze o profili; controllare separatamente i record della coda.
+- [ ] Verificare installazione/aggiornamento/disinstallazione, attivazione del menu moderno e strumenti opzionali nell'effettivo pacchetto Store su ambiente dedicato.
+- [ ] Prima della submission: verificare URL pubblici 0.6.0, catture aggiornate, testi IT/EN e persistenza dei campi dopo il salvataggio nel portale.
+
+Le caselle residue restano aperte: gli esiti vanno registrati soltanto dopo la prova corrispondente. Il WACK non viene dichiarato eseguito o superato.

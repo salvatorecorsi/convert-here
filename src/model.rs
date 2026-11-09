@@ -363,6 +363,23 @@ impl Default for ConversionSettings {
     }
 }
 
+impl ConversionSettings {
+    /// An ordinary destination change keeps compatible options and drops recipes
+    /// that the newly selected encoder cannot apply. Explicit profiles stay intact.
+    pub fn select_output_format(&mut self, format: OutputFormat) {
+        self.format = format;
+        if !matches!(
+            format,
+            OutputFormat::Png | OutputFormat::Jpg | OutputFormat::Webp | OutputFormat::Pdf
+        ) {
+            self.image.edit = None;
+        }
+        if format != OutputFormat::Pdf {
+            self.image.page = None;
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AudioSettings {
@@ -417,12 +434,18 @@ impl Default for VideoSettings {
 pub struct ImageSettings {
     pub quality: u8,
     pub width: Option<u32>,
+    #[serde(default)]
+    pub edit: Option<crate::image_edit::ImageEditSettings>,
+    #[serde(default)]
+    pub page: Option<crate::page_layout::PageLayoutSettings>,
 }
 impl Default for ImageSettings {
     fn default() -> Self {
         Self {
             quality: 90,
             width: None,
+            edit: None,
+            page: None,
         }
     }
 }

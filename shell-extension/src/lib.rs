@@ -21,6 +21,10 @@ use std::{
 #[path = "../../src/output_preferences_shared.rs"]
 mod output_preferences_shared;
 use output_preferences_shared as output_preferences;
+#[path = "../../src/profile_menu_shared.rs"]
+#[rustfmt::skip]
+mod profile_menu_shared;
+use profile_menu_shared::{ProfileInputPolicy, ProfileMenuItem};
 
 type HResult = i32;
 const S_OK: HResult = 0;
@@ -43,6 +47,9 @@ const SELECTION_CONTAINS_IMAGE: u64 = 1 << 62;
 const SELECTION_CONTAINS_PDF: u64 = 1 << 61;
 const SELECTION_MULTIPLE: u64 = 1 << 60;
 const SELECTION_SUPPORTED: u64 = 1 << 59;
+const SELECTION_ALL_IMAGES: u64 = 1 << 58;
+const SELECTION_ALL_IMAGES_OR_TEXT: u64 = 1 << 57;
+const SELECTION_ALL_PDFS: u64 = 1 << 56;
 const PDF_TARGET: u64 = 1 << 19;
 const PDF_MERGE_GUID_SLOT: usize = 45;
 const AUDIO_TARGETS: u64 = ((1 << 7) - 1) | (((1 << 5) - 1) << 21);
@@ -187,6 +194,8 @@ struct ExplorerObject {
     target: Option<String>,
     parent: bool,
     pdf_merge: bool,
+    profile: Option<ProfileMenuItem>,
+    separator_before: bool,
     selection_mask: AtomicU64,
 }
 
@@ -204,6 +213,7 @@ struct EnumeratorObject {
     header: ComObject<EnumeratorVtable>,
     cursor: AtomicUsize,
     mask: u64,
+    profiles: Vec<ProfileMenuItem>,
 }
 
 static FACTORY_VTABLE: FactoryVtable = FactoryVtable {
@@ -260,11 +270,22 @@ fn allocate_command(target: Option<&str>, parent: bool, pdf_merge: bool) -> *mut
         target: target.map(str::to_owned),
         parent,
         pdf_merge,
+        profile: None,
+        separator_before: false,
         selection_mask: AtomicU64::new(UNKNOWN_SELECTION_MASK),
     })) as *mut c_void
 }
 
+#[cfg(test)]
 fn allocate_enumerator(cursor: usize, mask: u64) -> *mut c_void {
+    allocate_profile_enumerator(cursor, mask, vec![])
+}
+
+fn allocate_profile_enumerator(
+    cursor: usize,
+    mask: u64,
+    profiles: Vec<ProfileMenuItem>,
+) -> *mut c_void {
     OBJECTS.fetch_add(1, Ordering::Relaxed);
     Box::into_raw(Box::new(EnumeratorObject {
         header: ComObject {
@@ -273,6 +294,7 @@ fn allocate_enumerator(cursor: usize, mask: u64) -> *mut c_void {
         },
         cursor: AtomicUsize::new(cursor),
         mask,
+        profiles,
     })) as *mut c_void
 }
 
@@ -386,6 +408,29 @@ fn enumeration_entry(index: usize, mask: u64) -> Option<(Option<&'static str>, b
     }
 }
 
+enum MenuEntry<'a> {
+    Standard(Option<&'static str>, bool),
+    Profile(&'a ProfileMenuItem, bool),
+}
+
+fn profile_enumeration_entry<'a>(
+    index: usize,
+    mask: u64,
+    profiles: &'a [ProfileMenuItem],
+) -> Option<MenuEntry<'a>> {
+    let first_profile = TARGETS.len() + 1;
+    if index < first_profile {
+        enumeration_entry(index, mask).map(|(target, merge)| MenuEntry::Standard(target, merge))
+    } else if let Some(profile) = profiles.get(index - first_profile) {
+        Some(MenuEntry::Profile(profile, index == first_profile))
+    } else if index == first_profile + profiles.len() {
+        enumeration_entry(first_profile, mask)
+            .map(|(target, merge)| MenuEntry::Standard(target, merge))
+    } else {
+        None
+    }
+}
+
 unsafe extern "system" fn enumerator_next(
     this: *mut c_void,
     requested: u32,
@@ -400,16 +445,25 @@ unsafe extern "system" fn enumerator_next(
     }
     let cursor = &(*(this as *mut EnumeratorObject)).cursor;
     let mask = (*(this as *mut EnumeratorObject)).mask;
+    let profiles = &(*(this as *mut EnumeratorObject)).profiles;
     let mut returned = 0;
     while returned < requested {
         let index = cursor.fetch_add(1, Ordering::AcqRel);
-        if index > TARGETS.len() + 1 {
+        if index > TARGETS.len() + 1 + profiles.len() {
             break;
         }
-        let Some((target, pdf_merge)) = enumeration_entry(index, mask) else {
+        let Some(entry) = profile_enumeration_entry(index, mask, profiles) else {
             continue;
         };
-        let child = allocate_command(target, false, pdf_merge);
+        let child = match entry {
+            MenuEntry::Standard(target, merge) => allocate_command(target, false, merge),
+            MenuEntry::Profile(profile, separator) => {
+                let child = allocate_command(Some(profile.output_extension), false, false);
+                (*(child as *mut ExplorerObject)).profile = Some(profile.clone());
+                (*(child as *mut ExplorerObject)).separator_before = separator;
+                child
+            }
+        };
         (*(child as *mut ExplorerObject))
             .selection_mask
             .store(mask, Ordering::Release);
@@ -430,10 +484,10 @@ unsafe extern "system" fn enumerator_skip(this: *mut c_void, count: u32) -> HRes
     for _ in 0..count {
         loop {
             let index = object.cursor.fetch_add(1, Ordering::AcqRel);
-            if index > TARGETS.len() + 1 {
+            if index > TARGETS.len() + 1 + object.profiles.len() {
                 return S_FALSE;
             }
-            if enumeration_entry(index, object.mask).is_some() {
+            if profile_enumeration_entry(index, object.mask, &object.profiles).is_some() {
                 break;
             }
         }
@@ -450,11 +504,12 @@ unsafe extern "system" fn enumerator_clone(this: *mut c_void, out: *mut *mut c_v
     if out.is_null() {
         return E_POINTER;
     }
-    *out = allocate_enumerator(
+    *out = allocate_profile_enumerator(
         (*(this as *mut EnumeratorObject))
             .cursor
             .load(Ordering::Acquire),
         (*(this as *mut EnumeratorObject)).mask,
+        (*(this as *mut EnumeratorObject)).profiles.clone(),
     );
     S_OK
 }
@@ -509,6 +564,15 @@ unsafe extern "system" fn explorer_title(
     let command = &*(this as *mut ExplorerObject);
     if command.parent {
         string_result("Converti in", out)
+    } else if let Some(profile) = &command.profile {
+        string_result(
+            &format!(
+                "{} · {}",
+                profile.name,
+                profile.output_extension.to_uppercase()
+            ),
+            out,
+        )
     } else if command.pdf_merge {
         string_result("PDF (Merge)", out)
     } else if let Some(target) = command.target.as_deref() {
@@ -536,7 +600,9 @@ unsafe extern "system" fn explorer_tooltip(
     out: *mut *mut u16,
 ) -> HResult {
     let command = &*(this as *mut ExplorerObject);
-    if command.pdf_merge {
+    if command.profile.is_some() {
+        string_result("Esegui il profilo salvato senza aprire le opzioni", out)
+    } else if command.pdf_merge {
         string_result("Ordina le pagine e crea un unico PDF", out)
     } else if command.target.is_some() {
         string_result("Converti subito con le impostazioni salvate", out)
@@ -574,6 +640,18 @@ unsafe extern "system" fn explorer_canonical(this: *mut c_void, out: *mut Guid) 
     }
     *out = CLSID_CONVERTER;
     let command = &*(this as *mut ExplorerObject);
+    if let Some(profile) = &command.profile {
+        let Some(bytes) = profile_menu_shared::profile_guid_bytes(&profile.id) else {
+            return E_FAIL;
+        };
+        *out = Guid {
+            a: u32::from_be_bytes(bytes[..4].try_into().unwrap()),
+            b: u16::from_be_bytes(bytes[4..6].try_into().unwrap()),
+            c: u16::from_be_bytes(bytes[6..8].try_into().unwrap()),
+            d: bytes[8..].try_into().unwrap(),
+        };
+        return S_OK;
+    }
     if !command.parent {
         let slot = if command.pdf_merge {
             PDF_MERGE_GUID_SLOT
@@ -591,7 +669,7 @@ unsafe extern "system" fn explorer_flags(this: *mut c_void, out: *mut u32) -> HR
     let command = &*(this as *mut ExplorerObject);
     *out = if command.parent {
         1
-    } else if command.target.is_none() {
+    } else if command.target.is_none() || command.separator_before {
         0x20
     } else {
         0
@@ -611,7 +689,13 @@ unsafe extern "system" fn explorer_enumerate(this: *mut c_void, out: *mut *mut c
         .load(Ordering::Acquire);
     // Some callers enumerate before GetState. Only filter an actual per-object
     // selection snapshot; child GetState and Invoke always validate their inputs.
-    *out = allocate_enumerator(0, visible_target_mask(mask, enabled_target_mask()));
+    let preferences = load_menu_preferences();
+    let profiles = preferences
+        .profiles
+        .into_iter()
+        .filter(|profile| profile_compatible(profile, mask, preferences.enabled))
+        .collect();
+    *out = allocate_profile_enumerator(0, visible_target_mask(mask, preferences.enabled), profiles);
     S_OK
 }
 
@@ -781,8 +865,79 @@ fn preferences_paths(
     paths
 }
 
-fn enabled_target_mask_at_paths(paths: &[PathBuf]) -> u64 {
-    const MAX_PREFERENCES_BYTES: u64 = 64 * 1024;
+struct MenuPreferences {
+    enabled: u64,
+    profiles: Vec<ProfileMenuItem>,
+}
+
+fn profile_compatible(profile: &ProfileMenuItem, selection: u64, enabled: u64) -> bool {
+    let target = extension_mask([profile.output_extension]);
+    // Explorer may enumerate before asking for the parent state. Include the
+    // candidates then; every child state/Invoke checks the actual selection.
+    if selection == UNKNOWN_SELECTION_MASK {
+        return profile.show_in_menu && enabled & target != 0;
+    }
+    profile.show_in_menu
+        && selection & enabled & target != 0
+        && match profile.input_policy {
+            ProfileInputPolicy::Compatible => true,
+            ProfileInputPolicy::Images => {
+                selection != UNKNOWN_SELECTION_MASK && selection & SELECTION_ALL_IMAGES != 0
+            }
+            ProfileInputPolicy::ImagesOrText => {
+                selection != UNKNOWN_SELECTION_MASK && selection & SELECTION_ALL_IMAGES_OR_TEXT != 0
+            }
+            ProfileInputPolicy::Pdf => {
+                selection != UNKNOWN_SELECTION_MASK && selection & SELECTION_ALL_PDFS != 0
+            }
+        }
+}
+
+fn profile_is_current(
+    profile: &ProfileMenuItem,
+    selection: u64,
+    preferences: &MenuPreferences,
+) -> bool {
+    preferences.profiles.iter().any(|current| {
+        current == profile && profile_compatible(current, selection, preferences.enabled)
+    })
+}
+
+fn selection_metadata(paths: &[PathBuf]) -> u64 {
+    let mut metadata = if paths.len() >= 2 {
+        SELECTION_MULTIPLE
+    } else {
+        0
+    };
+    for path in paths {
+        match target_mask(path) {
+            IMAGE_TARGETS => metadata |= SELECTION_CONTAINS_IMAGE,
+            PDF_TARGETS => metadata |= SELECTION_CONTAINS_PDF,
+            _ => {}
+        }
+    }
+    if !paths.is_empty() && paths.iter().all(|path| target_mask(path) == IMAGE_TARGETS) {
+        metadata |= SELECTION_ALL_IMAGES;
+    }
+    if !paths.is_empty() && paths.iter().all(|path| target_mask(path) == PDF_TARGETS) {
+        metadata |= SELECTION_ALL_PDFS;
+    }
+    if !paths.is_empty()
+        && paths.iter().all(|path| {
+            target_mask(path) == IMAGE_TARGETS
+                || path
+                    .extension()
+                    .and_then(|v| v.to_str())
+                    .is_some_and(|v| v.eq_ignore_ascii_case("txt"))
+        })
+    {
+        metadata |= SELECTION_ALL_IMAGES_OR_TEXT;
+    }
+    metadata
+}
+
+fn load_menu_preferences_at_paths(paths: &[PathBuf]) -> MenuPreferences {
+    use profile_menu_shared::MAX_PREFERENCES_BYTES;
     for path in paths {
         let file = match std::fs::File::open(path) {
             Ok(file) => file,
@@ -799,20 +954,35 @@ fn enabled_target_mask_at_paths(paths: &[PathBuf]) -> u64 {
             break;
         }
         let saved: Option<serde_json::Value> = serde_json::from_slice(&bytes).ok();
-        return extension_mask(output_preferences::decode_extensions(
-            saved
-                .as_ref()
-                .and_then(|saved| saved.get("enabled_output_formats")),
-        ));
+        return MenuPreferences {
+            enabled: extension_mask(output_preferences::decode_extensions(
+                saved
+                    .as_ref()
+                    .and_then(|saved| saved.get("enabled_output_formats")),
+            )),
+            profiles: profile_menu_shared::decode_profiles(
+                saved
+                    .as_ref()
+                    .and_then(|value| value.get("conversion_profiles")),
+            ),
+        };
     }
-    extension_mask(output_preferences::COMMON_OUTPUT_EXTENSIONS)
+    MenuPreferences {
+        enabled: extension_mask(output_preferences::COMMON_OUTPUT_EXTENSIONS),
+        profiles: vec![],
+    }
 }
 
-fn enabled_target_mask() -> u64 {
+#[cfg(test)]
+fn enabled_target_mask_at_paths(paths: &[PathBuf]) -> u64 {
+    load_menu_preferences_at_paths(paths).enabled
+}
+
+fn load_menu_preferences() -> MenuPreferences {
     let executable = executable_path();
     let roaming = std::env::var_os("APPDATA").map(PathBuf::from);
     let local = std::env::var_os("LOCALAPPDATA").map(PathBuf::from);
-    enabled_target_mask_at_paths(&preferences_paths(
+    load_menu_preferences_at_paths(&preferences_paths(
         executable.as_deref().and_then(Path::parent),
         roaming.as_deref(),
         local.as_deref(),
@@ -870,25 +1040,17 @@ unsafe extern "system" fn explorer_state(
         }
     }
     let mask = common_target_mask(paths.iter().map(PathBuf::as_path));
-    let mut metadata = 0;
-    for path in &paths {
-        match target_mask(path) {
-            IMAGE_TARGETS => metadata |= SELECTION_CONTAINS_IMAGE,
-            PDF_TARGETS => metadata |= SELECTION_CONTAINS_PDF,
-            _ => {}
-        }
-    }
+    let metadata = selection_metadata(&paths);
     command.selection_mask.store(
-        mask | if mask != 0 {
-            metadata | if count >= 2 { SELECTION_MULTIPLE } else { 0 }
-        } else {
-            0
-        },
+        mask | if mask != 0 { metadata } else { 0 },
         Ordering::Release,
     );
     if mask != 0
         && required.is_none_or(|required| mask & required != 0)
-        && required.is_none_or(|required| enabled_target_mask() & required != 0)
+        && required.is_none_or(|required| load_menu_preferences().enabled & required != 0)
+        && command.profile.as_ref().is_none_or(|profile| {
+            profile_is_current(profile, mask | metadata, &load_menu_preferences())
+        })
     {
         *out = ECS_ENABLED;
     }
@@ -936,7 +1098,8 @@ unsafe extern "system" fn explorer_invoke(
         }
     }
     let mask = common_target_mask(selected_paths.iter().map(PathBuf::as_path));
-    let enabled = enabled_target_mask();
+    let preferences = load_menu_preferences();
+    let enabled = preferences.enabled;
     if mask == 0
         || command.target.as_deref().is_some_and(|target| {
             TARGETS
@@ -945,6 +1108,15 @@ unsafe extern "system" fn explorer_invoke(
                 .is_none_or(|index| mask & enabled & (1 << index) == 0)
         })
     {
+        return E_FAIL;
+    }
+    if command.profile.as_ref().is_some_and(|profile| {
+        !profile_is_current(
+            profile,
+            mask | selection_metadata(&selected_paths),
+            &preferences,
+        )
+    }) {
         return E_FAIL;
     }
     let mut paths = Vec::with_capacity(selected_paths.len());
@@ -988,13 +1160,23 @@ unsafe extern "system" fn explorer_invoke(
     drop(file);
     // Command performs Win32 argument quoting. Never interpolate into a shell.
     let mut process = Command::new(executable);
-    if command.pdf_merge {
+    if let Some(profile) = &command.profile {
+        process.args([
+            "--quick",
+            "--profile",
+            &profile.id,
+            "--profile-revision",
+            &profile.revision.to_string(),
+        ]);
+    } else if command.pdf_merge {
         process.args(["--target", "pdf", "--pdf-batch", "merge"]);
     } else if let Some(target) = command.target.as_deref() {
         process.arg("--quick").arg("--target").arg(target);
         if target == "pdf" && count >= 2 {
             process.args(["--pdf-batch", "bulk"]);
         }
+    } else {
+        process.arg("--custom-settings");
     }
     match process
         .arg("--selection-file")
@@ -1049,6 +1231,19 @@ pub extern "system" fn DllCanUnloadNow() -> HResult {
 #[path = "../../src/model.rs"]
 mod model;
 
+// Model parity tests exercise the real classification/output enums. Editor
+// implementations belong to the application; these fields are never used here.
+#[cfg(test)]
+mod image_edit {
+    #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+    pub struct ImageEditSettings;
+}
+#[cfg(test)]
+mod page_layout {
+    #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+    pub struct PageLayoutSettings;
+}
+
 #[cfg(test)]
 use model as core_model;
 
@@ -1060,6 +1255,112 @@ mod core_output_preferences;
 #[cfg(test)]
 mod tests {
     use super::*;
+    static COM_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    fn profile_fixture(id: &str, name: &str) -> serde_json::Value {
+        serde_json::json!({"id":id,"revision":71,"name":name,"show_in_menu":true,"output_extension":"webp","input_policy":"images","settings":{"format":"Webp","image":{"edit":{}},"pdf":{"action":"Compress"}}})
+    }
+
+    #[test]
+    fn dynamic_profiles_are_bounded_compatible_and_revalidated_by_revision() {
+        let value = profile_fixture("0123456789abcdef0123456789abcdef", "Web & città");
+        let profile = profile_menu_shared::decode_profile(&value).unwrap();
+        let enabled = extension_mask(["webp"]);
+        let image = IMAGE_TARGETS | SELECTION_ALL_IMAGES | SELECTION_ALL_IMAGES_OR_TEXT;
+        assert!(profile_compatible(&profile, image, enabled));
+        assert!(!profile_compatible(&profile, PDF_TARGETS, enabled));
+        assert!(!profile_compatible(&profile, image, 0));
+        let mut preferences = MenuPreferences {
+            enabled,
+            profiles: vec![profile.clone()],
+        };
+        assert!(profile_is_current(&profile, image, &preferences));
+        preferences.profiles[0].revision += 1;
+        assert!(!profile_is_current(&profile, image, &preferences));
+        preferences.profiles.clear();
+        assert!(!profile_is_current(&profile, image, &preferences));
+        let split = serde_json::json!({"id":"3123456789abcdef0123456789abcdef","revision":71,"name":"Split","show_in_menu":true,"output_extension":"pdf","input_policy":"pdf","settings":{"format":"Pdf","pdf":{"action":"Split"}}});
+        let split = profile_menu_shared::decode_profile(&split).unwrap();
+        assert!(profile_compatible(
+            &split,
+            PDF_TARGETS | SELECTION_ALL_PDFS,
+            PDF_TARGET
+        ));
+        assert!(!profile_compatible(
+            &split,
+            IMAGE_TARGETS | SELECTION_ALL_IMAGES,
+            PDF_TARGET
+        ));
+        assert!(
+            profile_menu_shared::decode_profiles(Some(&serde_json::json!([value.clone(), value])))
+                .is_empty()
+        );
+        let values: Vec<_> = (1..=32)
+            .map(|index| profile_fixture(&format!("{index:032x}"), "Profilo"))
+            .collect();
+        assert_eq!(
+            profile_menu_shared::decode_profiles(Some(&serde_json::json!(values)))
+                .iter()
+                .filter(|p| p.show_in_menu)
+                .count(),
+            8
+        );
+    }
+
+    #[test]
+    fn dynamic_profile_enumerator_snapshot_clone_and_guid_remain_stable() {
+        let _guard = COM_TEST_LOCK.lock().unwrap();
+        unsafe {
+            let profile = profile_menu_shared::decode_profile(&profile_fixture(
+                "0123456789abcdef0123456789abcdef",
+                "Salva per web",
+            ))
+            .unwrap();
+            let enumerator = allocate_profile_enumerator(
+                TARGETS.len() + 1,
+                SELECTION_SUPPORTED,
+                vec![profile.clone()],
+            );
+            let mut child = ptr::null_mut();
+            let mut fetched = 0;
+            assert_eq!(
+                enumerator_next(enumerator, 1, &mut child, &mut fetched),
+                S_OK
+            );
+            assert_eq!(
+                (*(child as *mut ExplorerObject)).profile.as_ref(),
+                Some(&profile)
+            );
+            let mut first = CLSID_CONVERTER;
+            assert_eq!(explorer_canonical(child, &mut first), S_OK);
+            explorer_release(child);
+            let mut clone = ptr::null_mut();
+            assert_eq!(enumerator_clone(enumerator, &mut clone), S_OK);
+            assert_eq!(enumerator_next(clone, 1, &mut child, &mut fetched), S_OK);
+            assert!((*(child as *mut ExplorerObject)).target.is_none());
+            explorer_release(child);
+            enumerator_reset(enumerator);
+            enumerator_skip(enumerator, 0);
+            assert_eq!(enumerator_skip(enumerator, 1), S_OK);
+            assert_eq!(
+                enumerator_next(enumerator, 1, &mut child, &mut fetched),
+                S_OK
+            );
+            assert!((*(child as *mut ExplorerObject)).target.is_none());
+            explorer_release(child);
+            enumerator_release(clone);
+            enumerator_release(enumerator);
+            for index in 0..=46 {
+                let mut reserved = CLSID_CONVERTER;
+                reserved.d[7] ^= index;
+                assert!(first != reserved);
+            }
+            assert_eq!(
+                profile_menu_shared::profile_guid_bytes(&profile.id),
+                profile_menu_shared::profile_guid_bytes(&profile.id)
+            );
+        }
+    }
 
     #[test]
     fn preferences_filter_destinations_without_hiding_supported_inputs_or_custom() {
@@ -1164,7 +1465,11 @@ mod tests {
             std::fs::write(&package, bytes).unwrap();
             assert_eq!(enabled_target_mask_at_paths(&paths), defaults);
         }
-        std::fs::write(&package, vec![b' '; 64 * 1024 + 1]).unwrap();
+        std::fs::write(
+            &package,
+            vec![b' '; profile_menu_shared::MAX_PREFERENCES_BYTES as usize + 1],
+        )
+        .unwrap();
         assert_eq!(enabled_target_mask_at_paths(&paths), defaults);
         std::fs::remove_file(&package).unwrap();
         assert_eq!(enabled_target_mask_at_paths(&paths), (1 << 2) | TEXT_TARGET);
@@ -1172,6 +1477,7 @@ mod tests {
 
     #[test]
     fn com_lifetime_and_interface_contract() {
+        let _guard = COM_TEST_LOCK.lock().unwrap();
         unsafe {
             assert_eq!(DllCanUnloadNow(), S_OK);
             let mut factory = ptr::null_mut();
@@ -1400,7 +1706,7 @@ mod tests {
             .map(core_model::OutputFormat::extension)
             .collect();
         assert_eq!(core_targets, TARGETS);
-        assert!(TARGETS.len() < 60); // The upper bits record selection metadata.
+        assert!(TARGETS.len() < 56); // The upper bits record selection metadata.
         let registration = include_str!("../../scripts/install-context-menu.ps1");
         let extensions: Vec<_> = registration
             .lines()

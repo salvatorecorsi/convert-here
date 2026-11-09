@@ -1,8 +1,18 @@
-# Verifiche tecniche — 4 novembre 2026
+# Verifiche tecniche — aggiornamento 9 novembre 2026
 
 Queste verifiche accompagnano la preparazione Store di Convert Here, sviluppato da Salvatore Corsi. Non equivalgono alla certificazione Microsoft e non sostituiscono l'identita reale di Partner Center.
 
-## Stato corrente 0.4.0 / Store 1.0.3.0
+## Preparazione candidata 0.6.0 / Store 1.0.5.0
+
+La nuova candidata comprende editor immagini, anteprima con peso effettivo, fogli A4/A5 per immagini e testo semplice e profili personali. [Note IT](release-notes-0.6.0.md), [note EN](release-notes-0.6.0-en.md), schede [IT](store-listing-it.md) / [EN](store-listing-en.md) e [istruzioni di prova](store-testing-0.6.0.md) sono materiale locale. Pubblicazione GitHub, MSIX finale, upload e certificazione della 0.6.0 **non sono attestati** da questo aggiornamento.
+
+Il collector è stato eseguito sul grafo Windows effettivo: **243 componenti**, nessuno senza avvisi di licenza. Il codec integrato `libwebp-sys 0.14.4` include `COPYING` e `PATENTS` originali della libreria C e il testo MIT dichiarato dal wrapper, con provenienza esplicita; il collector non inventa un titolare di copyright. L'inventario della candidata è distinto dai **236 componenti** registrati per la 0.4.0. Hash e audit del nuovo pacchetto vanno aggiunti soltanto dopo la build e le verifiche corrispondenti.
+
+Le prove locali sui sorgenti 0.6.0 hanno superato formattazione, Clippy, **265 test app** e **12 test DLL**, con un test upstream in cache ignorato. La CLI conserva la ricetta del profilo dopo aggiornamento/eliminazione: risultato **220068 byte, 640 × 498 pixel**, originale invariato. La GUI ha salvato esattamente **297678 byte** per un WebP **900 × 700**, qualità **44**, entro il limite di **300000 byte**, e disabilitato il salvataggio con limite **100 byte**. Sono provati ritaglio, scala, tela bianca e persistenza di un profilo. Un TXT UTF-8 ha prodotto un PDF A5 di **4 pagine**, **176031 byte**, con font **18 pt**, misure **419.528 × 595.276 pt**, accenti e **€** corretti nell'estrazione; rendering Poppler ispezionato.
+
+La [checklist dettagliata](store-testing-0.6.0.md) distingue prove concluse e controlli residui, fra cui riavvio/profili e overflow dei controlli della tela. Non si dichiara eseguito il WACK, né installato o approvato il futuro MSIX 1.0.5.0, né registrato realmente il nuovo menu Explorer. I record successivi conservano data, versioni, checksum e stato del portale osservati per le release precedenti.
+
+## Stato registrato 0.4.0 / Store 1.0.3.0 — storico al 4 novembre 2026
 
 La [release GitHub 0.4.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.4.0) e pubblicata dal **4 novembre 2026, 18:56:51 UTC**, commit `b4d5d0866a59b821125e35053566c454dd598471`, senza flag draft o prerelease. [Windows checks 41890745922](https://github.com/salvatorecorsi/convert-here/actions/runs/41890745922) e **SUCCESS**, inclusi i nuovi controlli dei sorgenti e del wrapper motori. I quattro digest remoti corrispondono agli artefatti locali verificati.
 

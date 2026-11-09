@@ -169,6 +169,21 @@ pub fn convert(
             &mut on_progress,
         )?],
         MediaKind::Pdf => convert_pdf(&input, &out_dir, settings, tools, cancel, &mut on_progress)?,
+        MediaKind::Document
+            if settings.format == OutputFormat::Pdf
+                && settings.image.page.is_some()
+                && input
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("txt")) =>
+        {
+            vec![crate::page_layout::convert_text_pdf(
+                &input,
+                &out_dir,
+                settings,
+                cancel,
+                &mut on_progress,
+            )?]
+        }
         MediaKind::Document | MediaKind::Spreadsheet | MediaKind::Html => {
             vec![crate::documents::convert_office(
                 &input,
@@ -289,6 +304,31 @@ fn validate_for_input(input: &Path, settings: &ConversionSettings) -> Result<()>
         );
     }
     validate(settings)?;
+    if kind == MediaKind::Image {
+        if let Some(edit) = &settings.image.edit {
+            crate::image_edit::validate(edit)?;
+            if !matches!(
+                settings.format,
+                OutputFormat::Png | OutputFormat::Jpg | OutputFormat::Webp | OutputFormat::Pdf
+            ) {
+                bail!("Le modifiche immagine richiedono una destinazione PNG, JPEG, WebP o PDF");
+            }
+        }
+        if settings.format == OutputFormat::Pdf
+            && let Some(page) = &settings.image.page
+        {
+            page.validate()?;
+        }
+    }
+    if kind == MediaKind::Document
+        && settings.format == OutputFormat::Pdf
+        && input
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("txt"))
+        && let Some(page) = &settings.image.page
+    {
+        page.validate()?;
+    }
     if kind == MediaKind::Image && settings.format == OutputFormat::Txt
         || kind == MediaKind::Pdf
             && settings.ocr.enabled
@@ -422,6 +462,9 @@ fn convert_image(
     cancel: &AtomicBool,
     progress: &mut impl FnMut(Progress),
 ) -> Result<PathBuf> {
+    if s.image.edit.is_some() || s.format == OutputFormat::Pdf && s.image.page.is_some() {
+        return convert_edited_image(input, dir, s, tools, cancel, progress);
+    }
     let modern_workspace = if crate::modern_images::is_modern_input(input) {
         let workspace = tempfile::Builder::new()
             .prefix(".the-converter-heif-")
@@ -546,6 +589,84 @@ fn convert_image(
         message: "Salvataggio…".into(),
     });
     commit(temp, dir, &stem(input), s.format.extension())
+}
+
+fn convert_edited_image(
+    input: &Path,
+    dir: &Path,
+    settings: &ConversionSettings,
+    tools: &ToolPaths,
+    cancel: &AtomicBool,
+    progress: &mut impl FnMut(Progress),
+) -> Result<PathBuf> {
+    let loaded = crate::image_edit::load_image(input, tools, cancel, |update| {
+        progress(Progress {
+            fraction: update.fraction * 0.2,
+            message: update.message,
+        });
+    })?;
+    let mut edit = settings.image.edit.clone().unwrap_or_default();
+    // Existing width remains effective when page layout is used without an edit recipe.
+    if settings.image.edit.is_none()
+        && let Some(width) = settings.image.width
+    {
+        edit.resize = Some(crate::image_edit::ResizeSettings {
+            width: Some(width),
+            ..Default::default()
+        });
+    }
+    let pixels = crate::image_edit::render(&loaded.pixels, &edit, cancel)?;
+    progress(Progress {
+        fraction: 0.25,
+        message: "Geometria immagine pronta".into(),
+    });
+    let mut output_progress = |update: Progress| {
+        progress(Progress {
+            fraction: 0.25 + update.fraction * 0.7,
+            message: update.message,
+        });
+    };
+    let bytes = if settings.format == OutputFormat::Pdf {
+        let page = settings.image.page.clone().unwrap_or_default();
+        let prepared = crate::page_layout::prepare(
+            &[crate::page_layout::PageInput::Image(std::sync::Arc::new(
+                pixels,
+            ))],
+            &page,
+            settings.image.quality,
+            cancel,
+            &mut output_progress,
+        )?;
+        if edit
+            .max_bytes
+            .is_some_and(|cap| prepared.exact_bytes() > cap)
+        {
+            bail!(
+                "Il PDF supera il peso massimo: modifica qualità o dimensioni; nessun file è stato salvato"
+            );
+        }
+        prepared.bytes().to_vec()
+    } else {
+        let encoded = crate::image_edit::encode(
+            &pixels,
+            settings.format,
+            settings.image.quality,
+            &edit,
+            cancel,
+            &mut output_progress,
+        )?;
+        if !encoded.target_met {
+            bail!(
+                "Il peso massimo non è stato raggiunto: riduci qualità o dimensioni; nessun file è stato salvato"
+            );
+        }
+        encoded.bytes
+    };
+    cancelled(cancel)?;
+    let mut temp = temporary(dir, settings.format.extension())?;
+    temp.as_file_mut().write_all(&bytes)?;
+    cancelled(cancel)?;
+    commit(temp, dir, &stem(input), settings.format.extension())
 }
 
 fn image_pdf(image: &DynamicImage, quality: u8, output: &mut impl Write) -> Result<()> {

@@ -1,10 +1,10 @@
 # Scheda Microsoft Store — italiano (it-IT)
 
-Schede di Convert Here **0.4.0**, pacchetto Store **1.0.3.0** caricato e Validated, Submission 2 **In certification**. Editore e sviluppatore: **Salvatore Corsi**, account Active e verifica Authorized. IT/EN salvate e rilette con 17 funzionalita e quattro catture ciascuna. L'aggiornamento non e ancora approvato o pubblicato nello Store. Non copiare questo preambolo nei campi pubblici.
+Bozza per Convert Here **0.6.0**, pacchetto Store candidato **1.0.5.0**. Editore e sviluppatore: **Salvatore Corsi**. Testi pronti con 20 funzionalità; catture, URL versionati e caricamento vanno verificati sul candidato finale. Questo documento non attesta pubblicazione, invio o approvazione della 0.6.0. Il record della precedente 0.4.0 resta nello storico. Non copiare questo preambolo nei campi pubblici.
 
 ## Descrizione breve
 
-Conversioni di file dal tasto destro di Windows 11, con coda, opzioni e OCR locale. Motori esterni per audio/video e alcune funzioni PDF.
+Conversioni locali, editor immagini con peso esatto, fogli A4/A5 e profili dal tasto destro di Windows 11. Motori opzionali per altri formati e OCR.
 
 ## Descrizione
 
@@ -15,6 +15,12 @@ Convert Here porta le conversioni nella cartella in cui lavori. Dal menu contest
 Un segnaposto con icona di attesa mostra subito dove comparira il risultato. Puoi aprirlo per vedere lo stato o annullare il lavoro. Quando la conversione termina, il file pronto prende il suo posto. Per impostazione predefinita i risultati sono accanto agli originali; se un nome esiste gia viene aggiunto un numero.
 
 Sono disponibili 44 formati di destinazione e 93 estensioni di ingresso riconosciute, nelle categorie compatibili. Le conversioni di immagini native comprendono PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR e PNM, oltre alla creazione di un PDF A4 per ciascuna immagine. Puoi regolare qualita JPEG e larghezza delle immagini. Nelle Impostazioni scegli le uscite visibili nella GUI e nel menu Explorer: di default MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4. Puoi abilitare le altre uscite; le 93 estensioni in ingresso restano riconosciute e il menu si aggiorna senza riavviare Explorer.
+
+Apri Modifica… nella riga di un'immagine per ritagliare, ridimensionare o creare una tela con risoluzione, colore, posizione e ancoraggio scelti. Esporta PNG, JPEG, WebP o PDF con anteprima del risultato preparato e peso effettivo dei byte codificati. JPEG e WebP offrono qualità regolabile: con un peso massimo il motore cerca una qualità adatta; 300 kB sono 300000 byte. Ridurre anche le dimensioni richiede una scelta esplicita. Nei PDF regola qualità, dimensioni e DPI per cambiare il peso. Se il limite è impossibile, il salvataggio resta disattivato e la conversione rapida non produce un file oltre il limite. Salva con nome scrive gli stessi byte preparati e conserva i file già esistenti.
+
+Impagina immagini, testo scritto in Nuovo foglio… o file TXT UTF-8 su A4/A5, in verticale o orizzontale, con margini scelti. Il testo semplice offre dimensione, interlinea, allineamento e pagine automatiche, con Ubuntu Light incorporato e testo selezionabile nel PDF. I caratteri non supportati producono un errore esplicito. Questo percorso è nativo e non richiede LibreOffice; i documenti Word mantengono la conversione Office esistente.
+
+Salva le mie impostazioni crea profili con nome: fino a 32 salvati e 8 visibili in Converti in. Riusa ritaglio relativo, dimensioni, tela, qualità, peso e opzioni pagina senza salvare l'immagine di prova o il testo digitato. I miei profili nelle Impostazioni permette di applicare e aggiornare le ricette. Nel menu compaiono soltanto i profili abilitati con formato attivo e ingressi compatibili; la coda conserva le opzioni con cui ogni lavoro è stato creato.
 
 Con libheif puoi leggere HEIC/HEIF e AVIF e crearli dalle immagini supportate. Configura heif-dec.exe e heif-enc.exe in Impostazioni → Motori, mantenendo insieme DLL e plugin della build. La disponibilita dipende dai decoder e dagli encoder HEVC/AV1 installati. Puoi scegliere qualita e larghezza; viene usata la prima immagine del contenitore, senza conservare sequenze o animazioni.
 
@@ -45,8 +51,8 @@ Menu Converti in direttamente in Esplora file su Windows 11
 Conversioni rapide in coda senza aprire ogni volta le opzioni
 Segnaposto nella cartella di destinazione e stato del lavoro su richiesta
 Immagini in PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR e PNM
-Creazione di un PDF A4 separato per ciascuna immagine
-Qualita JPEG, ridimensionamento e cartella di destinazione personalizzabili
+Immagini e testo semplice su PDF A4/A5 con orientamento e margini scelti
+Editor locale: ritaglio, scala e tela con risoluzione, sfondo e ancoraggio
 Audio e video con FFmpeg opzionale selezionato dall'utente
 PDF in immagini, TXT, Word DOCX e HTML di solo testo con Poppler opzionale
 Excel in CSV del primo foglio e CSV UTF-8 in XLSX, con quattro separatori e LibreOffice opzionale
@@ -58,6 +64,9 @@ File originali conservati e nomi numerati in caso di conflitto
 Conversioni di formato elaborate sul PC senza un account nell'app
 Scegli le uscite visibili: otto formati predefiniti e 93 estensioni in ingresso riconosciute
 Download facoltativo di FFmpeg e Poppler con conferma, verifica SHA-256 e licenze conservate
+Anteprima e peso esatto per PNG/JPEG/WebP/PDF; salvataggio degli stessi byte preparati
+Fino a 32 profili personali, con 8 scorciatoie nel menu Converti in per file compatibili
+Testo scritto nell'app o TXT UTF-8 in PDF con font incorporato e testo selezionabile
 ```
 
 ## Termini di ricerca
@@ -85,7 +94,7 @@ libheif con heif-dec.exe, heif-enc.exe, DLL e plugin per HEIC/AVIF; Tesseract co
 ## Novita
 
 ```text
-Scegli i formati visibili nelle Impostazioni: otto uscite per default, con tutte le 93 estensioni in ingresso ancora riconosciute. Scarica FFmpeg e Poppler soltanto su richiesta, con conferma e verifica SHA-256. Codice originale GPL-3.0-only e sorgenti pubblici.
+Modifica immagini con ritaglio, scala e tela personalizzata; esporta PNG, JPEG, WebP o PDF con anteprima e peso effettivo. Regola la qualità e imposta un peso massimo, con riduzione delle dimensioni soltanto se autorizzata. Impagina immagini, testo scritto nell'app o TXT UTF-8 su A4/A5. Salva fino a 32 profili, con 8 scorciatoie nel menu Converti in. Elaborazione sul PC, 44 destinazioni e 93 estensioni riconosciute. Gratuito: nessun pagamento richiesto per continuare a usarlo.
 ```
 
 ## Didascalie delle schermate
@@ -97,6 +106,8 @@ Scegli i formati visibili nelle Impostazioni: otto uscite per default, con tutte
 
 Catture 1, 3 e 4 della 0.4.0; la 2 riusa PDF Merge della 0.3.1 con interfaccia invariata. [Percorsi delle catture](store-assets/README.md).
 
+Per la candidata 0.6.0 sono da aggiungere catture native dell'editor e dei profili, con didascalie da abbinare soltanto dopo la verifica dell'immagine: «Ritaglia e regola qualità e peso sul risultato preparato»; «Impagina un testo su A4 o A5»; «Salva le opzioni e riusale nei tuoi profili». Non attribuire queste nuove funzioni alle catture storiche.
+
 ## Copyright e termini di licenza aggiuntivi
 
 Copyright:
@@ -105,18 +116,18 @@ Copyright:
 Copyright (C) 2026 Salvatore Corsi.
 ```
 
-Per Additional license terms il seguente singolo URL pubblico e verificato; lo Store lo mostra come collegamento al testo integrale della GPLv3:
+URL previsto per Additional license terms, da verificare dopo la pubblicazione del tag 0.6.0 e prima del salvataggio nel portale; collega il testo integrale della GPLv3:
 
 ```text
-https://github.com/salvatorecorsi/convert-here/blob/v0.4.0/LICENSE
+https://github.com/salvatorecorsi/convert-here/blob/v0.6.0/LICENSE
 ```
 
-La scelta del progetto e GPL-3.0-only. L'archivio pubblico `ConvertHere-0.4.0-source.zip` include sorgenti, dipendenze Cargo vendorizzate e istruzioni di build offline. Queste istruzioni dei campi non fanno parte della descrizione pubblica.
+La scelta del progetto è GPL-3.0-only. Per la candidata è previsto `ConvertHere-0.6.0-source.zip` con sorgenti, dipendenze Cargo vendorizzate e istruzioni di build offline. Queste istruzioni dei campi non fanno parte della descrizione pubblica.
 
 ## Riferimenti submission
 
-Titolare e sviluppatore: **Salvatore Corsi**; editore: **Salvatore Corsi**. Contatto privacy e supporto: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Privacy 0.4.0 pubblica verificata](https://github.com/salvatorecorsi/convert-here/blob/v0.4.0/docs/privacy.md). Nome riservato: **Convert Here**. Per licenza, identita e stato operativo vedere la [procedura di submission](store-submission.md).
+Titolare e sviluppatore: **Salvatore Corsi**; editore: **Salvatore Corsi**. Contatto privacy e supporto: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Privacy della candidata 0.6.0](https://github.com/salvatorecorsi/convert-here/blob/v0.6.0/docs/privacy.md), URL da verificare dopo il tag. Nome riservato: **Convert Here**. Per licenza, identità e stato operativo vedere la [procedura di submission](store-submission.md).
 
-Le schede IT/EN e i termini GPL sono salvati e riletti per la 0.4.0. La Submission 2 e stata inviata ed e in certificazione; le evidenze delle versioni precedenti restano nello storico.
+Queste sono bozze locali 0.6.0, non campi già salvati nel portale. Le evidenze della 0.4.0 e delle altre versioni restano nello storico. [Istruzioni di test della candidata](store-testing-0.6.0.md).
 
 Descrizione entro 10.000 caratteri; breve entro 1.000 (qui meno di 270); massimo 20 funzionalita da 200 caratteri; novita massimo 1.500, vuote alla prima submission. [Limiti ufficiali dei campi MSIX](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).
