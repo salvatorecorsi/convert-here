@@ -6,9 +6,9 @@
 
 Developed by **[Salvatore Corsi](https://github.com/salvatorecorsi)**, Convert Here is a free, open source program written in Rust. Use its window, the File Explorer context menu or the command line. Conversion and OCR run on your computer without uploading your files to an online service. No account, subscription or in-app purchases.
 
-[Download for Windows](https://github.com/salvatorecorsi/convert-here/releases/latest) · [Microsoft Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8) · [What's new in 0.4.0 (Italian)](docs/release-notes-0.4.0.md) · [Report a problem](https://github.com/salvatorecorsi/convert-here/issues)
+[Download for Windows](https://github.com/salvatorecorsi/convert-here/releases/latest) · [Microsoft Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8) · [What's new in 0.5.0](docs/release-notes-0.5.0.en.md) · [Report a problem](https://github.com/salvatorecorsi/convert-here/issues)
 
-**Italian and English are available in the updated source code.** Build these sources to use the language selector; the previously published v0.4.0 packages retain their Italian interface. See [Languages](#languages).
+**GitHub release 0.5.0 is bilingual, in Italian and English.** Download the installer or portable package and choose a language in **Settings → Language**. See [Languages](#languages).
 
 ![Convert Here in English: two PNG images converted to JPEG, with two completed files and zero errors](docs/screenshots/en-conversion.jpg)
 
@@ -27,18 +27,18 @@ Developed by **[Salvatore Corsi](https://github.com/salvatorecorsi)**, Convert H
 
 ## Installation
 
-The GitHub distribution requires **Windows 10 build 19041 or later, x64**. The [0.4.0 release](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.4.0) offers:
+The GitHub distribution requires **Windows 10 build 19041 or later, x64**. The [0.5.0 release](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.5.0) offers:
 
 | Package | How to use it |
 | --- | --- |
-| `ConvertHere-0.4.0-windows-x64-setup.exe` | Run the setup. It installs for your user without administrator privileges; optional context-menu integration is selected by default. |
-| `ConvertHere-0.4.0-windows-x64-portable.zip` | Extract it to a stable folder and run `the-converter.exe`. It also includes the CLI and context-menu scripts. |
+| [ConvertHere-0.5.0-windows-x64-setup.exe](https://github.com/salvatorecorsi/convert-here/releases/download/v0.5.0/ConvertHere-0.5.0-windows-x64-setup.exe) | Run the setup. It installs for your user without administrator privileges; optional context-menu integration is selected by default. |
+| [ConvertHere-0.5.0-windows-x64-portable.zip](https://github.com/salvatorecorsi/convert-here/releases/download/v0.5.0/ConvertHere-0.5.0-windows-x64-portable.zip) | Extract it to a stable folder and run `the-converter.exe`. It also includes the CLI and context-menu scripts. |
 
 Check the packages against `SHA256SUMS.txt` from the same release. The executable names remain `the-converter.exe` and `the-converter-cli.exe`; some earlier releases display the name The Converter.
 
 **Native images, images to PDF and operations on existing PDFs work immediately.** Configure the [optional engines](#optional-engines) for other conversions: the setup neither includes nor downloads them. Python, Node and Rust are not required to run the app.
 
-In the GitHub distribution, the Windows 11 menu is under **Show more options**. The GitHub 0.4.0 packages are not Authenticode-signed. See the [Windows integration guide](docs/windows-integration.en.md) for classic and modern menu details.
+In the GitHub distribution, the Windows 11 menu is under **Show more options**. The GitHub 0.5.0 packages are not Authenticode-signed. See the [Windows integration guide](docs/windows-integration.en.md) for classic and modern menu details.
 
 To uninstall, use **Windows Settings → Apps → Installed apps → Convert Here → Uninstall**. Preferences and converted files are preserved.
 
@@ -132,7 +132,7 @@ Open **Settings → Conversion engines** to detect installed tools or choose the
 | **Tesseract** | OCR | `tesseract.exe` path and `tessdata` folder with the required models |
 | **libheif** | Reading and creating HEIC/HEIF and AVIF | `heif-dec.exe` and `heif-enc.exe` paths, with DLLs and plugins |
 
-**Download FFmpeg and Poppler directly from the app**, including the portable edition. Before confirmation, you see the source, version, size, licenses and installation folder. In 0.4.0, both archives require about **159 MB of downloads** and about **615 MB of free space** during download and extraction. SHA-256 checksums are verified and licenses and documentation are retained.
+**Download FFmpeg and Poppler directly from the app**, including the portable edition. Before confirmation, you see the source, version, size, licenses and installation folder. In 0.5.0, both archives require about **159 MB of downloads** and about **615 MB of free space** during download and extraction. SHA-256 checksums are verified and licenses and documentation are retained.
 
 ![English confirmation dialog for optional FFmpeg and Poppler downloads, showing versions, sizes, licenses and the personal installation folder](docs/screenshots/en-download-engines.jpg)
 
@@ -142,11 +142,11 @@ Configure LibreOffice, libheif, Tesseract and OCR models from local installation
 
 ## Languages
 
-The updated app and File Explorer menu support **Italian and English**. In **Settings → Language**, choose **System**, **Italiano** or **English**. System follows the Windows display language: Italian is used for Italian Windows, English for other languages. The choice is saved separately from OCR settings.
+The app and File Explorer menu support **Italian and English** from version 0.5.0. In **Settings → Language**, choose **System**, **Italiano** or **English**. System follows the Windows display language: Italian is used for Italian Windows, English for other languages. The choice is saved separately from OCR settings.
 
-The installer already supports Italian and English. The CLI uses stable English option names; `--language system|it|en` selects the language for that invocation without changing saved preferences. Messages from Windows and external engines may follow their own language settings.
+The installer supports Italian and English. The CLI uses stable English option names; `--language system|it|en` selects the language for that invocation without changing saved preferences. Messages from Windows and external engines may follow their own language settings.
 
-The bilingual interface is available when building the updated sources. The previously published **v0.4.0 packages have the Italian interface**; this source change does not replace those downloads.
+The installer and portable packages in [GitHub release 0.5.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.5.0) include the bilingual interface ready to use.
 
 **OCR supports the languages of the installed Tesseract models**: Italian and English are the default; the app also offers French, German, Spanish and a field for other codes. Recognition language is independent of interface language.
 
@@ -192,4 +192,4 @@ The [developer guide](docs/development.en.md) describes tests, distribution buil
 
 Copyright (C) 2026 Salvatore Corsi. The original code is licensed under **GNU GPL version 3 only** (`GPL-3.0-only`), without warranty under the terms of the [complete license](LICENSE). The project continues the work of [Final Converter](https://github.com/salvatorecorsi/final-converter).
 
-Sources are public; the release includes `ConvertHere-0.4.0-source.zip` with both lockfiles, vendored Cargo dependencies and offline build instructions. Conversion does not change the rights to your content or impose the GPL on results solely through use of the program. Dependencies, fonts and engines retain their own licenses: [third-party notices](THIRD-PARTY-NOTICES.md) and [license texts](docs/release-licenses/README.md).
+Sources are public; the release includes `ConvertHere-0.5.0-source.zip` with both lockfiles, vendored Cargo dependencies and offline build instructions. Conversion does not change the rights to your content or impose the GPL on results solely through use of the program. Dependencies, fonts and engines retain their own licenses: [third-party notices](THIRD-PARTY-NOTICES.md) and [license texts](docs/release-licenses/README.md).

@@ -32,6 +32,6 @@ TXT is available for images through local OCR and for PDFs through text extracti
 
 ## Language
 
-The updated sources support Italian and English for the app and Explorer commands. Choose the interface language in **Settings → Language**; the saved choice is independent of OCR models. Existing records may contain progress or diagnostic text saved under the language used when the job ran. The previously published v0.4.0 packages retain their Italian UI. See [language settings](configuration.en.md#interface-language).
+Version 0.5.0 supports Italian and English for the app and Explorer commands. Choose the interface language in **Settings → Language**; the saved choice is independent of OCR models. Existing records may contain progress or diagnostic text saved under the language used when the job ran. See [language settings](configuration.en.md#interface-language).
 
 [Back to README](../README.en.md)

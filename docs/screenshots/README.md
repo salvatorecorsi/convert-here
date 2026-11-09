@@ -4,7 +4,7 @@ Schermate reali dell'interfaccia Windows, usate nel [README italiano](../../READ
 
 ## Interfaccia inglese · 9 novembre 2026
 
-Catture native ottenute il **9 novembre 2026** da una build debug dei sorgenti bilingui successivi alla release 0.4.0. Le immagini sono **JPEG integrali della finestra**, senza ritocchi, sovrapposizioni o ridimensionamenti. Documentano il codice aggiornato, non una nuova release pubblica: i pacchetti v0.4.0 precedentemente pubblicati mantengono l'interfaccia italiana.
+Catture native ottenute il **9 novembre 2026** da una build debug dei sorgenti bilingui successivi alla release 0.4.0. Le immagini sono **JPEG integrali della finestra**, senza ritocchi, sovrapposizioni o ridimensionamenti. Documentano l'interfaccia bilingue inclusa nella 0.5.0; sono state acquisite durante le verifiche dei sorgenti prima della build release.
 
 | Screenshot | Cosa mostra | Dimensioni |
 | --- | --- | --- |

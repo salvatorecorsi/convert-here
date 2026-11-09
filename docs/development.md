@@ -2,7 +2,7 @@
 
 **Italiano** · [English](development.en.md)
 
-Questa guida descrive come compilare Convert Here, verificare il codice e preparare le release pubbliche con i rispettivi sorgenti. Esegui i comandi PowerShell dalla radice della repository. I sorgenti aggiornati includono l'interfaccia italiano/inglese; i pacchetti v0.4.0 precedentemente pubblicati mantengono la GUI italiana.
+Questa guida descrive come compilare Convert Here, verificare il codice e preparare le release pubbliche con i rispettivi sorgenti. Esegui i comandi PowerShell dalla radice della repository. La release 0.5.0 include l'interfaccia italiano/inglese nei pacchetti installer e portable.
 
 ## Compilazione
 
@@ -30,7 +30,7 @@ Revisiona e salva in Git sorgenti, lockfile e avvisi, poi esegui la build e la p
 .\scripts\prepare-public-release.ps1 -CompilerPath C:\Percorso\InnoSetup\ISCC.exe
 ```
 
-Lo staging pubblico usa una lista esplicita di file e una verifica che rifiuta motori esterni o DLL aggiuntive. Per la 0.4.0 prepara `dist/releases/v0.4.0/` con setup, portable, `ConvertHere-0.4.0-source.zip` e `SHA256SUMS.txt` per tutti e tre gli archivi. Licenza del progetto e avvisi di dipendenze e font sono inclusi nei pacchetti.
+Lo staging pubblico usa una lista esplicita di file e una verifica che rifiuta motori esterni o DLL aggiuntive. Per la 0.5.0 prepara `dist/releases/v0.5.0/` con setup, portable, `ConvertHere-0.5.0-source.zip` e `SHA256SUMS.txt` per tutti e tre gli archivi. Licenza del progetto e avvisi di dipendenze e font sono inclusi nei pacchetti.
 
 La preparazione richiama `release-support/build-corresponding-source.ps1`: esporta il commit Git, verifica la provenienza dei binari e usa `cargo vendor --locked --versioned-dirs --sync shell-extension/Cargo.toml` per entrambi i lockfile. L'archivio conserva sorgenti e licenze upstream, configurazione Cargo relativa a `vendor/`, metadati di checksum, toolchain e `BUILDING-OFFLINE.txt`. Dopo aver installato la toolchain indicata, MSVC x64 e Windows SDK, puoi compilare app ed estensione con Cargo offline seguendo quella ricetta. Gli strumenti di sviluppo generali non sono inclusi; Inno Setup serve solo per generare il setup. Motori esterni, certificati e credenziali non fanno parte dell'archivio sorgente.
 
@@ -51,7 +51,7 @@ I test esterni usano i motori trovati localmente; se FFmpeg, Poppler, LibreOffic
 
 Copyright (C) 2026 Salvatore Corsi. Il codice originale di Convert Here è distribuito secondo la **GNU General Public License versione 3 soltanto** (`GPL-3.0-only`), senza alcuna garanzia nei termini della [licenza](../LICENSE).
 
-L'archivio `ConvertHere-0.4.0-source.zip` include il commit della release, entrambi i lockfile, dipendenze Cargo vendorizzate, script e istruzioni di build offline. I checksum coprono setup, portable e sorgenti. L'app mostra licenza e collegamento ai sorgenti nelle informazioni sul programma.
+L'archivio `ConvertHere-0.5.0-source.zip` include il commit della release, entrambi i lockfile, dipendenze Cargo vendorizzate, script e istruzioni di build offline. I checksum coprono setup, portable e sorgenti. L'app mostra licenza e collegamento ai sorgenti nelle informazioni sul programma.
 
 Dipendenze, font e motori esterni conservano le rispettive licenze: vedi [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) e i [testi delle licenze](release-licenses/README.md).
 

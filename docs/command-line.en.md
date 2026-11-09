@@ -26,7 +26,7 @@ Use the dedicated console executable for output, diagnostics and reliable exit c
 .\the-converter-cli.exe --convert --settings .\settings.json --files "C:\Audio\recording.wav"
 ```
 
-`--language system|it|en` selects the interface and application-message language for the current invocation without changing saved preferences. Without an override, the app uses the saved language choice. `system` follows the Windows display language, using Italian for Italian Windows and English otherwise. This option is available in the updated source code; the previously published v0.4.0 binaries do not include it. Option names, JSON keys and output filename suffixes remain stable across languages. Windows and external-engine messages may use their own language settings.
+`--language system|it|en` selects the interface and application-message language for the current invocation without changing saved preferences. Without an override, the app uses the saved language choice. `system` follows the Windows display language, using Italian for Italian Windows and English otherwise. This option is available from version 0.5.0. Option names, JSON keys and output filename suffixes remain stable across languages. Windows and external-engine messages may use their own language settings.
 
 `--convert` runs without a UI, continues with other files after an error and exits with a nonzero code if any conversion fails. Ctrl+C cancels processing and cleans temporary files. Paths are passed directly to processes without shell interpolation.
 

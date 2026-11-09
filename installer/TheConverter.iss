@@ -1,9 +1,9 @@
 ; Small, per-user installer. Conversion runtimes are obtained from their upstream publishers.
 #ifndef AppVersion
-  #define AppVersion "0.4.0"
+  #define AppVersion "0.5.0"
 #endif
 #ifndef FileVersion
-  #define FileVersion "0.4.0.0"
+  #define FileVersion "0.5.0.0"
 #endif
 #ifndef SourceDir
   #define SourceDir "..\dist\ConvertHere"

@@ -8,7 +8,7 @@ This guide describes Convert Here's settings. Start with the [README](../README.
 
 In **Settings → Language**, choose **System**, **Italiano** or **English**. System follows the Windows display language: Italian for Italian Windows, English otherwise. The choice is stored in the `ui_language` field of `preferences.json` as `system`, `it` or `en`. Existing settings without that field use System. It does not change OCR language, conversion formats, output filenames or other preferences.
 
-The bilingual interface is available in builds from the updated sources. Previously published v0.4.0 packages retain their Italian interface. The installer already supports Italian and English.
+The 0.5.0 installer and portable packages include the bilingual interface ready to use. The setup is also available in Italian and English.
 
 For one CLI invocation, pass `--language system|it|en`. This overrides the saved choice without rewriting it. Messages produced by Windows and external engines may follow their own language settings. [CLI guide](command-line.en.md).
 
@@ -32,7 +32,7 @@ For libheif, keep `heif-dec.exe` and `heif-enc.exe` with DLLs and plugins from t
 
 Public packages do not contain the engines. Request FFmpeg, Poppler or both in **Settings → Conversion engines**. The confirmation displays the source, version, size, licenses and destination. Installation uses only the personal folder `%LOCALAPPDATA%\ConvertHere\tools`.
 
-The 0.4.0 engine configuration downloads [FFmpeg 9.0.2 from Gyan's distribution](https://github.com/GyanD/codexffmpeg/releases/tag/9.0.2) and [Poppler 26.09.0 for Windows](https://github.com/oschwartz10612/poppler-windows/releases/tag/v26.09.0-0): 158478032 bytes in total, about 159 MB. About 615 MB of free space is needed during downloading and extraction. SHA-256 is checked before extraction; upstream licenses and documentation are preserved.
+The 0.5.0 engine configuration downloads [FFmpeg 9.0.2 from Gyan's distribution](https://github.com/GyanD/codexffmpeg/releases/tag/9.0.2) and [Poppler 26.09.0 for Windows](https://github.com/oschwartz10612/poppler-windows/releases/tag/v26.09.0-0): 158478032 bytes in total, about 159 MB. About 615 MB of free space is needed during downloading and extraction. SHA-256 is checked before extraction; upstream licenses and documentation are preserved.
 
 HTTPS requests reach the distributors and their CDNs, which receive the IP address and normal HTTP request data, including a User-Agent with the app version. Files to convert are not uploaded. Cancellation and errors attempt to remove temporary staging; an unexpected shutdown may leave residual files.
 

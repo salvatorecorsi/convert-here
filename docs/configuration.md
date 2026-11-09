@@ -2,13 +2,13 @@
 
 **Italiano** · [English](configuration.en.md)
 
-Questa guida descrive le impostazioni di Convert Here, incluse le lingue aggiunte nei sorgenti successivi alla 0.4.0. Per iniziare, vedi il [README](../README.md); per le conversioni disponibili, la [guida ai formati](conversions.md).
+Questa guida descrive le impostazioni di Convert Here 0.5.0, inclusa la scelta fra italiano e inglese. Per iniziare, vedi il [README](../README.md); per le conversioni disponibili, la [guida ai formati](conversions.md).
 
 ## Lingua dell'interfaccia
 
 In **Impostazioni → Lingua** scegli **Sistema**, **Italiano** o **English**. Sistema segue la lingua di visualizzazione di Windows: italiano per Windows in italiano, inglese per le altre lingue. La scelta è salvata nel campo `ui_language` di `preferences.json`, con valore `system`, `it` o `en`. Le impostazioni precedenti senza questo campo usano Sistema. La scelta non modifica lingua OCR, formati, nomi dei risultati o altre preferenze.
 
-L'interfaccia bilingue è disponibile compilando i sorgenti aggiornati; i pacchetti v0.4.0 già pubblicati mantengono la GUI italiana. L'installer supporta già italiano e inglese.
+Installer e portable della 0.5.0 includono l'interfaccia bilingue pronta all'uso. Anche il setup è disponibile in italiano e inglese.
 
 Per una sola esecuzione della CLI usa `--language system|it|en`: prevale sulla scelta salvata senza riscriverla. I messaggi di Windows e dei motori esterni possono seguire le rispettive impostazioni. [Guida alla CLI](command-line.md).
 
@@ -32,7 +32,7 @@ Per libheif mantieni `heif-dec.exe` e `heif-enc.exe` insieme alle DLL e ai plugi
 
 I pacchetti pubblici non contengono i motori. In **Impostazioni → Motori** puoi richiedere FFmpeg, Poppler o entrambi. La conferma mostra origine, versione, dimensioni, licenze e destinazione; l'installazione avviene soltanto nella cartella dell'utente `%LOCALAPPDATA%\ConvertHere\tools`.
 
-La 0.4.0 scarica [FFmpeg 9.0.2 dalla distribuzione Gyan](https://github.com/GyanD/codexffmpeg/releases/tag/9.0.2) e [Poppler 26.09.0 per Windows](https://github.com/oschwartz10612/poppler-windows/releases/tag/v26.09.0-0): 158478032 byte complessivi, circa 159 MB. Durante download ed estrazione servono circa 615 MB liberi. Lo SHA-256 viene verificato prima dell'estrazione; il layout conserva licenze e documentazione upstream.
+La 0.5.0 scarica [FFmpeg 9.0.2 dalla distribuzione Gyan](https://github.com/GyanD/codexffmpeg/releases/tag/9.0.2) e [Poppler 26.09.0 per Windows](https://github.com/oschwartz10612/poppler-windows/releases/tag/v26.09.0-0): 158478032 byte complessivi, circa 159 MB. Durante download ed estrazione servono circa 615 MB liberi. Lo SHA-256 viene verificato prima dell'estrazione; il layout conserva licenze e documentazione upstream.
 
 Le richieste HTTPS raggiungono i distributori e i loro CDN, che ricevono IP e normali dati HTTP, incluso User-Agent con versione dell'app. I file da convertire non vengono caricati. Annullamento ed errore tentano di rimuovere lo staging temporaneo; un arresto improvviso può lasciare residui.
 

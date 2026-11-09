@@ -4,7 +4,7 @@
 
 Convert Here uses a Rust COM DLL implementing `IExplorerCommand`, the Windows contract for File Explorer commands. The **Convert to** submenu offers formats compatible with every selected file and enabled in Settings. Choosing MP3, WAV, PDF or another format immediately starts conversion with saved preferences. **Custom settings…** opens the window to change quality and destination. Conversion runs in a separate process from Explorer.
 
-The updated sources support Italian and English. The submenu is **Converti in** in Italian and **Convert to** in English. Choose **System**, **Italiano** or **English** in the app's **Settings → Language**; System uses Italian for Italian Windows and English otherwise. Existing v0.4.0 packages keep their Italian UI. Interface language does not change format identifiers, CLI option names or output filenames.
+Version 0.5.0 supports Italian and English. The submenu is **Converti in** in Italian and **Convert to** in English. Choose **System**, **Italiano** or **English** in the app's **Settings → Language**; System uses Italian for Italian Windows and English otherwise. Interface language does not change format identifiers, CLI option names or output filenames.
 
 MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4 are visible by default. Settings lets you choose them by category; the menu rereads output preferences on each opening without restarting Explorer. **Custom settings…** remains accessible even with every output hidden. The display filter does not change the 93 recognized extensions, 44 engine destinations or explicit quick requests and already queued jobs.
 
