@@ -1,6 +1,6 @@
 # Scheda Microsoft Store — italiano (it-IT)
 
-Bozza per Convert Here **0.7.0**, pacchetto Store candidato **1.0.6.0**. Editore e sviluppatore: **Salvatore Corsi**. Testi pronti con 20 funzionalità; catture, URL versionati e caricamento vanno verificati sul candidato finale. Questo documento non attesta pubblicazione, invio o approvazione della 0.7.0. Il record della precedente 0.4.0 resta nello storico. Non copiare questo preambolo nei campi pubblici.
+Scheda di Convert Here **0.7.0**, pacchetto Store **1.0.6.0**. Editore e sviluppatore: **Salvatore Corsi**. La release GitHub è pubblicata; l'aggiornamento Store è stato inviato il **9 novembre 2026 alle 19:45 UTC** e risulta **In certification** (Submission 3). IT ed EN sono state salvate e rilette, ciascuna con **20 funzionalità e quattro schermate**. La 0.7.0 non è ancora approvata o pubblicata nello Store. Non copiare questo preambolo nei campi pubblici.
 
 ## Descrizione breve
 

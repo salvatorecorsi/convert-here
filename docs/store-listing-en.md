@@ -1,6 +1,6 @@
 # Microsoft Store listing — English (en-US)
 
-Draft for Convert Here **0.7.0**, candidate Store package **1.0.6.0**. Publisher and developer: **Salvatore Corsi**. Copy is ready with 20 features; screenshots, versioned URLs and upload must be verified against the final candidate. This document does not attest publication, submission or approval of 0.7.0. Earlier release evidence remains historical. The app supports Italian and English. Do not copy this preamble into public listing fields.
+Listing for Convert Here **0.7.0**, Store package **1.0.6.0**. Publisher and developer: **Salvatore Corsi**. The GitHub release is published; the Store update was submitted on **9 November 2026 at 19:45 UTC** and is **In certification** (Submission 3). Both IT and EN were saved and reread, each with **20 features and four screenshots**. Version 0.7.0 is not yet approved or published in the Store. The app supports Italian and English. Do not copy this preamble into public listing fields.
 
 ## Short description
 

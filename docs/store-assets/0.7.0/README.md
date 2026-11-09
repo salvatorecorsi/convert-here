@@ -11,4 +11,6 @@ Entrambi i file sono effettivamente **JPEG**, **1722 × 959 pixel**; formato e d
 
 La QA ha verificato le quattro schede, il rifiuto atomico dell'importazione non valida e l'importazione di quattro profili validi. Una conversione rapida FLAC → MP3 con limite di 30 secondi ha prodotto 721649 byte e durata FFprobe 30.000000 secondi; la cronologia è stata osservata aggiornata anche da un'altra finestra. Le schermate non sostituiscono queste prove funzionali.
 
-Vedi il [resoconto di validazione](../../store-validation.md), l'[indice Store](../README.md) e l'[indice degli screenshot](../../screenshots/README.md). La 0.7.0 è in preparazione: non si dichiara ancora pubblicato alcun nuovo pacchetto.
+Per il caricamento Store, che accetta PNG, la CLI release 0.7.0 ha convertito queste catture conservando dimensioni e pixel decodificati. Le due varianti PNG sono rispettivamente **272102 byte**, SHA-256 `0cdf4d297505baf80977ddf42872056b3ac4e6931d2f8919d6f6327a7644f25e`, e **261864 byte**, SHA-256 `20df8de1fee5919a38d48489ccb34111e3d2c7b1565da2a96e1ac3b759f24604`. Sono caricate nelle schede IT/EN insieme alle catture riutilizzate di PDF Merge e della conferma download, la cui interfaccia resta invariata.
+
+Vedi il [resoconto di validazione](../../store-validation.md), l'[indice Store](../README.md) e l'[indice degli screenshot](../../screenshots/README.md). La [release GitHub 0.7.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.0) è pubblicata; Store 1.0.6.0 è in certificazione, con pubblicazione automatica dopo l'approvazione.

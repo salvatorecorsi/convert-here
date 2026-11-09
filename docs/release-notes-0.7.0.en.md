@@ -1,6 +1,8 @@
 # Convert Here 0.7.0 — profiles, engine options and history
 
-**Release in preparation.** Planned application version: **0.7.0**; Microsoft Store package: **1.0.6.0**. This page does not yet announce published packages. Developer and publisher: **Salvatore Corsi**. [Italiano](release-notes-0.7.0.md).
+Application **0.7.0 [was published on GitHub](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.0)** on **9 November 2026 at 19:36:38 UTC**, from commit `e4b41f66ce2d99c9c7bd528aa29733a71db2330d`. Developer and publisher: **Salvatore Corsi**. [Italiano](release-notes-0.7.0.md).
+
+Microsoft Store update **1.0.6.0** was submitted in **Submission 3**, ID `1152921505702351165`, on 9 November 2026. At **19:45 UTC**, the portal showed **Update in certification / Product update: In certification**: Submission Complete, Pre-processing In progress, Certification Not started, Publishing Not started. Automatic publication after approval is selected; **0.7.0 is not published in the Store yet**. [Store status](store-submission.md).
 
 The main window has four tabs: **Files**, **History**, **Settings** and **Profiles**. Format controls stay beside conversion, while engines, enabled outputs and appearance have their own page.
 
@@ -20,6 +22,6 @@ The Store package requires **Windows 10 build 19041 or later, x64**. Context-men
 
 Conversion, editing and OCR remain local and free. Optional engines retain their requirements. Requested FFmpeg/Poppler downloads require confirmation and Internet; linked HTML resources may access the network through LibreOffice.
 
-The planned distribution includes setup, portable, corresponding source with vendored Cargo dependencies and checksums. Original code remains **GPL-3.0-only**; dependencies, fonts and engines keep their licenses. No payment is required to continue using Convert Here.
+The GitHub release includes `ConvertHere-0.7.0-windows-x64-setup.exe`, `ConvertHere-0.7.0-windows-x64-portable.zip`, `ConvertHere-0.7.0-source.zip` with vendored Cargo dependencies and `SHA256SUMS.txt`. Published tags and artifacts remain unchanged. Original code remains **GPL-3.0-only**; dependencies, fonts and engines keep their licenses. No payment is required to continue using Convert Here.
 
 Details: [editor and profile manager](image-editor-profiles.en.md), [configuration](configuration.en.md), [history and queue](queued-conversions.en.md), [CLI](command-line.en.md), [privacy](privacy.md), [validation status](store-validation.md).

@@ -2,9 +2,9 @@
 
 Queste verifiche accompagnano la preparazione Store di Convert Here, sviluppato da Salvatore Corsi. Non equivalgono alla certificazione Microsoft e non sostituiscono l'identita reale di Partner Center.
 
-## Versione 0.7.0 / Store 1.0.6.0 — in preparazione
+## Release 0.7.0 pubblicata / Store 1.0.6.0 in certificazione
 
-La nuova versione è **in preparazione**: tag, release GitHub e pacchetto Store non sono ancora pubblicati. Le prove seguenti riguardano i sorgenti e la build debug locale **0.7.0** destinati alla successiva build release; non attestano un'installazione del nuovo MSIX o un invio a Microsoft.
+La [release GitHub 0.7.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.0) è pubblicata dal **9 novembre 2026, 19:36:38 UTC**, commit `e4b41f66ce2d99c9c7bd528aa29733a71db2330d`. [Windows checks 42683376497](https://github.com/salvatorecorsi/convert-here/actions/runs/42683376497) è **SUCCESS**. L'aggiornamento Store **1.0.6.0** è stato caricato, validato e inviato per certificazione; non è ancora approvato o pubblicato.
 
 La suite completa ha superato **348 test app**, con **un test già ignorato**, e **18 test DLL**. Sono passate anche **due ulteriori regressioni dei controlli numerici e degli alias UI**, oltre a **Clippy con `--all-targets -- -D warnings`**. Le fixture di packaging Store hanno superato **50 controlli** e quelle di branding **37**, sia con PowerShell 7 sia con Windows PowerShell 5.1. Le prove COM e di avvio isolato verificano anche filtri di ingresso, profili Merge e profili FFmpeg per sorgenti audio/video, senza registrare la DLL nel sistema.
 
@@ -14,9 +14,24 @@ Un profilo rapido ha convertito un **FLAC di 35 secondi in MP3** con durata mass
 
 Le [due catture italiane della 0.7.0](store-assets/0.7.0/README.md), **JPEG 1722 × 959**, documentano Impostazioni e Profili dalla build debug nativa degli stessi sorgenti destinati alla release. Provenienza, nomi e digest sono nel registro della cartella; gli indici [Store](store-assets/README.md) e [screenshot](screenshots/README.md) mantengono separate le catture precedenti.
 
-Il requisito del nuovo manifest Store è **Windows 10 build 19041 o successivo, x64**, verificato dalle fixture di packaging. **Non è stato eseguito un test di installazione su un host Windows 10 reale, né il WACK.** Non vengono anticipati esiti di audit degli artefatti finali, certificazione o pubblicazione.
+Il requisito del manifest Store è **Windows 10 build 19041 o successivo, x64**, verificato dalle fixture e dal pacchetto finale. Le importazioni PE dell'app (**298 simboli**) e della DLL (**110**) non aggiungono simboli rispetto alla precedente review Windows 10; non risultano dipendenze CRT dinamiche o importazioni esclusive di Windows 11. **Non è stato eseguito un test di installazione su un host Windows 10 reale, né il WACK o l'installazione del nuovo MSIX.**
 
-## Release 0.6.0 pubblicata / Store 1.0.5.0 non caricato
+| Artefatto | Byte | SHA-256 |
+| --- | ---: | --- |
+| `ConvertHere-0.7.0-windows-x64-setup.exe` | 12758928 | `6f4840b70bafb9a6fcfa1ed3baf35aefd70b3145d573fbcf1818eefd34046238` |
+| `ConvertHere-0.7.0-windows-x64-portable.zip` | 16996599 | `4da97260440031e982c315aee13f484fb0f32cb3ca8c9af6dcb8dce308c6d90e` |
+| `ConvertHere-0.7.0-source.zip` | 84725416 | `fa5c8f4ec5cab1758116954020add7915ef02a4282da59171e815dab93c3da51` |
+| `SHA256SUMS.txt` | 313 | `bdf038ab19ddf3dcf9a9dc81e478a7deed2baf3ee17086f0e619dc66724fc258` |
+
+L'audit standalone è **PASS**: provenienza dal commit pulito, CRT statica, metadati e manifest, **95 voci** portable e **243 componenti Windows** con avvisi. Report locali: `.tools/standalone-070-audit.json` e `.tools/standalone-070-payload-audit.json`. I sorgenti includono **431 crate vendorizzati**, **22801 file verificati** e **196 file tracciati** corrispondenti al commit, ammettendo soltanto la normalizzazione esatta CRLF → LF per **169 file**. Il controllo offline conta **707 file di licenza/avviso**, includendo `PATENTS`; l'auditor pubblico ne conta **706** con il precedente filtro dei nomi. Veri `cargo check --locked --offline --all-targets` sono passati per app (**66.98 s**) e DLL (**3.91 s**), con Cargo home inizialmente vuota, target isolato, CRT statica e Rust **1.99.1** identico alla provenienza. Non si tratta di una build completa con linking. Dopo il controllo il registro Cargo contiene soltanto `CACHEDIR.TAG`, senza dipendenze scaricate; hash dell'archivio invariato. Report: `.tools/source-offline-070-9e939ce0cc78475b84b6285146e10fda/offline-check.json`.
+
+Il MSIX `ConvertHere-1.0.6.0-x64-store.msix` misura **7437834 byte**, SHA-256 `84f2e3561e73f425393312139629edab8d149747380f369580bbe3babbed52d1`. L'audit `.tools/store-070-audit.json` verifica **57 elementi payload**, **59 voci ZIP**, identità, versione, hash, licenze e provenienza pulita dal medesimo commit. Il payload contiene GUI e DLL Explorer; la CLI è nella distribuzione GitHub. Il pacchetto di upload è unsigned; nessuna installazione o modifica dei certificati è stata effettuata dall'audit.
+
+La **Submission 3**, ID **1152921505702351165** del prodotto **9NPKPPCBNBM8**, è stata inviata il **9 novembre 2026 alle 19:45 UTC**. Il portale mostra **Update in certification / Product update: In certification**: **Submission Complete**, **Pre-processing In progress**, **Certification Not started**, **Publishing Not started**. È confermata la pubblicazione automatica dopo il superamento della certificazione; prezzo gratuito e 240 mercati restano invariati. Le schede IT/EN sono state salvate e rilette con **20 funzionalità e quattro schermate ciascuna**; privacy fissata alla 0.7.0 riletta, note di test e motivazione `runFullTrust` di **457 caratteri** salvate. Le [istruzioni e prove della 0.7.0](store-testing-0.7.0.md) distinguono il contenuto verificato del pacchetto dai test ancora non eseguiti. Prove locali: `.tools/store-submission-070-final-state.txt` e `.tools/store-submission-070-final.jpg`; il sondaggio facoltativo è stato chiuso senza inviarlo prima della cattura finale. Nessun artefatto, tag o report precedente è modificato.
+
+## Storico 0.6.0 / Store 1.0.5.0 non caricato
+
+Il record seguente precede l'aggiornamento della stessa Submission 3 con la 0.7.0 descritto sopra.
 
 La [release GitHub 0.6.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.6.0) è pubblicata dal **9 novembre 2026, 18:28:13 UTC**, senza stato draft, dal commit `9b959405e64e62f1f05f49a821bb9444747b3620`. [Windows checks 42672724894](https://github.com/salvatorecorsi/convert-here/actions/runs/42672724894) è **SUCCESS**. Dimensioni e digest dei quattro asset GitHub corrispondono esattamente ai file locali verificati; il report di consegna è `.tools/delivery-060.json`.
 

@@ -1,12 +1,26 @@
-# Microsoft Store: preparazione della submission
+# Microsoft Store: stato della submission
 
-## Release GitHub 0.6.0 / candidato Store 1.0.5.0
+## Stato corrente: GitHub 0.7.0 pubblicata / Store 1.0.6.0 in certificazione
+
+La [release GitHub 0.7.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.0) è pubblicata dal **9 novembre 2026, 19:36:38 UTC**, commit `e4b41f66ce2d99c9c7bd528aa29733a71db2330d`; [Windows checks 42683376497](https://github.com/salvatorecorsi/convert-here/actions/runs/42683376497) è **SUCCESS**. Setup, portable, sorgenti e checksum sono verificati. I sorgenti includono **431 crate vendorizzati**; veri `cargo check --locked --offline --all-targets` per app e DLL sono passati con cache Cargo inizialmente vuota e CRT statica, senza attestare una build completa con linking.
+
+Il MSIX **1.0.6.0**, **7437834 byte**, SHA-256 `84f2e3561e73f425393312139629edab8d149747380f369580bbe3babbed52d1`, deriva dal medesimo commit pulito. Sono verificati **57 elementi payload**, **59 voci ZIP**, **243 avvisi di dipendenze**, identità e requisito **Windows 10 versione 2004/build 19041 o successivo, x64**, incluso Windows 11. Il pacchetto contiene GUI e DLL Explorer; la CLI è nella distribuzione GitHub. Non sono attestati installazione del nuovo MSIX su Windows 10 reale o WACK.
+
+Il pacchetto è stato caricato e salvato come **Validated**. La **Submission 3**, ID **1152921505702351165**, è stata inviata il **9 novembre 2026 alle 19:45 UTC**: il portale mostra **Update in certification / Product update: In certification**, con **Submission Complete**, **Pre-processing In progress**, **Certification Not started**, **Publishing Not started**. La 0.7.0 non è ancora approvata o pubblicata nello Store. Restano prezzo **gratuito**, **240 mercati** e pubblicazione automatica appena superata la certificazione.
+
+Schede IT ed EN salvate e rilette, ciascuna con **20 funzionalità e quattro schermate**; privacy fissata alla **0.7.0** salvata e riletta. Le Additional Testing Information corrette, di **4406 caratteri**, sono salvate con persistenza verificata; la motivazione `runFullTrust` è di **457 caratteri**. Le note descrivono correttamente GUI e DLL nel MSIX, senza CLI. Nome pubblico **Salvatore Corsi**, identità tecnica, GUID e prezzi restano invariati.
+
+Materiale corrente: [scheda IT](store-listing-it.md), [scheda EN](store-listing-en.md), note [IT](release-notes-0.7.0.md) / [EN](release-notes-0.7.0.en.md), [istruzioni di test 0.7.0](store-testing-0.7.0.md) e [audit, checksum e limiti delle verifiche](store-validation.md). Evidenza locale del portale: `.tools/store-submission-070-final-state.txt`; report `.tools/standalone-070-audit.json`, `.tools/store-070-audit.json` e `.tools/source-offline-070-9e939ce0cc78475b84b6285146e10fda/offline-check.json`. I record seguenti descrivono stati precedenti; tag, artefatti e report restano immutati.
+
+## Storico: release GitHub 0.6.0 / candidato Store 1.0.5.0
+
+Stato registrato il 9 novembre 2026 prima dell'aggiornamento 0.7.0: il candidato 1.0.5.0 non fu caricato o inviato. Lo stato attuale della medesima Submission 3 è quello descritto sopra.
 
 La [release GitHub **0.6.0**](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.6.0) è pubblicata dal **9 novembre 2026, 18:28:13 UTC**, dal commit `9b959405e64e62f1f05f49a821bb9444747b3620`, senza stato draft. [Windows checks 42672724894](https://github.com/salvatorecorsi/convert-here/actions/runs/42672724894) è **SUCCESS**. I quattro asset pubblici corrispondono a dimensioni e digest locali verificati; l'archivio sorgente ha superato veri cargo check --offline --locked --all-targets di app e DLL con cache inizialmente vuota, senza attestare una build completa con linking.
 
 Il MSIX **1.0.5.0** è costruito e verificato: **7123294 byte**, SHA-256 `185212fc3118f0d499763e415fcad33ce1eec1999bce5c678de892a8a27d9e5e`, con **57 elementi payload**, **59 voci ZIP** e **243 avvisi di dipendenze**. **Non è caricato, Validated o inviato**: il tentativo tramite selettore file automatico non è stato completato. La **Submission 3**, ID **1152921505702351165**, resta **in bozza**. La scheda italiana è salvata e riletta come **Updated**; per l'inglese è stato eseguito Save, ma la persistenza dopo il salvataggio **non è stata verificata**. Non è attestata approvazione o pubblicazione Store della 0.6.0.
 
-Materiale: [scheda IT](store-listing-it.md), [scheda EN](store-listing-en.md), note [IT](release-notes-0.6.0.md) / [EN](release-notes-0.6.0.en.md) e [istruzioni di test](store-testing-0.6.0.md). Prima dell'invio occorre completare il caricamento e verificare pacchetto e campi effettivi del portale. Gli hash, i report e le evidenze precedenti restano storici; tag e artefatti pubblicati non sono modificati da questo aggiornamento.
+Materiale storico: note [IT](release-notes-0.6.0.md) / [EN](release-notes-0.6.0.en.md) e [istruzioni di test](store-testing-0.6.0.md). In quel momento restavano da completare caricamento e verifica del pacchetto e dei campi del portale. Gli hash, i report e le evidenze precedenti restano storici; tag e artefatti pubblicati non sono modificati da questo aggiornamento.
 
 ## Ultimo stato registrato 0.4.0 / Store 1.0.3.0 — storico
 
@@ -66,7 +80,7 @@ Il precedente file 1.0.0.0 aveva SHA-256 `e130564d34e88b3e9f60ba6de76b06536adaa1
 
 Distribuire un **MSIX completo x64**, contenente applicazione, DLL Explorer, risorse e avvisi delle dipendenze. Il Microsoft Store firma il pacchetto dopo la certificazione; non occorre acquistare un certificato per questa distribuzione. Il vecchio `TheConverter.Identity.msix` sparse e il setup EXE restano artefatti diversi e non sono la submission Store. [Requisiti MSIX e firma Store](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/app-package-requirements#code-signing-for-microsoft-store-submissions).
 
-Il menu moderno usa la DLL `IExplorerCommand`, COM surrogate e `windows.fileExplorerContextMenus` dichiarati nel manifest del pacchetto completo. Non richiede script di registrazione del menu classico nel pacchetto Store. [Integrazione ufficiale con Esplora file](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/integrate-packaged-app-with-file-explorer).
+Il menu usa la DLL `IExplorerCommand`, COM surrogate e `windows.fileExplorerContextMenus` dichiarati nel manifest del pacchetto completo: menu classico su Windows 10, moderno su Windows 11. Non richiede script separati di registrazione nel pacchetto Store. [Integrazione ufficiale con Esplora file](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/integrate-packaged-app-with-file-explorer).
 
 ## Dati confermati e campi della submission
 
@@ -80,14 +94,14 @@ Il menu moderno usa la DLL `IExplorerCommand`, COM surrogate e `windows.fileExpl
 | Publisher display name | **Salvatore Corsi**, approvato; profilo **Authorized**, account **Active** e nome pubblico confermato in Legal info. |
 | Store ID | `9NPKPPCBNBM8`; l'identificativo non attesta la pubblicazione dell'app. |
 | Titolare e contatto | **Salvatore Corsi**, **salvo@salvatorecorsi.com**. |
-| Informativa privacy | [Versione 0.4.0 pubblica](https://github.com/salvatorecorsi/convert-here/blob/v0.4.0/docs/privacy.md), HTTP 200 e contenuto verificati; URL salvato e riletto nelle Properties. |
+| Informativa privacy | [Versione 0.7.0 pubblica](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/privacy.md); URL salvato e riletto nelle Properties. |
 | Supporto | **salvo@salvatorecorsi.com** oppure [pagina contatti](https://www.salvatorecorsi.com/contatti/), gia pubblici. Per PC il campo e facoltativo, ma consigliato. |
 | Prezzo, mercati e calendario | Scelte confermate dal proprietario e salvate: **Gratuita**, **tutti i 240 mercati disponibili**, **pubblicazione appena approvata**. |
-| Licenza applicazione Store | Codice originale **GPL-3.0-only**, Copyright (C) 2026 Salvatore Corsi. [Testo integrale 0.4.0](https://github.com/salvatorecorsi/convert-here/blob/v0.4.0/LICENSE) pubblico verificato (HTTP 200); URL singolo salvato e riletto in Additional license terms per entrambe le lingue. Le licenze dei terzi restano invariate. |
+| Licenza applicazione Store | Codice originale **GPL-3.0-only**, Copyright (C) 2026 Salvatore Corsi. [Testo integrale 0.7.0](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/LICENSE); URL singolo nelle schede IT/EN salvate e rilette. Le licenze dei terzi restano invariate. |
 
 Riferimenti Microsoft: [privacy e supporto](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/support-info), [termini di licenza aggiuntivi](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-additional-information#additional-license-terms).
 
-Microsoft accetta un singolo URL come collegamento cliccabile ai termini, oppure fino a 10000 caratteri di testo semplice. Il collegamento alla licenza completa evita di troncare la GPL; le schede IT/EN riportano anche il repository dei sorgenti. `ConvertHere-0.4.0-source.zip` e pubblicato con dipendenze Cargo vendorizzate e ricetta di build offline, verificata anche con cache Cargo inizialmente vuota. Licenza e avvisi terzi sono inclusi nei pacchetti; la conversione non cambia i diritti sui file dell'utente.
+Microsoft accetta un singolo URL come collegamento cliccabile ai termini, oppure fino a 10000 caratteri di testo semplice. Il collegamento alla licenza completa evita di troncare la GPL; le schede IT/EN riportano anche il repository dei sorgenti. `ConvertHere-0.7.0-source.zip` è pubblicato con dipendenze Cargo vendorizzate e ricetta di build offline; i `cargo check` offline sono verificati con cache inizialmente vuota. Licenza e avvisi terzi sono inclusi nei pacchetti; la conversione non cambia i diritti sui file dell'utente.
 
 ## Identita, versione e lingue
 
@@ -109,16 +123,16 @@ Il builder rifiuta identita di prova, placeholder e versioni Store non valide. C
 
 In alternativa, aprire [Actions → Microsoft Store package → Run workflow](https://github.com/salvatorecorsi/convert-here/actions/workflows/microsoft-store.yml) nel repository. Il valore predefinito genera una preview; per un candidato attivare `for_submission` e inserire identita, editore, nome riservato e versione. Gli input sono trasferiti allo script tramite variabili d'ambiente, senza interpretarli come codice. Gli artefatti includono il pacchetto unsigned e le bozze di submission. Microsoft esegue la firma dopo l'approvazione Store.
 
-[Windows checks](https://github.com/salvatorecorsi/convert-here/actions/workflows/windows-ci.yml) esegue automaticamente formattazione, test Rust e fixture PowerShell. Una pipeline verde verifica queste operazioni; non sostituisce la certificazione Microsoft o il collaudo dell'installazione su Windows 11.
+[Windows checks](https://github.com/salvatorecorsi/convert-here/actions/workflows/windows-ci.yml) esegue automaticamente formattazione, test Rust e fixture PowerShell. Una pipeline verde verifica queste operazioni; non sostituisce la certificazione Microsoft o il collaudo dell'installazione su Windows 10 e 11.
 
-- Versione Store prevista per la nuova candidata: `1.0.5.0`, distinta dalla versione applicazione `0.6.0`. Il precedente candidato generato e validato era `1.0.3.0` / `0.4.0`. Il primo segmento Store deve essere maggiore di zero; il quarto rimane zero. Ogni segmento e al massimo 65535. [Versioni dei pacchetti](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/app-package-requirements#version-numbering-for-windows-10-and-11-packages).
+- Versione Store corrente: `1.0.6.0`, distinta dalla versione applicazione `0.7.0`, generata, validata e inviata. Il precedente candidato `1.0.5.0` / `0.6.0` non fu caricato. Il primo segmento Store deve essere maggiore di zero; il quarto rimane zero. Ogni segmento è al massimo 65535. [Versioni dei pacchetti](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/app-package-requirements#version-numbering-for-windows-10-and-11-packages).
 - Nome e Publisher devono corrispondere esattamente ai dati Partner Center, comprese maiuscole e punteggiatura. Il builder ricompila gli eseguibili con il manifest dedicato al pacchetto completo, senza l'elemento di identita sparse dell'installer EXE.
-- La UI e attualmente in italiano. La scheda inglese e una traduzione della descrizione, non una traduzione dell'interfaccia. Non dichiarare supporto UI inglese finche non implementato e verificato.
-- Target previsto: Windows 11 desktop x64 per il menu moderno. Il limite OS e quello effettivamente impostato e collaudato nel manifest Store; non promettere ARM64 nativo.
+- Interfaccia e menu supportano italiano e inglese; in Impostazioni si sceglie Sistema, Italiano o English indipendentemente dalla lingua OCR.
+- Target: Windows 10 versione 2004/build `10.0.19041.0` o successivo, desktop x64, incluso Windows 11. Menu classico su Windows 10 e moderno su Windows 11. Manifest e import PE sono verificati; nessuna installazione su un host Windows 10 reale è attestata. Nessuna build ARM64 nativa dichiarata.
 
 ## Funzioni incluse e motori opzionali
 
-La candidata 0.6.0 aggiunge editor nativo PNG/JPEG/WebP/PDF con ritaglio, scala, tela e peso effettivo, impaginazione A4/A5 da immagini o testo semplice scritto/TXT UTF-8 e profili personali. Queste funzioni native non richiedono un motore esterno. Si possono salvare 32 profili e mostrarne 8 nel menu; i profili conservano parametri senza immagini di prova o testo digitato. Le ricette vengono applicate soltanto a ingressi compatibili; nessuna nuova estensione viene aggiunta alle 93 riconosciute. La procedura di prova è nella [checklist della candidata](store-testing-0.6.0.md).
+La 0.7.0 comprende editor nativo PNG/JPEG/WebP/PDF con ritaglio, scala, tela e peso effettivo, impaginazione A4/A5 da immagini o testo semplice scritto/TXT UTF-8 e profili personali. Il manager consente creazione, modifica, duplicazione, scelta dei predefiniti, import/export JSON e filtri sulle estensioni di ingresso; limiti di peso per file e durata audio/video, opzioni FFmpeg avanzate tipate e cronologia locale completano il flusso. Le funzioni native non richiedono un motore esterno. Si possono salvare 32 profili e mostrarne 8 nel menu; i profili conservano parametri senza immagini di prova o testo digitato. Le ricette vengono applicate soltanto a ingressi compatibili; restano 93 estensioni riconosciute. La procedura di prova è nella [checklist 0.7.0](store-testing-0.7.0.md).
 
 Il pacchetto leggero offre subito conversioni immagini native e immagini in PDF, compressione PDF senza perdita, divisione e unione di PDF, coda, impostazioni e menu contestuale. Il modello espone 44 destinazioni per le categorie compatibili e riconosce 93 estensioni in ingresso. FFmpeg serve per audio/video; Poppler per PDF in immagini e testo (TXT, DOCX o HTML); LibreOffice per documenti Office/HTML in PDF ed Excel/CSV; Tesseract con dati delle lingue per OCR locale; libheif (`heif-dec` e `heif-enc`, con i codec necessari) per leggere e scrivere HEIC/AVIF. OCR dei PDF richiede anche Poppler per rasterizzare le pagine. Sono programmi esterni gia disponibili sul PC o selezionati dall'utente in Impostazioni → Motori. La build Store non deve includere il downloader PowerShell del setup EXE. Nella 0.4.0 FFmpeg e Poppler possono essere scaricati su richiesta con conferma nell'app; LibreOffice, Tesseract, modelli OCR e libheif restano da selezionare da installazioni locali. Nessun motore e incluso nel MSIX.
 
@@ -133,7 +147,7 @@ La dipendenza va dichiarata all'inizio delle descrizioni: la policy 10.2.4 ammet
 
 ## Capability e motivazione per la certificazione
 
-`runFullTrust` e dichiarato per l'app desktop `mediumIL` e il COM packaged. La motivazione di 424 caratteri e stata salvata per il precedente candidato 1.0.1.0. Scopo tecnico:
+`runFullTrust` è dichiarato per l'app desktop `mediumIL` e il COM packaged. Per la 1.0.6.0 è salvata una motivazione di **457 caratteri**, coerente con conversioni locali, strumenti opzionali e integrazione Explorer, senza elevazione. Il testo seguente, di 424 caratteri, appartiene invece al precedente candidato 1.0.1.0 e resta storico:
 
 > Convert Here is a native Rust desktop file conversion application. It reads files explicitly selected by the user, writes converted outputs to the selected folder, and provides an IExplorerCommand shell extension through packaged COM. Optional conversion engines already installed or explicitly selected by the user run as child processes with the user's permissions. The app does not require administrator privileges, a service, a driver, or elevation.
 

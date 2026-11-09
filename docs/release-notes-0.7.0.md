@@ -1,6 +1,8 @@
 # Convert Here 0.7.0 — profili, opzioni dei motori e cronologia
 
-**Versione in preparazione.** Applicazione prevista **0.7.0**, pacchetto Microsoft Store **1.0.6.0**. Questa pagina non annuncia ancora la pubblicazione dei pacchetti. Sviluppatore e publisher: **Salvatore Corsi**. [English](release-notes-0.7.0.en.md).
+Applicazione **0.7.0 [pubblicata su GitHub](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.0)** il **9 novembre 2026 alle 19:36:38 UTC**, dal commit `e4b41f66ce2d99c9c7bd528aa29733a71db2330d`. Sviluppatore e publisher: **Salvatore Corsi**. [English](release-notes-0.7.0.en.md).
+
+L'aggiornamento Microsoft Store **1.0.6.0** è stato inviato nella **Submission 3**, ID `1152921505702351165`, il 9 novembre 2026. Alle **19:45 UTC** il portale mostrava **Update in certification / Product update: In certification**: Submission Complete, Pre-processing In progress, Certification Not started, Publishing Not started. È selezionata la pubblicazione automatica appena approvato; **la 0.7.0 non è ancora pubblicata nello Store**. [Stato Store](store-submission.md).
 
 La finestra principale è organizzata in quattro schede: **File**, **Cronologia**, **Impostazioni** e **Profili**. Le opzioni del formato restano vicine alla conversione; motori, uscite abilitate e aspetto hanno una pagina dedicata.
 
@@ -20,6 +22,6 @@ Il requisito del pacchetto Store è **Windows 10 build 19041 o successivo, x64**
 
 Conversioni, editor e OCR restano locali e gratuiti. I motori opzionali mantengono i propri requisiti; il download facoltativo di FFmpeg/Poppler richiede conferma e Internet, mentre HTML con risorse collegate può accedere alla rete tramite LibreOffice.
 
-La distribuzione prevista comprende installer, portable, sorgenti corrispondenti con dipendenze Cargo vendorizzate e checksum. Il codice originale resta **GPL-3.0-only**; dipendenze, font e motori conservano le proprie licenze. Nessun pagamento è richiesto per continuare a usare Convert Here.
+La release GitHub comprende `ConvertHere-0.7.0-windows-x64-setup.exe`, `ConvertHere-0.7.0-windows-x64-portable.zip`, `ConvertHere-0.7.0-source.zip` con dipendenze Cargo vendorizzate e `SHA256SUMS.txt`. Tag e artefatti pubblicati restano invariati. Il codice originale resta **GPL-3.0-only**; dipendenze, font e motori conservano le proprie licenze. Nessun pagamento è richiesto per continuare a usare Convert Here.
 
 Approfondimenti: [editor e manager profili](image-editor-profiles.md), [configurazione](configuration.md), [cronologia e coda](queued-conversions.md), [CLI](command-line.md), [privacy](privacy.md), [stato di verifica](store-validation.md).
