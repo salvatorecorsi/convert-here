@@ -1,6 +1,6 @@
 # Scheda Microsoft Store — italiano (it-IT)
 
-Scheda di Convert Here **0.7.0**, pacchetto Store **1.0.6.0**. Editore e sviluppatore: **Salvatore Corsi**. La release GitHub è pubblicata; l'aggiornamento Store è stato inviato il **9 novembre 2026 alle 19:45 UTC** e risulta **In certification** (Submission 3). IT ed EN sono state salvate e rilette, ciascuna con **20 funzionalità e quattro schermate**. La 0.7.0 non è ancora approvata o pubblicata nello Store. Non copiare questo preambolo nei campi pubblici.
+Scheda di Convert Here **0.7.1**, pacchetto Store **1.0.7.0**. Editore e sviluppatore: **Salvatore Corsi**. GitHub pubblicata il **9 novembre 2026 alle 21:08:01 UTC**; aggiornamento Store inviato alle **21:09 UTC**, **In certification** (Submission 4, ID **1152921505702358188**), con pubblicazione automatica dopo approvazione. IT ed EN salvate e rilette con **20 funzionalità e due PNG 2562 × 1430 ciascuna**. La 0.7.1 non è ancora approvata o pubblicata nello Store; il precedente 1.0.6.0 era già approvato. Il workaround del menu non è verificato su un host Windows 10 reale. Non copiare questo preambolo nei campi pubblici.
 
 ## Descrizione breve
 
@@ -54,7 +54,7 @@ Inserire ciascuna riga in un campo separato, senza il trattino iniziale:
 
 ```text
 Converti in nel menu classico di Windows 10 e moderno di Windows 11, da build 19041 x64
-Coda rapida con segnaposto e stato del lavoro su richiesta
+Cronologia unificata con conversioni in corso, in coda e completate
 44 destinazioni e 93 estensioni in ingresso, con otto uscite visibili per default
 Conversioni immagini native, HEIC/AVIF con libheif opzionale e audio/video con FFmpeg opzionale
 Editor immagini con ritaglio, scala, tela, sfondo e ancoraggio
@@ -100,19 +100,15 @@ libheif con heif-dec.exe, heif-enc.exe, DLL e plugin per HEIC/AVIF; Tesseract co
 ## Novita
 
 ```text
-Nuova gestione profili per Audio, Video, Immagini e Documenti: crea, duplica e scambia ricette JSON, scegli gli ingressi e fino a 8 scorciatoie nel menu. Aggiunti peso massimo per file, durata audio/video e opzioni FFmpeg avanzate verificate sugli encoder locali. Il pacchetto Store richiede ora Windows 10 build 19041 o successivo, x64, con menu classico su Windows 10 e moderno su Windows 11. Restano editor immagini, testo A4/A5, 44 destinazioni e 93 estensioni. Elaborazione locale e gratuita, senza pagamenti richiesti per continuare l'uso.
+Aggiornata la registrazione del menu contestuale Store per affrontare la mancata comparsa di Converti in su Windows 10. Nuove schermate native ad alta risoluzione, senza puntatore. Restano profili personalizzati, editor immagini, PDF Bulk/Merge e cronologia.
 ```
 
 ## Didascalie delle schermate
 
-1. Conversione locale di due immagini in JPEG completata.
-2. Riordina le singole pagine in PDF Merge per creare un documento unico.
-3. Scegli le uscite visibili nelle Impostazioni, con otto formati predefiniti e categorie dedicate.
-4. Conferma fonti, versioni, dimensioni e cartella prima di scaricare FFmpeg e Poppler.
+1. Formati di uscita per categoria e motori in griglia. Interfaccia in italiano, cattura nativa 2562 × 1430.
+2. Profili personali per immagini, audio, video e PDF, con importazione ed esportazione JSON. Interfaccia in italiano.
 
-Catture 1, 3 e 4 della 0.4.0; la 2 riusa PDF Merge della 0.3.1 con interfaccia invariata. [Percorsi delle catture](store-assets/README.md).
-
-Per la candidata 0.7.0 sono da aggiungere catture native dell'editor e dei profili, con didascalie da abbinare soltanto dopo la verifica dell'immagine: «Ritaglia e regola qualità e peso sul risultato preparato»; «Impagina un testo su A4 o A5»; «Salva le opzioni e riusale nei tuoi profili». Non attribuire queste nuove funzioni alle catture storiche.
+Due PNG native **2562 × 1430**, salvate e rilette in entrambe le schede. Le catture provengono dalla build debug **0.7.0**, con interfaccia invariata nella 0.7.1 e zoom nativo **150%**, senza ingrandimento successivo; non sono catture di una build 0.7.1. [Galleria e provenienza](store-assets/0.7.1/README.md). Le immagini precedenti restano soltanto nello storico.
 
 ## Copyright e termini di licenza aggiuntivi
 
@@ -122,18 +118,18 @@ Copyright:
 Copyright (C) 2026 Salvatore Corsi.
 ```
 
-URL previsto per Additional license terms, da verificare dopo la pubblicazione del tag 0.7.0 e prima del salvataggio nel portale; collega il testo integrale della GPLv3:
+URL pubblico salvato e riletto in Additional license terms; collega il testo integrale della GPLv3:
 
 ```text
-https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/LICENSE
+https://github.com/salvatorecorsi/convert-here/blob/v0.7.1/LICENSE
 ```
 
-La scelta del progetto è GPL-3.0-only. Per la candidata è previsto `ConvertHere-0.7.0-source.zip` con sorgenti, dipendenze Cargo vendorizzate e istruzioni di build offline. Queste istruzioni dei campi non fanno parte della descrizione pubblica.
+Il progetto è GPL-3.0-only. La release pubblica include `ConvertHere-0.7.1-source.zip` con sorgenti, dipendenze Cargo vendorizzate e istruzioni di build offline. Queste istruzioni dei campi non fanno parte della descrizione pubblica.
 
 ## Riferimenti submission
 
-Titolare e sviluppatore: **Salvatore Corsi**; editore: **Salvatore Corsi**. Contatto privacy e supporto: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Privacy della candidata 0.7.0](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/privacy.md), URL da verificare dopo il tag. Nome riservato: **Convert Here**. Per licenza, identità e stato operativo vedere la [procedura di submission](store-submission.md).
+Titolare e sviluppatore: **Salvatore Corsi**; editore: **Salvatore Corsi**. Contatto privacy e supporto: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Privacy 0.7.1 pubblica](https://github.com/salvatorecorsi/convert-here/blob/v0.7.1/docs/privacy.md), URL salvato nel portale. Nome riservato: **Convert Here**. Per identità e stato operativo vedere la [procedura di submission](store-submission.md).
 
-Queste sono bozze locali 0.7.0, non campi già salvati nel portale. Le evidenze della 0.4.0 e delle altre versioni restano nello storico. [Istruzioni di test della candidata](store-testing-0.7.0.md).
+Testi IT/EN salvati e riletti per la Submission 4; l'aggiornamento è in certificazione, non ancora approvato o pubblicato. [Istruzioni e prove 0.7.1](store-testing-0.7.1.md). I record delle versioni precedenti restano storici.
 
 Descrizione entro 10.000 caratteri; breve entro 1.000 (qui meno di 270); massimo 20 funzionalita da 200 caratteri; novita massimo 1.500, vuote alla prima submission. [Limiti ufficiali dei campi MSIX](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).

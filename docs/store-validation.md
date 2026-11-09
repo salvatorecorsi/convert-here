@@ -165,10 +165,26 @@ Il report WACK locale della precedente preview **1.0.1.0**, eseguito con kit 10.
 
 Il precedente pacchetto 1.0.1.0 è stato sostituito dal 1.0.2.0. Il nuovo nome **Salvatore Corsi** e approvato, il pacchetto 1.0.2.0 e Validated e la submission e **In certification** dal 4 novembre 2026; la pubblicazione Store non e ancora iniziata. Vedi la [procedura di submission](store-submission.md).
 
-## 0.7.1 / Store 1.0.7.0 — candidata del 9 novembre 2026
+## 0.7.1 / Store 1.0.7.0 — pubblicazione del 9 novembre 2026
 
-La modifica del menu packaged usa `0000ConvertHere`, mantenendo identità, CLSID e capability. I controlli mirati passano: branding 37, Store 51 più MakeAppx semantico, sparse 26, installer 7 e cleanup 6, sorgenti corrispondenti 21, parità delle 93 estensioni con due fixture incoerenti respinte. Il nuovo probe COM/menu classico è passato sul pacchetto **installato 1.0.6.0** e Windows 11 build 26200: questo dato non collauda il candidato 1.0.7.0 né Windows 10. Il gate richiede `-ExpectedVersion 1.0.7.0` dopo l'installazione. Non è disponibile un host Windows 10 reale.
+Commit della build e del tag: **2c6d6968159a46baef37d8f20aef049e7be4c8c4**, checkout pulito. [CI 42698306310](https://github.com/salvatorecorsi/convert-here/actions/runs/42698306310) **SUCCESS**, inclusi formatting, Clippy con warning negati, test Rust di tutti i target, COM, parità input e fixture PowerShell/Store/branding/licenze. Controlli locali mirati: branding 37, Store 51 più MakeAppx semantico, sparse 26, installer 7 e cleanup 6, sorgenti corrispondenti 21, parità di 93 estensioni e due regressioni respinte. COM ABI sulle DLL finali standalone e Store: PASS.
 
-Le due [nuove catture](store-assets/0.7.1/README.md) sono PNG 2562 × 1430, senza puntatore. Provengono dalla UI debug 0.7.0 invariata in 0.7.1, zoom nativo 150%, senza ingrandimento successivo; la CLI ha convertito i JPEG nativi in PNG. I 20 screenshot precedenti con puntatore/alone sono ritirati dal ramo corrente; gli archivi rimandano al tag storico v0.7.0.
+| Artefatto | Byte | SHA-256 |
+| --- | ---: | --- |
+| ConvertHere-0.7.1-windows-x64-setup.exe | 11749805 | 57baae391bbc6131ea3d7dbbd82b0bc4f28016cc979c42336627be16bf26f17b |
+| ConvertHere-0.7.1-windows-x64-portable.zip | 14990007 | c0b1ed27b7fa7f2c8a02905ebe38783c28be9ef25db1914de8c7c94db717803b |
+| ConvertHere-0.7.1-source.zip | 82724658 | a8db6bd83383322366081bba9eeadaa16d1af69bf440644da71a87eef7dbb728 |
+| SHA256SUMS.txt | 313 | a13cffa9b07fff504992390c05f26b43a3f6744cc67891fea3df52861bdb095a |
+| ConvertHere-1.0.7.0-x64-store.msix | 7441267 | 60ec178179ade97e1f5f23c40a26c259a25da2ed48cea78c1a1456927ec55d87 |
 
-Build, audit finali, push, release e stato della nuova submission saranno registrati dopo l'esecuzione; non trasferire checksum o prove della 0.7.0 al candidato.
+[GitHub 0.7.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.1) è pubblicata dal **21:08:01 UTC**. I quattro asset risultano uploaded con dimensioni e digest corrispondenti. Il portable comprende **84 file** corrispondenti allo staging; notice Windows **243**. PE x64, versioni degli eseguibili 0.7.1, manifest assembly 0.7.1.0 e CRT statico verificati. I sorgenti comprendono **431 crate**, **22801 file vendor** verificati, **707 file di licenze/notice** e **186 file tracciati** confrontati al commit (blob esatto o sola normalizzazione CRLF→LF). Sono passati veri cargo check locked/offline/all-targets per app (**68,45 s**) e DLL (**3,92 s**) con cache inizialmente vuota: nessun crate o indice scaricato. Questo è un check dei target, non una build completa con linking dal bundle estratto.
+
+Il MSIX contiene **57 file payload / 59 voci ZIP**: GUI, DLL e installer nativo; nessuna CLI o motore di conversione. Identità SalvatoreCorsi.ConvertHere, publisher e CLSID invariati, MinVersion **10.0.19041.0**, sola capability runFullTrust. Tutti i payload e le licenze corrispondono al commit; marker del downloader nativo e checksum dei due motori verificati.
+
+La modifica del menu packaged usa **0000ConvertHere**. Il nuovo probe COM/menu classico è passato sul pacchetto **installato 1.0.6.0** e Windows 11 build 26200: quel risultato non collauda il nuovo 1.0.7.0 né Windows 10. Il gate postinstallazione richiede ExpectedVersion 1.0.7.0. **Non sono stati eseguiti installazione della nuova build MSIX, test Windows 10 reale o WACK.**
+
+Le due [catture correnti](store-assets/0.7.1/README.md) sono PNG **2562 × 1430**, senza puntatore, dalla UI debug 0.7.0 invariata in 0.7.1, zoom nativo 150% e nessun ingrandimento successivo. I 20 screenshot precedenti con puntatore/alone sono ritirati dal ramo corrente; gli archivi rimandano al tag storico v0.7.0. IT/EN salvate e rilette con **20 funzionalità e due immagini per lingua**, note aggiornate e URL licenza/privacy al tag v0.7.1.
+
+La **Submission 4**, ID **1152921505702358188**, è stata inviata e osservata alle **21:09 UTC** in stato **In certification**: Submission Complete, Pre-processing In progress, Certification/Publishing Not started, pubblicazione automatica appena approvato. Il precedente Store 1.0.6.0 risultava già pubblicato; **non si dichiara ancora pubblicato Store 1.0.7.0**. Le nuove istruzioni sono salvate e ricaricate con 2380 caratteri nel campo; la motivazione runFullTrust resta 457 caratteri.
+
+Report locali: .tools/standalone-071-audit.json, .tools/standalone-071-payload-audit.json, .tools/store-071-audit.json, .tools/source-offline-071-fa491735cf384b60ac134a55afc23b9d/offline-check.json, .tools/standalone-071-com.txt, .tools/store-071-com.txt, .tools/ci-071.log, .tools/github-release-071-final.json e .tools/store-submission-071-final-state.txt. I file distribuiti e il tag non sono modificati dagli aggiornamenti documentali successivi.

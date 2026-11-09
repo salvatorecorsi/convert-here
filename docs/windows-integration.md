@@ -27,7 +27,25 @@ cargo build --release --manifest-path .\shell-extension\Cargo.toml
 
 Il risultato e `dist\ConvertHere\`: `the-converter.exe` e `the_converter_shell.dll` devono stare nella stessa cartella. Questi nomi tecnici e gli identificativi COM/MSIX restano stabili dopo la rinomina pubblica. Mantieni quella cartella in una posizione stabile prima di registrare il menu. La DLL x64 deve corrispondere all'architettura di Esplora file; il pacchetto corrente non e per Explorer ARM64.
 
-## Menu classico, senza privilegi amministrativi
+## Pacchetto Microsoft Store e menu classico
+
+La distribuzione Microsoft Store contiene applicazione e DLL COM nello stesso MSIX. Il manifest dichiara `windows.comServer` e `windows.fileExplorerContextMenus`: la registrazione e la rimozione seguono il ciclo di vita del pacchetto. Gli script di registrazione per setup e portable descritti sotto non servono alla versione Store. Il requisito del pacchetto è Windows 10 versione 2004, build **19041**, o successiva, **x64**; il menu previsto è quello classico su Windows 10 e quello moderno su Windows 11.
+
+Dalla **0.7.1 / MSIX 1.0.7.0** il verbo dichiarato usa l'ID **`0000ConvertHere`**, conservando CLSID e titolo visibile. Il prefisso che precede gli altri nomi nell'ordinamento applica una mitigazione adottata da [NanaZip nel suo manifest](https://github.com/M2Team/NanaZip/blob/main/NanaZipPackage/Package.appxmanifest) e da [MediaInfo per comandi packaged assenti nel menu classico](https://github.com/MediaArea/MediaInfo/pull/998). È un workaround osservato su alcune configurazioni, non una garanzia documentata sul comportamento di Explorer. Non richiede nuove capability o registrazioni del menu esterne al pacchetto.
+
+Per verificare l'installazione effettiva, usa **Windows PowerShell a 64 bit**, i sorgenti della release e un file supportato già presente. Dopo che lo Store ha installato **1.0.7.0**, dalla cartella dei sorgenti:
+
+```powershell
+.\scripts\test-packaged-context-menu.ps1 -ExpectedVersion 1.0.7.0 -SamplePath 'C:\Immagini\esempio.png'
+```
+
+Lo script richiede un unico pacchetto Store `SalvatoreCorsi.ConvertHere` della versione attesa e rifiuta le registrazioni classiche o i pacchetti Convert Here concorrenti che renderebbero ambiguo il risultato. Per una prova isolata usa un account con la sola installazione Store. Il controllo attiva il COM surrogate installato e interroga il vero menu classico con `IContextMenu`; su Windows 11 corrisponde a **Mostra altre opzioni**. Verifica il comando radice su file singoli, senza eseguire conversioni o controllare multiselezione e sottomenu caricati in ritardo. Non registra DLL, cambia associazioni, riavvia Explorer o modifica certificati.
+
+Se il menu non si aggiorna dopo l'installazione, esci dall'account Windows e accedi nuovamente, poi ripeti il controllo. Il parametro `-ExpectedVersion` impedisce di attribuire un risultato alla nuova release quando sul PC è ancora installata la precedente.
+
+**Windows 10 reale non è ancora stato testato.** Il probe eseguito su Windows 11 build 26200 ha verificato attivazione COM e presenza nel menu classico del precedente **MSIX 1.0.6.0**. Il nuovo **1.0.7.0** è stato compilato e auditato staticamente, ma non installato localmente; il 9 novembre 2026 la Submission 4 risulta **In certification**. Questi risultati non attestano il ripristino del menu su Windows 10. Vedi il [registro della 0.7.1](store-testing-0.7.1.md) per verifiche e limiti.
+
+## Menu classico per setup e portable, senza privilegi amministrativi
 
 ```powershell
 .\scripts\install-context-menu.ps1 -Mode Classic -InstallDirectory .\dist\ConvertHere

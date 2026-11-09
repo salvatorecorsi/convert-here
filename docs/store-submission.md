@@ -1,6 +1,22 @@
 # Microsoft Store: stato della submission
 
-## Stato corrente: GitHub 0.7.0 pubblicata / Store 1.0.6.0 in certificazione
+## Stato corrente: GitHub 0.7.1 pubblicata / Store 1.0.7.0 in certificazione
+
+La [release GitHub 0.7.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.1) è pubblicata dal **9 novembre 2026, 21:08:01 UTC**, commit pulito **2c6d6968159a46baef37d8f20aef049e7be4c8c4**. [Windows checks 42698306310](https://github.com/salvatorecorsi/convert-here/actions/runs/42698306310) è **SUCCESS**. Setup, portable, sorgenti vendorizzati e checksum sono verificati anche rispetto ai digest GitHub. Dai sorgenti estratti sono passati veri cargo check offline per app e DLL con cache inizialmente vuota: **68,45 s** e **3,92 s**, senza attestare una build completa con linking.
+
+La **Submission 4**, ID **1152921505702358188**, è stata inviata il **9 novembre 2026 alle 21:09 UTC**. Stato osservato: **Update in certification / Product update: In certification**, Submission Complete, Pre-processing In progress, Certification e Publishing Not started. È selezionata la **pubblicazione automatica appena approvato**. La 1.0.7.0 non è ancora dichiarata approvata o disponibile nello Store. La precedente **Submission 3 / Store 1.0.6.0** risultava invece già pubblicata all'inizio di questo aggiornamento.
+
+Il MSIX **1.0.7.0** misura **7441267 byte**, SHA-256 **60ec178179ade97e1f5f23c40a26c259a25da2ed48cea78c1a1456927ec55d87**. Sono verificati commit, GUI 0.7.1, DLL, **57 payload / 59 voci ZIP**, **243 notice**, CRT statico e sola capability runFullTrust. Restano identità e CLSID, x64 e MinVersion **10.0.19041.0**. Il verbo manifest è **0000ConvertHere**, mitigazione del menu classico da verificare su Windows 10 reale; non è stata installata questa build MSIX né eseguito WACK. GUI, DLL e installer nativo dei motori sono inclusi; CLI e motori non sono inclusi nel MSIX.
+
+IT ed EN sono salvate e rilette: **20 funzionalità e due PNG 2562 × 1430 per lingua**, con didascalie che dichiarano l'interfaccia italiana. Tutte le quattro vecchie immagini di ciascuna scheda sono state rimosse dalla bozza. Nel ramo corrente sono ritirati i 20 screenshot contaminati; i tag storici restano immutati. [Provenienza delle catture](store-assets/0.7.1/README.md).
+
+Privacy e licenza puntano al tag **v0.7.1**. Le nuove Additional Testing Information sono state salvate e ricaricate (**2380 caratteri nel campo**, con normalizzazione dei fine riga). La motivazione runFullTrust resta **457 caratteri**; non sono state aggiunte capability, credenziali o nuove accettazioni contrattuali. Prezzo, mercati e identità pubblica Salvatore Corsi restano invariati.
+
+Materiale corrente: [scheda IT](store-listing-it.md), [scheda EN](store-listing-en.md), note [IT](release-notes-0.7.1.md) / [EN](release-notes-0.7.1.en.md), [test 0.7.1](store-testing-0.7.1.md) e [validazione](store-validation.md). Evidenza locale: .tools/store-submission-071-final-state.txt e .tools/store-submission-071-final.jpg; report .tools/standalone-071-audit.json, .tools/store-071-audit.json e .tools/source-offline-071-fa491735cf384b60ac134a55afc23b9d/offline-check.json.
+
+I paragrafi seguenti conservano gli stati osservati nelle versioni precedenti. Le indicazioni «non ancora pubblicata» nello storico si riferiscono all'ora riportata, precedente all'approvazione della Submission 3.
+
+## Storico: GitHub 0.7.0 / Store 1.0.6.0 — stato osservato alle 19:45 UTC
 
 La [release GitHub 0.7.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.0) è pubblicata dal **9 novembre 2026, 19:36:38 UTC**, commit `e4b41f66ce2d99c9c7bd528aa29733a71db2330d`; [Windows checks 42683376497](https://github.com/salvatorecorsi/convert-here/actions/runs/42683376497) è **SUCCESS**. Setup, portable, sorgenti e checksum sono verificati. I sorgenti includono **431 crate vendorizzati**; veri `cargo check --locked --offline --all-targets` per app e DLL sono passati con cache Cargo inizialmente vuota e CRT statica, senza attestare una build completa con linking.
 

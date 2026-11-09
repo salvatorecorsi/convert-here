@@ -1,6 +1,6 @@
 # Microsoft Store listing — English (en-US)
 
-Listing for Convert Here **0.7.0**, Store package **1.0.6.0**. Publisher and developer: **Salvatore Corsi**. The GitHub release is published; the Store update was submitted on **9 November 2026 at 19:45 UTC** and is **In certification** (Submission 3). Both IT and EN were saved and reread, each with **20 features and four screenshots**. Version 0.7.0 is not yet approved or published in the Store. The app supports Italian and English. Do not copy this preamble into public listing fields.
+Listing for Convert Here **0.7.1**, Store package **1.0.7.0**. Publisher and developer: **Salvatore Corsi**. GitHub published on **9 November 2026 at 21:08:01 UTC**; Store update submitted at **21:09 UTC**, **In certification** (Submission 4, ID **1152921505702358188**), with automatic publication after approval. IT and EN were saved and reread with **20 features and two 2562 × 1430 PNGs each**. Version 0.7.1 is not yet approved or published in the Store; the preceding 1.0.6.0 update was already approved. The menu workaround has not been verified on a real Windows 10 host. The app supports Italian and English. Do not copy this preamble into public listing fields.
 
 ## Short description
 
@@ -54,7 +54,7 @@ Enter each line in a separate feature field, without adding bullet characters:
 
 ```text
 Convert to in the Windows 10 classic and Windows 11 modern menus, from build 19041 x64
-Quick queue with output placeholders and job status on demand
+Unified history for conversions in progress, queued and completed
 44 outputs and 93 input extensions, with eight visible outputs by default
 Native images, optional libheif for HEIC/AVIF and optional FFmpeg for audio/video
 Image editor with crop, resize, canvas, background and anchor
@@ -100,19 +100,15 @@ libheif with heif-dec.exe, heif-enc.exe, DLLs and plugins for HEIC/AVIF; Tessera
 ## What's new
 
 ```text
-New Audio, Video, Images and Documents profile manager: create, duplicate and exchange JSON recipes, select inputs and show up to 8 menu shortcuts. Added a per-file size cap, audio/video duration limit and advanced FFmpeg controls verified against local encoders. The Store package now targets Windows 10 build 19041 or later, x64, with the classic Windows 10 and modern Windows 11 menus. Image editing, A4/A5 text, 44 outputs and 93 input extensions remain available. Local and free; no payment is required to keep using it.
+Updated the Store context-menu registration to address Convert to not appearing on Windows 10. New high-resolution native screenshots without a pointer. Personal profiles, the image editor, PDF Bulk/Merge and history remain available.
 ```
 
 ## Screenshot captions
 
-1. Two local image-to-JPEG conversions completed. App UI shown in Italian.
-2. Reorder individual pages in PDF Merge to create one document. App UI shown in Italian.
-3. Choose visible outputs in Settings, with eight defaults and separate categories. App UI shown in Italian.
-4. Confirm sources, versions, sizes and folder before downloading FFmpeg and Poppler. App UI shown in Italian.
+1. Output formats by category and conversion engines in a grid. Italian interface, native 2562 × 1430 capture.
+2. Personal profiles for images, audio, video and PDF, with JSON import and export. Italian interface shown.
 
-Screenshots 1, 3 and 4 show 0.4.0; screenshot 2 reuses the unchanged PDF Merge UI from 0.3.1. [Screenshot paths](store-assets/README.md).
-
-Native editor and profile screenshots remain to be captured for the 0.7.0 candidate. Match captions only after verifying the image: “Crop and adjust quality and size on the prepared result”; “Lay out text on A4 or A5”; “Save settings and reuse your profiles”. State the language actually shown in each screenshot. Do not attribute these new functions to historical screenshots.
+Two native **2562 × 1430 PNGs**, saved and reread in both listings. They come from debug build **0.7.0**, whose interface is unchanged in 0.7.1, at native **150%** UI zoom without later upscaling; they do not capture a 0.7.1 build. [Gallery and provenance](store-assets/0.7.1/README.md). Earlier images remain historical only.
 
 ## Copyright and additional license terms
 
@@ -122,18 +118,18 @@ Copyright:
 Copyright (C) 2026 Salvatore Corsi.
 ```
 
-Planned Additional license terms URL, to be verified after the 0.7.0 tag is published and before saving it in the portal. It links to the complete GPLv3 text:
+Public URL saved and reread in Additional license terms, linking to the full GPLv3 text:
 
 ```text
-https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/LICENSE
+https://github.com/salvatorecorsi/convert-here/blob/v0.7.1/LICENSE
 ```
 
-The project uses GPL-3.0-only. The candidate plans `ConvertHere-0.7.0-source.zip` with source code, vendored Cargo dependencies and offline build instructions. These field-entry instructions are not part of the public description.
+The project uses GPL-3.0-only. The public release includes `ConvertHere-0.7.1-source.zip` with source code, vendored Cargo dependencies and offline build instructions. These field-entry instructions are not part of the public description.
 
 ## Submission references
 
-Data controller and developer: **Salvatore Corsi**; publisher: **Salvatore Corsi**. Privacy and support contact: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Candidate 0.7.0 privacy statement](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/privacy.md), to be verified after the tag is published. Reserved name: **Convert Here**. See the [submission procedure](store-submission.md) for licensing, identity and current status.
+Data controller and developer: **Salvatore Corsi**; publisher: **Salvatore Corsi**. Privacy and support contact: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Public 0.7.1 privacy statement](https://github.com/salvatorecorsi/convert-here/blob/v0.7.1/docs/privacy.md), URL saved in the portal. Reserved name: **Convert Here**. See the [submission procedure](store-submission.md) for identity and current status.
 
-These are local 0.7.0 drafts, not fields already saved in the portal. Evidence for 0.4.0 and other earlier versions remains historical. [Candidate testing instructions](store-testing-0.7.0.md).
+IT/EN fields were saved and reread for Submission 4; the update is in certification, not yet approved or published. [0.7.1 testing instructions and evidence](store-testing-0.7.1.md). Earlier release records remain historical.
 
-Description: 10,000 characters maximum; short description: 1,000 maximum (this draft is below 270); up to 20 features of 200 characters each; release notes: 1,500 maximum, empty for the first submission. [Official MSIX listing limits](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).
+Description: 10,000 characters maximum; short description: 1,000 maximum (below 270 here); up to 20 features of 200 characters each; release notes: 1,500 maximum, empty for the first submission. [Official MSIX listing limits](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).

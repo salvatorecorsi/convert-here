@@ -10,7 +10,7 @@ Sviluppato da **[Salvatore Corsi](https://github.com/salvatorecorsi)**, Convert 
 
 **Convert Here è bilingue, in italiano e inglese.** Scarica installer o portable e scegli la lingua in **Impostazioni → Lingua**. Vedi [Lingue](#lingue).
 
-La **0.7.1 è candidata, in preparazione**, con un workaround per il menu del pacchetto Store su Windows 10 e nuove catture dell'app. La correzione del menu non è ancora verificata su un host Windows 10 reale. [Note IT](docs/release-notes-0.7.1.md) / [EN](docs/release-notes-0.7.1.en.md). Le funzioni della [0.7.0 pubblicata su GitHub](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.0) restano invariate. Lo **Store 1.0.6.0 resta in certificazione**; il nuovo **1.0.7.0** è in preparazione e non ancora inviato. [Stato Store](docs/store-submission.md).
+La **0.7.1 è pubblicata su GitHub** dal 9 novembre 2026, con un workaround per il menu del pacchetto Store su Windows 10 e nuove catture dell'app. La modifica del menu non è ancora verificata su un host Windows 10 reale. [Note IT](docs/release-notes-0.7.1.md) / [EN](docs/release-notes-0.7.1.en.md). Le funzioni della 0.7.0 restano invariate. L'aggiornamento **Store 1.0.7.0 è in certificazione**, con pubblicazione automatica appena approvato; il precedente 1.0.6.0 era già approvato. [Stato Store](docs/store-submission.md).
 
 ![Convert Here: manager dei profili e quattro schede](docs/store-assets/0.7.1/02-profili-it.png)
 
@@ -35,7 +35,7 @@ Impagina immagini, testo scritto in **Nuovo foglio…** o TXT UTF-8 su **A4/A5**
 
 ## Installazione
 
-La distribuzione GitHub richiede **Windows 10 build 19041 o successivo, x64**. I pacchetti della [0.7.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.1), attualmente candidata, saranno disponibili dopo la pubblicazione:
+La distribuzione GitHub richiede **Windows 10 build 19041 o successivo, x64**. Dalla [release 0.7.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.1) puoi scegliere:
 
 | Pacchetto | Come si usa |
 | --- | --- |
@@ -146,7 +146,7 @@ Apri **Impostazioni → Motori** per rilevare gli strumenti già installati o sc
 | **Tesseract** | OCR | Percorso di `tesseract.exe` e cartella `tessdata` con i modelli necessari |
 | **libheif** | Lettura e creazione HEIC/HEIF e AVIF | Percorsi di `heif-dec.exe` e `heif-enc.exe`, con DLL e plugin |
 
-**FFmpeg e Poppler si possono scaricare direttamente dall'app**, anche nella versione portable. Prima della conferma vedi origine, versione, dimensioni, licenze e cartella di installazione. Nella 0.7.0 i due archivi richiedono circa **159 MB di download** e circa **615 MB liberi** durante download ed estrazione. Gli archivi vengono verificati con SHA-256; licenze e documentazione restano incluse.
+**FFmpeg e Poppler si possono scaricare direttamente dall'app**, anche nella versione portable. Prima della conferma vedi origine, versione, dimensioni, licenze e cartella di installazione. Nella 0.7.1 i due archivi richiedono circa **159 MB di download** e circa **615 MB liberi** durante download ed estrazione. Gli archivi vengono verificati con SHA-256; licenze e documentazione restano incluse.
 
 Il download parte soltanto dopo la conferma. I motori vengono installati nella cartella dell'utente; i file da convertire restano sul PC. [Cattura storica del dialogo](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/screenshots/download-motori.png).
 
@@ -158,7 +158,7 @@ L'**app e il menu di Esplora file supportano italiano e inglese** dalla versione
 
 Anche l'**installer è disponibile in italiano e inglese**. La CLI mantiene i nomi delle opzioni in inglese; `--language system|it|en` sceglie la lingua per la singola esecuzione senza cambiare le preferenze. I messaggi di Windows e dei motori esterni possono seguire le rispettive impostazioni.
 
-Installer e portable della [release GitHub 0.7.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.0) includono l'interfaccia bilingue pronta all'uso.
+Installer e portable della [release GitHub 0.7.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.1) includono l'interfaccia bilingue pronta all'uso.
 
 L'**OCR supporta le lingue dei modelli Tesseract installati**: italiano e inglese sono la scelta predefinita; nell'app sono proposti anche francese, tedesco, spagnolo e un campo per altri codici. La lingua del riconoscimento non cambia quella dell'interfaccia.
 
@@ -204,4 +204,4 @@ La [guida per sviluppatori](docs/development.md) descrive test, build della dist
 
 Copyright (C) 2026 Salvatore Corsi. Il codice originale è distribuito con licenza **GNU GPL versione 3 soltanto** (`GPL-3.0-only`), senza garanzia nei termini della [licenza completa](LICENSE). Il progetto prosegue il lavoro di [Final Converter](https://github.com/salvatorecorsi/final-converter).
 
-I sorgenti sono pubblici; la release include `ConvertHere-0.7.0-source.zip` con entrambi i lockfile, dipendenze Cargo vendorizzate e istruzioni di build offline. La conversione non cambia i diritti dei tuoi contenuti e non impone la GPL ai risultati per il solo uso del programma. Dipendenze, font e motori conservano le rispettive licenze: [avvisi di terze parti](THIRD-PARTY-NOTICES.md) e [testi delle licenze](docs/release-licenses/README.md).
+I sorgenti sono pubblici; la release include `ConvertHere-0.7.1-source.zip` con entrambi i lockfile, dipendenze Cargo vendorizzate e istruzioni di build offline. La conversione non cambia i diritti dei tuoi contenuti e non impone la GPL ai risultati per il solo uso del programma. Dipendenze, font e motori conservano le rispettive licenze: [avvisi di terze parti](THIRD-PARTY-NOTICES.md) e [testi delle licenze](docs/release-licenses/README.md).
