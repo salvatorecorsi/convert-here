@@ -1,4 +1,4 @@
-﻿# Installs only the selected Explorer integration, for the current user.
+# Installs only the selected Explorer integration, for the current user.
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [ValidateSet('Classic', 'Modern')][string]$Mode = 'Classic',
@@ -112,7 +112,7 @@ $classKey = "HKCU:\Software\Classes\CLSID\$classId"
 $menuKey = 'HKCU:\Software\Classes\*\shell\TheConverter'
 # Canonical AQS uses only the fast file-extension property, independent of locale.
 # Keep this input whitelist aligned with target_mask in the Explorer DLL.
-$classicExtensions = @('mp3', 'mpga', 'wav', 'flac', 'aac', 'm4a', 'ogg', 'opus', 'wma', 'aiff', 'aif', 'alac', 'ape', 'm4b', 'mka', 'mp2', 'oga', 'weba', 'ac3', 'au', 'caf', 'amr', 'dts', 'tta', 'voc', 'wv', 'tak', 'w64', 'aifc', 'ra', 'mp4', 'mkv', 'mov', 'avi', 'webm', 'wmv', 'm4v', 'mpeg', 'mpg', 'ts', 'mts', 'm2ts', '3gp', 'flv', 'asf', 'vob', 'ogv', 'm2v', 'mxf', 'f4v', 'divx', '3g2', 'm2t', 'mpe', 'mpv', 'png', 'jpg', 'jpeg', 'webp', 'bmp', 'tif', 'tiff', 'gif', 'ico', 'qoi', 'tga', 'ff', 'hdr', 'exr', 'pnm', 'pam', 'pbm', 'pgm', 'ppm', 'avif', 'heic', 'heif', 'pdf', 'xls', 'xlsx', 'xlsm', 'ods', 'csv', 'html', 'htm', 'doc', 'docx', 'odt', 'rtf', 'txt', 'ppt', 'pptx', 'odp')
+$classicExtensions = @('mp3', 'mpga', 'wav', 'flac', 'aac', 'm4a', 'ogg', 'opus', 'wma', 'aiff', 'aif', 'alac', 'ape', 'm4b', 'mka', 'mp2', 'oga', 'weba', 'ac3', 'au', 'caf', 'amr', 'dts', 'tta', 'voc', 'wv', 'tak', 'w64', 'aifc', 'ra', 'mp4', 'mkv', 'mov', 'avi', 'webm', 'wmv', 'm4v', 'mpeg', 'mpg', 'ts', 'mts', 'm2ts', '3gp', 'flv', 'asf', 'vob', 'ogv', 'm2v', 'mxf', 'f4v', 'divx', '3g2', 'm2t', 'mpe', 'mpv', 'png', 'svg', 'jpg', 'jpeg', 'webp', 'bmp', 'tif', 'tiff', 'gif', 'ico', 'qoi', 'tga', 'ff', 'hdr', 'exr', 'pnm', 'pam', 'pbm', 'pgm', 'ppm', 'avif', 'heic', 'heif', 'pdf', 'xls', 'xlsx', 'xlsm', 'ods', 'csv', 'html', 'htm', 'doc', 'docx', 'odt', 'rtf', 'txt', 'ppt', 'pptx', 'odp')
 $appliesTo = ($classicExtensions | ForEach-Object { 'System.FileExtension:=".' + $_ + '"' }) -join ' OR '
 if ($PSCmdlet.ShouldProcess('HKCU\Software\Classes', (Get-LocalizedText 'Installa il comando classico Convert Here' 'Install the classic Convert Here command'))) {
     New-Item -Path $classKey -Force | Out-Null

@@ -69,7 +69,7 @@ const SELECTION_ALL_PDFS: u64 = 1 << 56;
 const SELECTION_ALL_MEDIA: u64 = 1 << 55;
 const PDF_TARGET: u64 = 1 << 19;
 const PDF_MERGE_GUID_SLOT: usize = 45;
-const AUDIO_TARGETS: u64 = ((1 << 7) - 1) | (((1 << 5) - 1) << 21);
+const AUDIO_TARGETS: u64 = ((1 << 7) - 1) | (((1 << 5) - 1) << 21) | TEXT_TARGET;
 const VIDEO_TARGETS: u64 = AUDIO_TARGETS | (((1 << 6) - 1) << 7) | (((1 << 6) - 1) << 26);
 const IMAGE_TARGETS: u64 =
     (((1 << 8) - 1) << 12) | (((1 << 6) - 1) << 32) | (3 << 42) | TEXT_TARGET;
@@ -124,6 +124,9 @@ const ALL_TARGETS: u64 = (1 << TARGETS.len()) - 1;
 fn text_target_title(selection: u64, language: Language) -> &'static str {
     if selection == UNKNOWN_SELECTION_MASK {
         return "TXT";
+    }
+    if selection & SELECTION_ALL_MEDIA != 0 {
+        return localized(language, "TXT · Trascrizione", "TXT · Transcription");
     }
     if selection & SELECTION_CONTAINS_IMAGE != 0 && selection & SELECTION_CONTAINS_PDF != 0 {
         localized(language, "TXT · OCR / testo PDF", "TXT · OCR / PDF text")
@@ -856,8 +859,8 @@ fn target_mask(path: &Path) -> u64 {
         "mp4" | "mkv" | "mov" | "avi" | "webm" | "wmv" | "m4v" | "mpeg" | "mpg" | "ts" | "mts"
         | "m2ts" | "3gp" | "flv" | "asf" | "vob" | "ogv" | "m2v" | "mxf" | "f4v" | "divx"
         | "3g2" | "m2t" | "mpe" | "mpv" => VIDEO_TARGETS,
-        "png" | "jpg" | "jpeg" | "webp" | "bmp" | "tif" | "tiff" | "gif" | "ico" | "qoi"
-        | "tga" | "ff" | "hdr" | "exr" | "pnm" | "pam" | "pbm" | "pgm" | "ppm" | "avif"
+        "png" | "svg" | "jpg" | "jpeg" | "webp" | "bmp" | "tif" | "tiff" | "gif" | "ico"
+        | "qoi" | "tga" | "ff" | "hdr" | "exr" | "pnm" | "pam" | "pbm" | "pgm" | "ppm" | "avif"
         | "heic" | "heif" => IMAGE_TARGETS,
         "pdf" => PDF_TARGETS,
         "xls" | "xlsx" | "xlsm" | "ods" | "csv" => SPREADSHEET_TARGETS,
@@ -1827,6 +1830,14 @@ mod tests {
             "TXT · OCR"
         );
         assert_eq!(
+            text_target_title(TEXT_TARGET | SELECTION_ALL_MEDIA, Language::Italian),
+            "TXT · Trascrizione"
+        );
+        assert_eq!(
+            text_target_title(TEXT_TARGET | SELECTION_ALL_MEDIA, Language::English),
+            "TXT · Transcription"
+        );
+        assert_eq!(
             pdf_target_title(SELECTION_CONTAINS_PDF, Language::English),
             "PDF · compress"
         );
@@ -2014,13 +2025,14 @@ mod tests {
         assert_eq!(
             formats(audio & video),
             vec![
-                "mp3", "wav", "flac", "aac", "ogg", "opus", "aiff", "m4a", "wma", "ac3", "au",
-                "caf"
+                "mp3", "wav", "flac", "aac", "ogg", "opus", "aiff", "txt", "m4a", "wma", "ac3",
+                "au", "caf"
             ]
         );
         assert_eq!(formats(image & pdf), vec!["png", "jpg", "pdf", "txt"]);
         assert_eq!(formats(document & image), vec!["pdf"]);
-        assert_eq!(audio & image, 0);
+        assert_eq!(audio & image, TEXT_TARGET);
+        assert_eq!(target_mask(Path::new("vector.SVG")), image);
         assert_eq!(target_mask(Path::new("unknown.exe")), 0);
         for extension in [
             "txt", "doc", "docx", "odt", "rtf", "ppt", "pptx", "odp", "html", "htm",
@@ -2031,8 +2043,8 @@ mod tests {
             );
         }
         assert_eq!(target_mask(Path::new("musica.mpga")), audio);
-        assert_eq!(audio & TEXT_TARGET, 0);
-        assert_eq!(audio & pdf, 0);
+        assert_eq!(audio & TEXT_TARGET, TEXT_TARGET);
+        assert_eq!(audio & pdf, TEXT_TARGET);
         let batch = [Path::new("testo.txt"), Path::new("foto.png")];
         assert_eq!(formats(common_target_mask(batch)), vec!["pdf"]);
         assert_eq!(
@@ -2127,7 +2139,7 @@ mod tests {
         registered.sort_unstable();
         let mut profile_extensions = profile_menu_shared::RECOGNIZED_INPUT_EXTENSIONS.to_vec();
         profile_extensions.sort_unstable();
-        assert_eq!(profile_extensions.len(), 93);
+        assert_eq!(profile_extensions.len(), 94);
         assert_eq!(
             core_extensions, profile_extensions,
             "Profile filters must use exactly the recognized input whitelist"

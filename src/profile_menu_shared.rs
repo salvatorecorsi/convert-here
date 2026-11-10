@@ -14,10 +14,10 @@ pub const RECOGNIZED_INPUT_EXTENSIONS: &[&str] = &[
     "m4b", "mka", "mp2", "oga", "weba", "ac3", "au", "caf", "amr", "dts", "tta", "voc", "wv",
     "tak", "w64", "aifc", "ra", "mp4", "m4v", "mkv", "mov", "webm", "avi", "wmv", "mpeg", "mpg",
     "mts", "m2ts", "ts", "3gp", "flv", "asf", "vob", "ogv", "m2v", "mxf", "f4v", "divx", "3g2",
-    "m2t", "mpe", "mpv", "png", "jpg", "jpeg", "webp", "gif", "bmp", "tif", "tiff", "ico", "qoi",
-    "tga", "ff", "hdr", "exr", "pnm", "pam", "pbm", "pgm", "ppm", "avif", "heic", "heif", "pdf",
-    "doc", "docx", "odt", "rtf", "txt", "ppt", "pptx", "odp", "xls", "xlsx", "xlsm", "ods", "csv",
-    "html", "htm",
+    "m2t", "mpe", "mpv", "png", "svg", "jpg", "jpeg", "webp", "gif", "bmp", "tif", "tiff", "ico",
+    "qoi", "tga", "ff", "hdr", "exr", "pnm", "pam", "pbm", "pgm", "ppm", "avif", "heic", "heif",
+    "pdf", "doc", "docx", "odt", "rtf", "txt", "ppt", "pptx", "odp", "xls", "xlsx", "xlsm", "ods",
+    "csv", "html", "htm",
 ];
 
 pub fn normalize_input_extensions(inputs: &[String]) -> Option<Vec<String>> {

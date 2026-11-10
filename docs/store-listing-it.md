@@ -1,78 +1,72 @@
 # Scheda Microsoft Store — italiano (it-IT)
 
-Scheda di Convert Here **0.7.1**, pacchetto Store **1.0.7.0**. Editore e sviluppatore: **Salvatore Corsi**. GitHub pubblicata il **9 novembre 2026 alle 21:08:01 UTC**; aggiornamento Store inviato alle **21:09 UTC**, **In certification** (Submission 4, ID **1152921505702358188**), con pubblicazione automatica dopo approvazione. IT ed EN salvate e rilette con **20 funzionalità e due PNG 2562 × 1430 ciascuna**. La 0.7.1 non è ancora approvata o pubblicata nello Store; il precedente 1.0.6.0 era già approvato. Il workaround del menu non è verificato su un host Windows 10 reale. Non copiare questo preambolo nei campi pubblici.
+**Bozza per la candidata Convert Here 0.8.0 / Store 1.0.8.0**, sviluppatore e publisher **Salvatore Corsi**. Non ancora pubblicata, caricata o inviata; testi e nuove schermate non risultano salvati nel portale. Sono predisposte **20 funzionalità**. Lo stato storico della 0.7.1 resta nel [suo record](store-testing-0.7.1.md); nessuna nuova verifica dello stato Store è attestata qui. Nessun test su host Windows 10 reale o WACK. Non copiare questo preambolo nei campi pubblici.
 
 ## Descrizione breve
 
-Conversioni locali per Windows 10 e 11, editor immagini, fogli A4/A5 e profili per audio, video e PDF. Motori opzionali per altri formati e OCR.
+Conversioni locali per Windows 10 e 11, editor immagini e audio/video, profili e PDF. OCR e trascrizione con motori installabili su richiesta.
 
 ## Descrizione
 
-Le immagini nei formati nativi e le immagini in PDF funzionano subito, come compressione, divisione e unione dei PDF. Audio/video richiedono FFmpeg; esportazione PDF richiede Poppler; Office, Excel/CSV e HTML in PDF richiedono LibreOffice. HEIC/HEIF e AVIF richiedono libheif; OCR richiede Tesseract e i modelli delle lingue, oltre a Poppler per le scansioni PDF. Questi motori opzionali non sono inclusi. Da Impostazioni → Motori puoi richiedere il download di FFmpeg, Poppler o entrambi, con conferma di origine, versione, dimensioni, licenze e cartella. Internet serve per questo download facoltativo; conversioni e OCR restano locali.
+Convert Here porta le conversioni nella cartella in cui lavori, su Windows 10 versione 2004 o successivo (build 19041), x64, e Windows 11. Dal menu contestuale scegli Converti in e un formato compatibile: il lavoro entra in coda con le impostazioni salvate. Un segnaposto indica dove comparirà il risultato e permette di controllare lo stato o annullare. Originali e file già esistenti sono conservati; i conflitti di nome ricevono un numero.
 
-Convert Here porta le conversioni nella cartella in cui lavori, su Windows 10 versione 2004 o successivo (build 19041), x64, e Windows 11. Dal menu contestuale classico di Windows 10 o moderno di Windows 11 scegli Converti in e il formato desiderato: il lavoro entra in coda con le impostazioni salvate, senza aprire ogni volta la finestra delle opzioni.
+Sono disponibili 44 destinazioni e 94 estensioni di ingresso riconosciute. Le uscite visibili per default restano MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4. Abilita le altre da Impostazioni → Formati di uscita; TXT si trova in Raw. Il filtro riguarda le uscite e il menu si aggiorna senza riavviare Explorer. Interfaccia e menu sono disponibili in italiano e inglese.
 
-Un segnaposto con icona di attesa mostra subito dove comparira il risultato. Puoi aprirlo per vedere lo stato o annullare il lavoro. Quando la conversione termina, il file pronto prende il suo posto. Per impostazione predefinita i risultati sono accanto agli originali; se un nome esiste gia viene aggiunto un numero.
+Immagini native, SVG statico, immagini in PDF e compressione/divisione/unione PDF funzionano senza motori esterni. Audio/video richiedono FFmpeg; esportazione PDF richiede Poppler; Office, Excel/CSV e HTML in PDF richiedono LibreOffice. HEIC/HEIF e AVIF usano libheif; OCR usa Tesseract e modelli delle lingue, con Poppler per le scansioni PDF. La trascrizione usa FFmpeg/ffprobe e Whisper con Tiny multilingue.
 
-Sono disponibili 44 formati di destinazione e 93 estensioni di ingresso riconosciute, nelle categorie compatibili. Le conversioni di immagini native comprendono PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR e PNM, oltre alla creazione di un PDF A4 per ciascuna immagine. Puoi regolare qualita JPEG e larghezza delle immagini. Nelle Impostazioni scegli le uscite visibili nella GUI e nel menu Explorer: di default MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4. Puoi abilitare le altre uscite; le 93 estensioni in ingresso restano riconosciute e il menu si aggiorna senza riavviare Explorer.
+Da Impostazioni → Motori puoi richiedere FFmpeg, Poppler, Tesseract con italiano/inglese, libheif o Whisper con Tiny. Ogni download richiede conferma di origine, versione, dimensioni, licenze e cartella. Gli asset sono verificati con SHA-256 prima dell'estrazione; licenze e provenienza restano nella cartella personale. Motori e modelli non sono inclusi nell'app né scaricati senza richiesta. LibreOffice resta separato. Internet serve per acquisire i motori; i file scelti per conversione, OCR o trascrizione non vengono caricati ai distributori.
 
-Apri Modifica… nella riga di un'immagine per ritagliare, ridimensionare o creare una tela con risoluzione, colore, posizione e ancoraggio scelti. Esporta PNG, JPEG, WebP o PDF con anteprima del risultato preparato e peso effettivo dei byte codificati. JPEG e WebP offrono qualità regolabile: con un peso massimo il motore cerca una qualità adatta; 300 kB sono 300000 byte. Ridurre anche le dimensioni richiede una scelta esplicita. Nei PDF regola qualità, dimensioni e DPI per cambiare il peso. Se il limite è impossibile, il salvataggio resta disattivato e la conversione rapida non produce un file oltre il limite. Salva con nome scrive gli stessi byte preparati e conserva i file già esistenti.
+Converti immagini in PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR e PNM, oppure crea PDF. Gli SVG UTF-8 statici vengono rasterizzati localmente con resvg integrato: non vengono conservati i vettori. Risorse esterne, script, DTD, foreignObject e immagini incorporate vengono rifiutati. SVGZ non è supportato e valgono limiti di dimensioni e complessità.
 
-Impagina immagini, testo scritto in Nuovo foglio… o file TXT UTF-8 su A4/A5, in verticale o orizzontale, con margini scelti. Il testo semplice offre dimensione, interlinea, allineamento e pagine automatiche, con Ubuntu Light incorporato e testo selezionabile nel PDF. I caratteri non supportati producono un errore esplicito. Questo percorso è nativo e non richiede LibreOffice; i documenti Word mantengono la conversione Office esistente.
+Apri Modifica… per ritagliare, ridimensionare e creare una tela con sfondo, posizione e ancoraggio. PNG, JPEG, WebP e PDF mostrano anteprima e peso effettivo dei byte preparati; Salva con nome usa quegli stessi byte. JPEG/WebP possono cercare una qualità compatibile con il peso massimo; ridurre anche le dimensioni richiede una scelta esplicita. 300 kB corrispondono a 300000 byte. Un limite impossibile non pubblica un risultato sovradimensionato.
 
-Salva le mie impostazioni crea profili con nome: fino a 32 salvati e 8 visibili in Converti in. Riusa ritaglio relativo, dimensioni, tela, qualità, peso e opzioni pagina senza salvare l'immagine di prova o il testo digitato. La pagina Profili permette di applicare e aggiornare le ricette. Nel menu compaiono soltanto i profili abilitati con formato attivo e ingressi compatibili; la coda conserva le opzioni con cui ogni lavoro è stato creato.
+Impagina immagini, testo scritto in Nuovo foglio… e TXT UTF-8 su A4/A5, in verticale o orizzontale, con margini scelti. Il testo semplice offre dimensione, interlinea, allineamento e pagine automatiche, con Ubuntu Light incorporato e testo selezionabile. I caratteri non supportati producono un errore. Questo percorso non richiede LibreOffice.
 
-La gestione Profili offre categorie Audio, Video, Immagini e Documenti. Crea, modifica, duplica, rinomina o elimina ricette, scegli il predefinito, importa ed esporta JSON e limita le estensioni di ingresso di ciascun profilo. Le opzioni pertinenti includono bitrate, frequenza, canali, codec, taglio, pagine e operazioni PDF. Un profilo PDF Merge apre l'editor dell'ordine pagine; i lavori già accodati conservano lo snapshot originale anche dopo aggiornamento o eliminazione del profilo.
+L'editor audio/video offre forma d'onda, fotogrammi per i video, maniglie sulla timeline e tempi numerici per il taglio. Puoi impostare gain o muto per le conversioni compatibili: valori positivi possono saturare il segnale. Le anteprime mostrano la sorgente prima degli effetti; non sono presenti riproduzione o montaggio multitraccia. Per TXT viene applicato soltanto il taglio, senza gain o muto.
 
-Puoi imporre un peso massimo per file e una durata massima audio/video, combinata con l'intervallo di taglio più breve. Il peso viene verificato prima della pubblicazione; per PDF divisi vale su ogni pagina. Audio, video e PDF non promettono un adattamento automatico al peso: se il risultato supera il limite, non viene pubblicato un file sovradimensionato. Per immagini JPEG/WebP restano la ricerca della qualità e la riduzione delle dimensioni facoltativa.
+Abilita TXT in Raw per trascrivere il parlato di audio/video sul PC. La voce del menu è TXT · Trascrizione. Scegli rilevamento automatico o una lingua supportata e il segmento da elaborare. Tiny multilingue richiede 77,69 MB; il download di Whisper con modello è circa 87,94 MB, escluso FFmpeg. La GUI include FFmpeg se manca FFmpeg o ffprobe. I temporanei audio/testo vengono normalmente rimossi a completamento o annullamento; un arresto improvviso può lasciare residui. La trascrizione può contenere errori e va riletta.
 
-La sezione Avanzate espone controlli FFmpeg tipizzati per encoder, preset compatibili, colore, GOP, bitrate, campioni audio, filtri numerici e metadati. Le opzioni numeriche, booleane ed enumerate degli encoder installati vengono lette dal motore locale e verificate prima della conversione. Non è una riga di comando libera. Le opzioni FFmpeg riguardano sorgenti audio/video, comprese le GIF create da video; non vengono applicate alle conversioni immagini native.
+Con un pulsante puoi installare Tesseract con italiano e inglese per riconoscere testo da immagini in TXT. Attivando OCR locale per PDF puoi ottenere TXT, DOCX o HTML dalle scansioni, con Poppler. OCR PDF è disattivato per default; scegli lingue installate e DPI. Il riconoscimento non ricostruisce impaginazione e grafica e non crea un PDF ricercabile. Il testo può richiedere correzioni.
 
-Con libheif puoi leggere HEIC/HEIF e AVIF e crearli dalle immagini supportate. Configura heif-dec.exe e heif-enc.exe in Impostazioni → Motori, mantenendo insieme DLL e plugin della build. La disponibilita dipende dai decoder e dagli encoder HEVC/AV1 installati. Puoi scegliere qualita e larghezza; viene usata la prima immagine del contenitore, senza conservare sequenze o animazioni.
+Il pulsante libheif prepara decoder ed encoder per leggere HEIC/HEIF e AVIF e creare HEIC/AVIF. Sono supportati i codec presenti nella build selezionata. Da GIF animate, TIFF multipagina e contenitori HEIC/AVIF viene convertita la prima immagine; sequenze e animazioni non sono conservate.
 
-Con FFmpeg puoi convertire audio in MP3, WAV, FLAC, AAC, OGG, Opus, AIFF, M4A con AAC, WMA, AC3, AU e CAF con ALAC; convertire video in MP4, MKV, MOV, WebM, AVI, MPEG, WMV, FLV, MPEG-TS, M4V, 3GP e GIF animato, oppure estrarne l'audio. La disponibilita dei codec dipende dal motore FFmpeg selezionato. Le opzioni comprendono preset di qualita, bitrate, frequenza, canali, normalizzazione, qualita video, larghezza, FPS e taglio temporale.
+Con FFmpeg converti audio in MP3, WAV, FLAC, AAC, OGG, Opus, AIFF, M4A con AAC, WMA, AC3, AU e CAF con ALAC; video in MP4, MKV, MOV, WebM, AVI, MPEG, WMV, FLV, MPEG-TS, M4V, 3GP e GIF animato, oppure estrai l'audio. Regola bitrate, frequenza, canali, normalizzazione, qualità, larghezza, FPS e intervallo. Avanzate offre opzioni tipizzate e controlli degli encoder locali verificati prima dell'uso, senza comandi o script liberi. Le opzioni FFmpeg riguardano sorgenti audio/video.
 
-Con Poppler puoi esportare i PDF in immagini PNG/JPEG, estrarne il testo incorporato in TXT oppure ricostruirlo in Word DOCX e HTML modificabili. Le esportazioni DOCX e HTML contengono solo testo: immagini, tabelle e impaginazione originali non vengono ricostruite.
+Il manager Profili crea, modifica, duplica, rinomina ed elimina ricette per Audio, Video, Immagini e Documenti: fino a 32 salvate e 8 nel menu. Scegli il predefinito, i filtri delle estensioni ammesse e la visibilità; importa/esporta JSON senza sovrascrivere ricette esistenti. I profili conservano opzioni, non immagini o testi di prova. I lavori accodati mantengono il proprio snapshot anche dopo modifica o eliminazione del profilo.
 
-Con Tesseract puoi riconoscere il testo delle immagini in TXT e, attivando OCR locale per i PDF, creare TXT, DOCX o HTML dalle scansioni. OCR dei PDF e disattivato per default e usa anche Poppler. Seleziona lingue installate, per esempio ita+eng, e i DPI delle pagine PDF; conserva i modelli nella cartella tessdata del motore. L'elaborazione resta sul PC. Il testo riconosciuto puo contenere errori e va riletto; OCR non crea un PDF ricercabile.
+Puoi imporre peso massimo per risultato e durata massima audio/video, combinata con il taglio. Il peso è controllato prima della pubblicazione; per PDF divisi vale su ogni pagina. Audio/video e PDF non promettono adattamento automatico al peso. Cronologia riunisce lavori della finestra, coda ed editor e conserva gli esiti fra gli avvii, senza cancellare originali o risultati.
 
-Puoi comprimere i PDF senza perdita o dividerli in un file per pagina. Con piu file convertibili in PDF, PDF (Bulk) crea risultati separati in coda; PDF (Merge) prepara immagini, PDF, Word/Office, Excel/CSV e HTML compatibili per creare un PDF unico. Trascina le singole pagine per intercalarle fra sorgenti, oppure usa le frecce o Alt+su/giu. PDF e immagini native non richiedono motori esterni per l'unione; restano LibreOffice per i documenti e libheif per HEIC/AVIF. Audio e video sono esclusi. La compressione non ricampiona le immagini e non produce un file piu grande dell'originale. Divisione e unione non trasferiscono segnalibri, tag o metadati del documento e rifiutano moduli interattivi. Le operazioni rifiutano PDF cifrati o firmati; la compressione conserva catalogo e moduli e non rimuove i metadati.
+Con Poppler esporta pagine PDF in PNG/JPEG, testo incorporato in TXT o ricostruzioni DOCX/HTML di solo testo: immagini, tabelle e impaginazione originali non sono ricostruite. Comprimi PDF senza perdita, dividili per pagina o usa PDF Bulk per risultati separati e PDF Merge per un documento unico, con pagine trascinabili. Sono ammessi PDF e sorgenti convertibili in PDF, esclusi audio/video. La compressione non produce un file più grande dell'originale. Le operazioni rifiutano PDF cifrati o firmati; divisione/unione rifiutano moduli interattivi e omettono segnalibri, tag e metadati. Non è disponibile la modifica libera del contenuto delle pagine PDF.
 
-Con LibreOffice puoi convertire documenti Word e altri documenti, fogli e presentazioni compatibili in PDF, esportare XLS/XLSX/XLSM/ODS in CSV e creare Excel XLSX da CSV. Il CSV contiene soltanto il primo foglio, in UTF-8 con virgolette: conserva i valori visualizzati, senza formattazione o formule. Puoi scegliere virgola, punto e virgola, tab o pipe sia in ingresso sia in uscita; il default e la virgola. I CSV in ingresso devono essere UTF-8; le espressioni che iniziano con = vengono importate come testo e i campi quotati mantengono gli identificativi con zeri iniziali.
+Con LibreOffice converti Word e documenti compatibili in PDF, fogli XLS/XLSX/XLSM/ODS in CSV e CSV in XLSX. Il CSV contiene il primo foglio, valori visualizzati in UTF-8, senza formattazione o formule. Scegli virgola, punto e virgola, tab o pipe. I CSV in ingresso devono essere UTF-8; espressioni iniziate da = sono importate come testo. HTML in PDF supporta documenti semplici, con possibili differenze CSS e senza JavaScript; le risorse collegate possono accedere a file o rete.
 
-Puoi anche convertire file HTML in PDF con LibreOffice. Sono supportati documenti HTML semplici; CSS complessi possono cambiare impaginazione e JavaScript non viene eseguito. Le risorse collegate nell'HTML possono accedere a file locali o alla rete durante la conversione.
+Convert Here è gratuito, senza abbonamenti, acquisti in-app o pagamenti per continuare l'uso. Non richiede un account nell'app. Preferenze, percorsi, coda e dettagli degli errori sono salvati localmente. Il codice originale è GPL-3.0-only, con sorgenti su https://github.com/salvatorecorsi/convert-here; dipendenze, font, motori e modelli mantengono le proprie licenze. Il menu moderno richiede Windows 11 x64; Windows 10 usa quello classico.
 
-Convert Here e gratuito, senza abbonamenti, acquisti in-app o costi a consumo. Nessun pagamento richiesto per continuare a usarlo. Le conversioni di formato vengono elaborate sul PC e non richiedono un account nell'app. Preferenze, percorsi dei file, stato della coda e dettagli degli errori vengono salvati localmente.
-
-Il codice originale e software libero con licenza GPL-3.0-only; i sorgenti sono disponibili su https://github.com/salvatorecorsi/convert-here. Dipendenze, font e motori mantengono le rispettive licenze. La conversione non cambia i diritti sui contenuti dei tuoi file.
-
-Limiti: non e disponibile la modifica libera del contenuto delle pagine PDF. OCR riconosce il testo senza ricostruire la grafica o l'impaginazione. Da GIF animate, TIFF multipagina e contenitori HEIC/AVIF viene convertito il primo fotogramma o la prima immagine. PDF (Bulk) mantiene risultati separati; PDF (Merge) include tutte le pagine preparate una volta, fino a 10.000. L'impaginazione dei documenti Office dipende da LibreOffice e dai font disponibili. Interfaccia e menu sono disponibili in italiano e inglese; la lingua OCR si sceglie separatamente. Il menu moderno richiede Windows 11 x64.
-
-## Funzionalita
+## Funzionalità
 
 Inserire ciascuna riga in un campo separato, senza il trattino iniziale:
 
 ```text
 Converti in nel menu classico di Windows 10 e moderno di Windows 11, da build 19041 x64
-Cronologia unificata con conversioni in corso, in coda e completate
-44 destinazioni e 93 estensioni in ingresso, con otto uscite visibili per default
-Conversioni immagini native, HEIC/AVIF con libheif opzionale e audio/video con FFmpeg opzionale
-Editor immagini con ritaglio, scala, tela, sfondo e ancoraggio
-Anteprima e peso esatto per PNG/JPEG/WebP/PDF; salvataggio degli stessi byte preparati
+Cronologia unificata per lavori in corso, in coda e completati
+44 destinazioni e 94 ingressi; otto uscite predefinite e TXT attivabile in Raw
+Immagini native e SVG statici rasterizzati localmente senza risorse esterne
+Editor immagini con ritaglio, scala, tela e anteprima dei byte da salvare
 Immagini, testo scritto e TXT UTF-8 su PDF A4/A5 con font incorporato
-Gestione profili per Audio, Video, Immagini e Documenti: 32 salvati, 8 nel menu
+Profili Audio, Video, Immagini e Documenti: 32 salvati, 8 nel menu
 Importa/esporta profili JSON e scegli le estensioni di ingresso compatibili
-Peso massimo per file e durata massima audio/video combinata con il taglio
-Opzioni FFmpeg avanzate tipizzate, con parametri degli encoder installati verificati nel core
-Audio/video: bitrate, codec, frequenza, canali, normalizzazione, FPS e intervallo temporale
-PDF in immagini, TXT, Word DOCX e HTML di solo testo con Poppler opzionale
-Excel/CSV con quattro separatori e Word/HTML in PDF con LibreOffice opzionale
-OCR locale con Tesseract e modelli delle lingue; scansioni PDF anche con Poppler
-Comprimi e dividi PDF, oppure PDF Bulk separati e PDF Merge con pagine trascinabili
-Originali conservati e nomi numerati in caso di conflitto
-Profili accodati conservano la ricetta anche dopo modifica o eliminazione
-Elaborazione locale, nessun account, abbonamento o pagamento richiesto per continuare l'uso
-Download facoltativo FFmpeg/Poppler con conferma, SHA-256 e licenze conservate
+Peso massimo per risultato e durata massima audio/video combinata con il taglio
+Editor audio/video con timeline, forma d'onda, fotogrammi, taglio e gain
+Opzioni FFmpeg avanzate tipizzate e parametri degli encoder locali verificati
+Trascrizione locale audio/video in TXT con Whisper e Tiny multilingue facoltativi
+Tesseract OCR installabile con un pulsante, con italiano e inglese inclusi
+libheif installabile con un pulsante per leggere e creare HEIC/AVIF
+Audio/video con FFmpeg: codec, bitrate, frequenza, canali, normalizzazione e FPS
+PDF in immagini e testo con Poppler; compressione, divisione e unione con pagine trascinabili
+Excel/CSV con quattro separatori e Word/HTML in PDF con LibreOffice
+Originali e file esistenti conservati; i lavori accodati mantengono la ricetta
+Elaborazione locale, nessun account o pagamento richiesto per continuare l'uso
+Download motori su richiesta con conferma, SHA-256 e licenze originali conservate
 ```
 
 ## Termini di ricerca
@@ -85,51 +79,43 @@ convertire immagini
 immagini PDF
 menu contestuale
 conversione audio
-conversione video
+trascrizione locale
 coda conversioni
 ```
 
 ## Requisiti aggiuntivi
 
 ```text
-Windows 10 versione 2004 (build 19041) o successivo, x64; menu classico su Windows 10, moderno su Windows 11
-FFmpeg per audio/video; Poppler per esportare PDF; LibreOffice per Office/HTML in PDF ed Excel/CSV. Motori opzionali non inclusi. Download facoltativo di FFmpeg/Poppler da Impostazioni → Motori; richiede Internet.
-libheif con heif-dec.exe, heif-enc.exe, DLL e plugin per HEIC/AVIF; Tesseract con i modelli delle lingue per OCR, oltre a Poppler per i PDF. Non inclusi.
+Windows 10 versione 2004 (build 19041) o successivo, x64; menu classico su Windows 10, moderno su Windows 11.
+Motori facoltativi non inclusi: FFmpeg per audio/video, Poppler per esportare PDF, LibreOffice per Office/HTML ed Excel/CSV, libheif per HEIC/AVIF, Tesseract per OCR; scansioni PDF anche con Poppler.
+Trascrizione: FFmpeg/ffprobe, Whisper CPU e Tiny multilingue. Download Whisper con modello circa 87,94 MB, oltre a FFmpeg. Download motori da Impostazioni con conferma e Internet; LibreOffice separato.
 ```
 
-## Novita
+## Novità
 
 ```text
-Aggiornata la registrazione del menu contestuale Store per affrontare la mancata comparsa di Converti in su Windows 10. Nuove schermate native ad alta risoluzione, senza puntatore. Restano profili personalizzati, editor immagini, PDF Bulk/Merge e cronologia.
+SVG statico nativo, editor audio/video con timeline e taglio/gain, trascrizione locale in TXT con Whisper Tiny multilingue. Tesseract con italiano/inglese e libheif si installano da un pulsante con conferma e verifica SHA-256. Le uscite predefinite restano otto; abilita TXT in Raw. Sono riconosciuti 94 ingressi.
 ```
 
 ## Didascalie delle schermate
 
-1. Formati di uscita per categoria e motori in griglia. Interfaccia in italiano, cattura nativa 2562 × 1430.
-2. Profili personali per immagini, audio, video e PDF, con importazione ed esportazione JSON. Interfaccia in italiano.
+1. Formati di uscita per categoria e nuova barra delle schede. Interfaccia italiana.
+2. Motori locali: installazione di OCR, libheif e Whisper con un pulsante. Interfaccia italiana.
+3. Editor audio/video: timeline, intervallo selezionato e gain. Interfaccia italiana.
+4. Trascrizione locale in TXT con scelta della lingua e taglio della clip. Interfaccia italiana.
 
-Due PNG native **2562 × 1430**, salvate e rilette in entrambe le schede. Le catture provengono dalla build debug **0.7.0**, con interfaccia invariata nella 0.7.1 e zoom nativo **150%**, senza ingrandimento successivo; non sono catture di una build 0.7.1. [Galleria e provenienza](store-assets/0.7.1/README.md). Le immagini precedenti restano soltanto nello storico.
+Le [quattro catture native 0.8.0](store-assets/0.8.0/README.md) sono PNG **2562 × 1441**, senza puntatore, da build debug 0.8.0 con zoom 150% e senza ingrandimento successivo. La galleria precedente resta storica. Il salvataggio delle nuove immagini nel portale non è ancora attestato.
 
 ## Copyright e termini di licenza aggiuntivi
-
-Copyright:
 
 ```text
 Copyright (C) 2026 Salvatore Corsi.
 ```
 
-URL pubblico salvato e riletto in Additional license terms; collega il testo integrale della GPLv3:
-
-```text
-https://github.com/salvatorecorsi/convert-here/blob/v0.7.1/LICENSE
-```
-
-Il progetto è GPL-3.0-only. La release pubblica include `ConvertHere-0.7.1-source.zip` con sorgenti, dipendenze Cargo vendorizzate e istruzioni di build offline. Queste istruzioni dei campi non fanno parte della descrizione pubblica.
+Il progetto è GPL-3.0-only. Usare l'[attuale testo completo](../LICENSE); dopo la pubblicazione del tag, il riferimento previsto per il campo pubblico è `https://github.com/salvatorecorsi/convert-here/blob/v0.8.0/LICENSE`. Il tag e questo URL non sono ancora attestati come pubblicati. L'asset sorgente previsto è `ConvertHere-0.8.0-source.zip`, con dipendenze vendorizzate e istruzioni offline. Terze parti mantengono licenze e copyright originali.
 
 ## Riferimenti submission
 
-Titolare e sviluppatore: **Salvatore Corsi**; editore: **Salvatore Corsi**. Contatto privacy e supporto: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Privacy 0.7.1 pubblica](https://github.com/salvatorecorsi/convert-here/blob/v0.7.1/docs/privacy.md), URL salvato nel portale. Nome riservato: **Convert Here**. Per identità e stato operativo vedere la [procedura di submission](store-submission.md).
+Titolare, sviluppatore e publisher: **Salvatore Corsi**. Supporto/privacy: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Privacy della candidata](privacy.md), [pin e licenze dei motori](release-licenses/EXTERNAL-ENGINES.md), [verifiche 0.8.0](store-testing-0.8.0.md), [procedura e stato Store](store-submission.md).
 
-Testi IT/EN salvati e riletti per la Submission 4; l'aggiornamento è in certificazione, non ancora approvato o pubblicato. [Istruzioni e prove 0.7.1](store-testing-0.7.1.md). I record delle versioni precedenti restano storici.
-
-Descrizione entro 10.000 caratteri; breve entro 1.000 (qui meno di 270); massimo 20 funzionalita da 200 caratteri; novita massimo 1.500, vuote alla prima submission. [Limiti ufficiali dei campi MSIX](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).
+Testi e schermate della candidata non sono ancora attestati come salvati nel portale. Lo stato storico precedente non implica upload, certificazione o pubblicazione della 0.8.0. Descrizione entro 10.000 caratteri, breve entro 1.000, **20 funzionalità** entro 200 caratteri ciascuna e novità entro 1.500. [Limiti dei campi MSIX](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).

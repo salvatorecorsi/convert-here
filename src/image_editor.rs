@@ -723,7 +723,7 @@ impl ImageEditor {
                         &[
                             "png", "jpg", "jpeg", "webp", "gif", "bmp", "tif", "tiff", "heic",
                             "heif", "avif", "ico", "qoi", "tga", "ff", "hdr", "exr", "pnm", "pam",
-                            "pbm", "pgm", "ppm",
+                            "pbm", "pgm", "ppm", "svg",
                         ],
                     )
                 };

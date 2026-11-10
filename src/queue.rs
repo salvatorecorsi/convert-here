@@ -1329,13 +1329,7 @@ mod tests {
 
         let rejected = load(&root, &first.id).unwrap();
         assert_eq!(rejected.view.state, JobState::Failed);
-        assert!(
-            rejected
-                .view
-                .error
-                .unwrap()
-                .contains("Conversione non supportata")
-        );
+        assert!(rejected.view.error.unwrap().contains("FFmpeg"));
         assert!(!old.view.outputs[0].exists());
         assert!(!old.plan.work_dir.exists());
         assert!(!old.plan.outputs[0].marker.exists());

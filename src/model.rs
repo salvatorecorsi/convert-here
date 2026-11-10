@@ -32,7 +32,7 @@ impl MediaKind {
             | "divx" | "3g2" | "m2t" | "mpe" | "mpv" => Self::Video,
             "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" | "tif" | "tiff" | "ico" | "qoi"
             | "tga" | "ff" | "hdr" | "exr" | "pnm" | "pam" | "pbm" | "pgm" | "ppm" | "avif"
-            | "heic" | "heif" => Self::Image,
+            | "heic" | "heif" | "svg" => Self::Image,
             "pdf" => Self::Pdf,
             "doc" | "docx" | "odt" | "rtf" | "txt" | "ppt" | "pptx" | "odp" => Self::Document,
             "xls" | "xlsx" | "xlsm" | "ods" | "csv" => Self::Spreadsheet,
@@ -304,10 +304,12 @@ impl std::fmt::Display for OutputFormat {
 pub fn supported_formats(kind: MediaKind) -> Vec<OutputFormat> {
     use OutputFormat::*;
     match kind {
-        MediaKind::Audio => vec![Mp3, Wav, Flac, Aac, Ogg, Opus, Aiff, M4a, Wma, Ac3, Au, Caf],
+        MediaKind::Audio => vec![
+            Mp3, Wav, Flac, Aac, Ogg, Opus, Aiff, M4a, Wma, Ac3, Au, Caf, Txt,
+        ],
         MediaKind::Video => vec![
             Mp4, Mkv, Mov, Webm, Avi, Gif, Mpeg, Wmv, Flv, Ts, M4v, ThreeGp, Mp3, Wav, Flac, Aac,
-            Ogg, Opus, Aiff, M4a, Wma, Ac3, Au, Caf,
+            Ogg, Opus, Aiff, M4a, Wma, Ac3, Au, Caf, Txt,
         ],
         MediaKind::Image => vec![
             Png, Jpg, Webp, Bmp, Tiff, Gif, Ico, Pdf, Qoi, Tga, Farbfeld, OpenExr, Hdr, Pnm, Avif,
@@ -347,6 +349,7 @@ pub struct ConversionSettings {
     pub pdf: PdfSettings,
     pub csv: CsvSettings,
     pub ocr: OcrSettings,
+    pub speech: SpeechSettings,
     pub limits: ConversionLimits,
     pub media_options: std::collections::BTreeMap<String, String>,
 }
@@ -361,6 +364,7 @@ impl Default for ConversionSettings {
             pdf: PdfSettings::default(),
             csv: CsvSettings::default(),
             ocr: OcrSettings::default(),
+            speech: SpeechSettings::default(),
             limits: ConversionLimits::default(),
             media_options: std::collections::BTreeMap::new(),
         }
@@ -424,6 +428,27 @@ impl ConversionSettings {
         }
         if format != OutputFormat::Pdf {
             self.image.page = None;
+        }
+        if format == OutputFormat::Txt {
+            self.media_options.clear();
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct SpeechSettings {
+    /// Whisper language code, or automatic language detection.
+    pub language: String,
+    /// Zero selects a bounded number of available CPU threads.
+    pub threads: u8,
+}
+
+impl Default for SpeechSettings {
+    fn default() -> Self {
+        Self {
+            language: "auto".into(),
+            threads: 0,
         }
     }
 }

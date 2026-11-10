@@ -1,0 +1,73 @@
+{
+  "application_version": "0.8.0",
+  "capture_build": "native debug, 150% application zoom, working tree before release commit",
+  "binary_sha256": "001acf141b7b8e3f7c976bf2d4bbbf6d1cd0484e1cbf6a2b65d32f6639a5ec97",
+  "native_capture": "JPEG, cursor parked outside the target window",
+  "png_conversion": "Convert Here 0.8.0 CLI, PNG, no resize or crop",
+  "files": [
+    {
+      "file": "01-formati-it.jpg",
+      "format": "JPEG",
+      "width": 2562,
+      "height": 1441,
+      "bytes": 159030,
+      "sha256": "1bb9cec9ccd1a816af852faf4064cdb6b0c55b179e062aebdcb4efd4a4a8ef5a"
+    },
+    {
+      "file": "01-formati-it.png",
+      "format": "PNG",
+      "width": 2562,
+      "height": 1441,
+      "bytes": 415169,
+      "sha256": "beeac736f604e54990b3ebfd870b2dd38667d6e91d863542498d4a6413667c4a"
+    },
+    {
+      "file": "02-motori-it.jpg",
+      "format": "JPEG",
+      "width": 2562,
+      "height": 1441,
+      "bytes": 155829,
+      "sha256": "8669a71a50af9d91c16cb1f06a4c2e73d3b45dd58a8263e2683617608d1b6f6b"
+    },
+    {
+      "file": "02-motori-it.png",
+      "format": "PNG",
+      "width": 2562,
+      "height": 1441,
+      "bytes": 367033,
+      "sha256": "d17cfbed40d9123c5e41698c6dff2171a533eaea9c8b82a9e0536fa3fc5738f8"
+    },
+    {
+      "file": "03-timeline-it.jpg",
+      "format": "JPEG",
+      "width": 2562,
+      "height": 1441,
+      "bytes": 176441,
+      "sha256": "ba918a8459610c5dcf938d0bfaaf3b60337d16ac2ee94066eca1c1e99985ace3"
+    },
+    {
+      "file": "03-timeline-it.png",
+      "format": "PNG",
+      "width": 2562,
+      "height": 1441,
+      "bytes": 573122,
+      "sha256": "cb8d9ca53ef92e1333527b9a39858ff8368487700bed5b3b20bbd6d52564eaa9"
+    },
+    {
+      "file": "04-trascrizione-it.jpg",
+      "format": "JPEG",
+      "width": 2562,
+      "height": 1441,
+      "bytes": 187636,
+      "sha256": "f9899af96ae9156d7125dea7f85296c09eb12ff63877f81dc9c896b1d4af2d9a"
+    },
+    {
+      "file": "04-trascrizione-it.png",
+      "format": "PNG",
+      "width": 2562,
+      "height": 1441,
+      "bytes": 641807,
+      "sha256": "a27a0d83b28055e8b32d98f71187b97626bb85d8688a512ffcc70bf7b2c69762"
+    }
+  ]
+}

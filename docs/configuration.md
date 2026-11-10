@@ -2,13 +2,15 @@
 
 **Italiano** · [English](configuration.en.md)
 
-Questa guida descrive le impostazioni di Convert Here 0.5.0, inclusa la scelta fra italiano e inglese. Per iniziare, vedi il [README](../README.md); per le conversioni disponibili, la [guida ai formati](conversions.md).
+Questa guida descrive le impostazioni di Convert Here, inclusa la scelta fra italiano e inglese. Per iniziare, vedi il [README](../README.md); per le conversioni disponibili, la [guida ai formati](conversions.md).
+
+**Candidata 0.8.0, non ancora pubblicata:** SVG, editor audio/video, trascrizione e download aggiuntivi dei motori descritti come «in sviluppo» appartengono a questa candidata, non alla release pubblicata collegata dal README.
 
 ## Lingua dell'interfaccia
 
-In **Impostazioni → Lingua** scegli **Sistema**, **Italiano** o **English**. Sistema segue la lingua di visualizzazione di Windows: italiano per Windows in italiano, inglese per le altre lingue. La scelta è salvata nel campo `ui_language` di `preferences.json`, con valore `system`, `it` o `en`. Le impostazioni precedenti senza questo campo usano Sistema. La scelta non modifica lingua OCR, formati, nomi dei risultati o altre preferenze.
+In **Impostazioni → Lingua** scegli **Sistema**, **Italiano** o **English**. Sistema segue la lingua di visualizzazione di Windows: italiano per Windows in italiano, inglese per le altre lingue. La scelta è salvata nel campo `ui_language` di `preferences.json`, con valore `system`, `it` o `en`. Le impostazioni precedenti senza questo campo usano Sistema. La scelta non modifica lingua OCR o del parlato, formati, nomi dei risultati o altre preferenze.
 
-Installer e portable della 0.5.0 includono l'interfaccia bilingue pronta all'uso. Anche il setup è disponibile in italiano e inglese.
+L'interfaccia e il setup sono disponibili in italiano e inglese.
 
 Per una sola esecuzione della CLI usa `--language system|it|en`: prevale sulla scelta salvata senza riscriverla. I messaggi di Windows e dei motori esterni possono seguire le rispettive impostazioni. [Guida alla CLI](command-line.md).
 
@@ -28,37 +30,51 @@ Per l'OCR configura `tesseract.exe` e conserva accanto la cartella `tessdata` co
 
 Per libheif mantieni `heif-dec.exe` e `heif-enc.exe` insieme alle DLL e ai plugin della stessa distribuzione. La build deve contenere i decoder e gli encoder HEVC/AV1 necessari.
 
-## Download facoltativo di FFmpeg e Poppler
+Per la trascrizione in sviluppo configura `whisper-cli.exe` e il modello `ggml-tiny.bin`. Servono anche FFmpeg e ffprobe: il solo runtime Whisper non legge direttamente tutti i contenitori audio/video. La lingua del parlato e i thread CPU si configurano nei controlli di trascrizione, separati dalla lingua dell'interfaccia e dall'OCR. Il default rileva automaticamente la lingua; i profili salvano `speech.language` e `speech.threads`.
 
-I pacchetti pubblici non contengono i motori. In **Impostazioni → Motori** puoi richiedere FFmpeg, Poppler o entrambi. La conferma mostra origine, versione, dimensioni, licenze e destinazione; l'installazione avviene soltanto nella cartella dell'utente `%LOCALAPPDATA%\ConvertHere\tools`.
+## Download facoltativi dei motori
 
-La 0.5.0 scarica [FFmpeg 9.0.2 dalla distribuzione Gyan](https://github.com/GyanD/codexffmpeg/releases/tag/9.0.2) e [Poppler 26.09.0 per Windows](https://github.com/oschwartz10612/poppler-windows/releases/tag/v26.09.0-0): 158478032 byte complessivi, circa 159 MB. Durante download ed estrazione servono circa 615 MB liberi. Lo SHA-256 viene verificato prima dell'estrazione; il layout conserva licenze e documentazione upstream.
+I pacchetti dell'app non contengono i motori esterni o il modello vocale. In **Impostazioni → Motori** richiedi soltanto quelli necessari. Il ramo di sviluppo aggiunge Tesseract, libheif e Whisper + Tiny ai download di FFmpeg e Poppler. La conferma mostra origine, versione, dimensioni, spazio estratto, licenze e destinazione. L'installazione avviene nella sola cartella personale `%LOCALAPPDATA%\ConvertHere\tools`, senza UAC o installer di sistema.
 
-Le richieste HTTPS raggiungono i distributori e i loro CDN, che ricevono IP e normali dati HTTP, incluso User-Agent con versione dell'app. I file da convertire non vengono caricati. Annullamento ed errore tentano di rimuovere lo staging temporaneo; un arresto improvviso può lasciare residui.
+| Motore | Distribuzione fissata | Download |
+| --- | --- | --- |
+| FFmpeg + Poppler | [FFmpeg 9.0.2 Gyan](https://github.com/GyanD/codexffmpeg/releases/tag/9.0.2) e [Poppler 26.09.0](https://github.com/oschwartz10612/poppler-windows/releases/tag/v26.09.0-0) | 158.478.032 byte complessivi; circa 615 MB liberi durante download/estrazione |
+| Tesseract + ita/eng, in sviluppo | [Tesseract 5.5.4 da MSYS2](https://packages.msys2.org/packages/mingw-w64-ucrt-x86_64-tesseract-ocr) e modelli OCR | 38.276.135 byte; circa 60 MB estratti |
+| libheif, in sviluppo | [libheif 1.23.7 da MSYS2](https://packages.msys2.org/packages/mingw-w64-ucrt-x86_64-libheif) | 28.215.281 byte; circa 71,4 MB estratti |
+| Whisper + Tiny, in sviluppo | [Whisper 1.9.5.r258 da MSYS2](https://packages.msys2.org/packages/mingw-w64-ucrt-x86_64-whisper.cpp) e [Tiny multilingue](https://huggingface.co/ggerganov/whisper.cpp) | 87.939.016 byte, inclusi 77.691.713 del modello; circa 101,5 MB estratti |
 
-Il setup non avvia download e non aggiunge un collegamento Start per installare i motori. LibreOffice, libheif, Tesseract e i modelli OCR si configurano da installazioni locali. Le copie di sviluppo sotto `.tools/` non fanno parte dei pacchetti pubblici.
+Il [catalogo dei pacchetti portabili](../src/runtime_install/portable-packages.json) riporta versioni, origini e SHA-256 fissati per Tesseract, libheif e Whisper/Tiny. Lo SHA-256 viene verificato prima dell'estrazione; licenze e documentazione sono conservate. Il download non esegue gli strumenti scaricati. Le distribuzioni portabili includono le dipendenze necessarie; Whisper offre il backend CPU generico senza richiedere un'installazione manuale del runtime Visual C++.
+
+Se scegli Whisper dall'app e manca FFmpeg oppure ffprobe, viene aggiunto anche FFmpeg alla richiesta di conferma. Il suo peso resta separato dagli 87.939.016 byte di Whisper + Tiny. Nessun modello o motore viene scaricato automaticamente all'avvio dell'app.
+
+Le richieste HTTPS raggiungono i distributori e i loro CDN: GitHub/Gyan per i motori esistenti, MSYS2 e relativi mirror, GitHub per licenze/modelli OCR, Hugging Face e CDN per Tiny. Ricevono IP e normali dati HTTP, incluso User-Agent con versione dell'app. I file da convertire non vengono caricati. Annullamento ed errore tentano di rimuovere lo staging temporaneo; un arresto improvviso può lasciare residui.
+
+Il setup non avvia download e non aggiunge un collegamento Start per installare i motori. LibreOffice resta da installare e selezionare separatamente; puoi continuare a usare copie locali degli altri motori. Le copie di sviluppo sotto `.tools/` non fanno parte dei pacchetti pubblici.
 
 ### Alternativa dalla riga di comando
 
 ```powershell
 .\the-converter-cli.exe --install-runtime ffmpeg
 .\the-converter-cli.exe --install-runtime poppler
+.\the-converter-cli.exe --install-runtime tesseract
+.\the-converter-cli.exe --install-runtime libheif
+.\the-converter-cli.exe --install-runtime whisper
 .\scripts\install-runtime-tools.ps1 -InstallDirectory "C:\Programmi\ConvertHere" -Engine ffmpeg
 ```
 
-Lo script richiama la stessa CLI; omettendo `-Engine` richiede entrambi i motori. `-InstallDirectory` individua la cartella dell'app, non la destinazione dei motori. I distributori vengono contattati soltanto quando avvii il comando. [Guida alla CLI](command-line.md).
+I tre comandi aggiuntivi appartengono al ramo di sviluppo. La CLI installa il solo motore richiesto: per trascrivere installa separatamente anche FFmpeg. Lo script richiama la stessa CLI; omettendo `-Engine` richiede **FFmpeg e Poppler**, non tutti i motori. `-InstallDirectory` individua la cartella dell'app, non la destinazione dei motori. I distributori vengono contattati soltanto quando avvii il comando. [Guida alla CLI](command-line.md).
 
 ## Formati visibili e aspetto
 
-In **Impostazioni → Formati di uscita** scegli le destinazioni da mostrare nell'app e nel menu Explorer, raggruppate per audio, video, immagini e documenti. Le otto uscite iniziali sono MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4.
+In **Impostazioni → Formati di uscita** scegli le destinazioni da mostrare nell'app e nel menu Explorer, raggruppate per audio, video, immagini, documenti e **Raw**. Le otto uscite iniziali restano MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4. Abilita **TXT** in Raw per rendere visibili OCR e trascrizione.
 
-Le scelte vengono salvate e il menu le rilegge senza riavviare Esplora file. Anche disabilitando tutte le uscite resta disponibile **Impostazioni personalizzate…**. Il filtro non blocca la CLI, le richieste `--quick` esplicite o i lavori già accodati. Restano supportati tutti i 44 formati del motore e le 93 estensioni di ingresso.
+Le scelte vengono salvate e il menu le rilegge senza riavviare Esplora file. Anche disabilitando tutte le uscite resta disponibile **Impostazioni personalizzate…**. Il filtro non disabilita ingressi, CLI, richieste `--quick` esplicite o lavori già accodati. Il ramo di sviluppo mantiene 44 formati di uscita e riconosce 94 estensioni di ingresso, inclusa SVG. **File**, **Cronologia** e **Profili** sono a sinistra nella navigazione; **Impostazioni** è a destra.
 
 Per l'aspetto puoi seguire il tema di Windows oppure scegliere **Chiaro** o **Scuro**.
 
 ## Profili personali
 
-Nella nuova scheda **Profili**, crea, modifica, duplica, rinomina, elimina e scegli la ricetta predefinita. Si possono salvare **32 profili** e mostrarne **8 in Converti in**, se il formato è abilitato e ogni ingresso selezionato è compatibile. Puoi ammettere tutti gli ingressi compatibili o limitare una ricetta a estensioni specifiche. Il filtro non cambia le 93 estensioni riconosciute dall'app. Riapri il menu Explorer dopo aver modificato un profilo; i lavori già accodati mantengono la propria ricetta. I profili PDF Merge richiedono almeno due file e aprono l'ordinamento pagine.
+Nella scheda **Profili**, crea, modifica, duplica, rinomina, elimina e scegli la ricetta predefinita. Si possono salvare **32 profili** e mostrarne **8 in Converti in**, se il formato è abilitato e ogni ingresso selezionato è compatibile. Puoi ammettere tutti gli ingressi compatibili o limitare una ricetta a estensioni specifiche. Il filtro non cambia le 94 estensioni riconosciute nel ramo di sviluppo. Riapri il menu Explorer dopo aver modificato un profilo; i lavori già accodati mantengono la propria ricetta. I profili PDF Merge richiedono almeno due file e aprono l'ordinamento pagine.
 
 **Importa JSON…**, **Esporta…** ed **Esporta tutti…** trasferiscono le ricette. Il JSON comprende parametri, filtri, visibilità ed eventuale cartella di uscita, senza percorsi dei motori o contenuti di prova. L'importazione è atomica, crea nuove copie e non sovrascrive profili; oltre gli 8 visibili importa le ricette aggiuntive fuori dal menu. Un file oltre 256 KiB o un totale superiore a 32 profili viene rifiutato. Il nome scelto dall'utente non viene tradotto. [Guida completa ed esempio JSON](image-editor-profiles.md).
 
@@ -66,9 +82,11 @@ Nella nuova scheda **Profili**, crea, modifica, duplica, rinomina, elimina e sce
 
 Il **peso massimo per file** comune viene verificato prima di pubblicare ogni risultato. I vecchi limiti immagine continuano a funzionare; se coesistono, vale il minore. L'editor JPEG/WebP può cercare una qualità adatta e ridimensionare solo se autorizzato. Gli altri percorsi falliscono se il risultato resta troppo grande; il limite audio/video non è una promessa di bitrate automatico.
 
-La **durata massima audio/video** si applica alle sorgenti audio/video, anche per estrazione audio e GIF, dopo l'inizio scelto e insieme alla fine del taglio. Non modifica immagini o testo.
+La **durata massima audio/video** si applica alle sorgenti audio/video, anche per estrazione audio, GIF e trascrizione, dopo l'inizio scelto e insieme alla fine del taglio. Non tronca immagini o file TXT usati come ingresso.
 
 **Avanzate** raccoglie controlli tipizzati e ricercabili per codec, filtri, metadati e prestazioni. Le opzioni specifiche dell'encoder sono rilevate dal FFmpeg locale configurato, non da un servizio online. Le disponibilità dipendono da build, codec e contenitore; opzioni incompatibili o non verificabili producono un errore. Le ricette con opzioni FFmpeg richiedono ingressi audio/video, anche quando l'uscita è GIF. Non sono accettati comandi liberi, script o percorsi eseguibili nel catalogo.
+
+Nell'editor audio/video il gain e il muto diventano `media_options.audio_volume`; il taglio usa `video.trim_start` e `video.trim_end` anche per l'audio. Per TXT si applicano soltanto taglio, limiti e impostazioni del parlato: gain, muto e opzioni di codifica vengono esclusi. **Usa queste impostazioni** aggiorna le impostazioni attive; **Salva profilo…** conserva i parametri, senza contenuto del file o trascrizione completa.
 
 ## Preferenze e resoconti
 

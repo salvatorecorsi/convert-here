@@ -12,7 +12,9 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
+mod bundles;
 mod http;
+mod license_data;
 
 const MARKER: &str = ".convert-here-runtime.json";
 const MAX_FILES: usize = 4096;
@@ -22,6 +24,19 @@ const MAX_EXPANDED: u64 = 512 * 1024 * 1024;
 pub enum RuntimeEngine {
     Ffmpeg,
     Poppler,
+    Tesseract,
+    Libheif,
+    Whisper,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RuntimeArtifact {
+    pub name: String,
+    pub version: String,
+    pub download_bytes: u64,
+    pub source_url: String,
+    pub sha256: String,
+    pub license: String,
 }
 
 #[derive(Debug)]
@@ -29,6 +44,8 @@ pub struct RuntimeManifest {
     pub name: &'static str,
     pub version: &'static str,
     pub download_bytes: u64,
+    /// Materialized payload estimate; download archives and the transaction
+    /// workspace temporarily require additional space during installation.
     pub expanded_bytes: u64,
     pub source_url: &'static str,
     pub sha256: &'static str,
@@ -79,6 +96,25 @@ impl RuntimeEngine {
         match self {
             Self::Ffmpeg => &FFMPEG,
             Self::Poppler => &POPPLER,
+            Self::Tesseract | Self::Libheif | Self::Whisper => bundles::manifest(self),
+        }
+    }
+
+    /// Every archive/model downloaded after the single consent prompt.
+    pub fn artifacts(self) -> Vec<RuntimeArtifact> {
+        match self {
+            Self::Tesseract | Self::Libheif | Self::Whisper => bundles::artifacts(self),
+            _ => {
+                let manifest = self.manifest();
+                vec![RuntimeArtifact {
+                    name: manifest.name.into(),
+                    version: manifest.version.into(),
+                    download_bytes: manifest.download_bytes,
+                    source_url: manifest.source_url.into(),
+                    sha256: manifest.sha256.into(),
+                    license: manifest.license.into(),
+                }]
+            }
         }
     }
 
@@ -94,10 +130,16 @@ impl RuntimeEngine {
         match self {
             Self::Ffmpeg => "ffmpeg",
             Self::Poppler => "poppler",
+            Self::Tesseract => "tesseract",
+            Self::Libheif => "libheif",
+            Self::Whisper => "whisper",
         }
     }
 
     fn spec(self) -> PackageSpec<'static> {
+        if matches!(self, Self::Tesseract | Self::Libheif | Self::Whisper) {
+            return bundles::spec(self);
+        }
         let info = self.manifest();
         PackageSpec {
             engine: self,
@@ -108,14 +150,17 @@ impl RuntimeEngine {
             archive_root: match self {
                 Self::Ffmpeg => "ffmpeg-9.0.2-essentials_build",
                 Self::Poppler => "poppler-26.09.0",
+                _ => unreachable!(),
             },
             required: match self {
                 Self::Ffmpeg => FFMPEG_TOOLS,
                 Self::Poppler => POPPLER_TOOLS,
+                _ => unreachable!(),
             },
             license: match self {
                 Self::Ffmpeg => "LICENSE",
                 Self::Poppler => "share/poppler/COPYING",
+                _ => unreachable!(),
             },
         }
     }
@@ -180,6 +225,12 @@ pub fn install(
         "Cartella personale dei motori non disponibile",
         "User engine folder unavailable",
     ))?;
+    if matches!(
+        engine,
+        RuntimeEngine::Tesseract | RuntimeEngine::Libheif | RuntimeEngine::Whisper
+    ) {
+        return bundles::install(engine, &root, cancel, &mut progress);
+    }
     install_with(
         &engine.spec(),
         &root,
@@ -382,6 +433,57 @@ fn install_with(
         &mut dyn FnMut(InstallProgress),
     ) -> Result<()>,
 ) -> Result<PathBuf> {
+    install_prepared(
+        spec,
+        root,
+        cancel,
+        progress,
+        |workspace, prepared, cancel, progress| {
+            let archive = workspace.join("download.zip");
+            download(&archive, spec, cancel, progress)?;
+            cancelled(cancel)?;
+            let _archive_guard = pin_archive(&archive)?;
+            progress(update(
+                spec,
+                InstallPhase::Verifying,
+                0.72,
+                spec.bytes,
+                crate::i18n::tr(
+                    "Verifica SHA-256 dell’archivio…",
+                    "Verifying the archive's SHA-256…",
+                ),
+            ));
+            ensure!(
+                fs::metadata(&archive)?.len() == spec.bytes,
+                crate::trf!(
+                    "Dimensione dell’archivio diversa da quella prevista",
+                    "The archive size does not match the expected size"
+                )
+            );
+            ensure!(
+                hash_file(&archive, cancel)? == spec.sha256,
+                crate::trf!(
+                    "Verifica SHA-256 non riuscita: nessun motore è stato installato",
+                    "SHA-256 verification failed: no engine was installed"
+                )
+            );
+            extract_archive(&archive, prepared, spec, cancel, progress)
+        },
+    )
+}
+
+fn install_prepared(
+    spec: &PackageSpec<'_>,
+    root: &Path,
+    cancel: &AtomicBool,
+    progress: &mut dyn FnMut(InstallProgress),
+    prepare: impl FnOnce(
+        &Path,
+        &Path,
+        &AtomicBool,
+        &mut dyn FnMut(InstallProgress),
+    ) -> Result<BTreeMap<String, InstalledFile>>,
+) -> Result<PathBuf> {
     cancelled(cancel)?;
     ensure_directory(root)?;
     let _directory_guard = pin_directory(root)?;
@@ -460,37 +562,9 @@ fn install_with(
         .prefix(&format!(".install-{}-", spec.engine.key()))
         .tempdir_in(root)?;
     crate::platform::set_hidden(workspace.path())?;
-    let archive = workspace.path().join("download.zip");
-    download(&archive, spec, cancel, progress)?;
-    cancelled(cancel)?;
-    let _archive_guard = pin_archive(&archive)?;
-    progress(update(
-        spec,
-        InstallPhase::Verifying,
-        0.72,
-        spec.bytes,
-        crate::i18n::tr(
-            "Verifica SHA-256 dell’archivio…",
-            "Verifying the archive's SHA-256…",
-        ),
-    ));
-    ensure!(
-        fs::metadata(&archive)?.len() == spec.bytes,
-        crate::trf!(
-            "Dimensione dell’archivio diversa da quella prevista",
-            "The archive size does not match the expected size"
-        )
-    );
-    ensure!(
-        hash_file(&archive, cancel)? == spec.sha256,
-        crate::trf!(
-            "Verifica SHA-256 non riuscita: nessun motore è stato installato",
-            "SHA-256 verification failed: no engine was installed"
-        )
-    );
     let prepared = workspace.path().join("prepared");
     fs::create_dir(&prepared)?;
-    let files = extract_archive(&archive, &prepared, spec, cancel, progress)?;
+    let files = prepare(workspace.path(), &prepared, cancel, progress)?;
     for required in spec
         .required
         .iter()

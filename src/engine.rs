@@ -178,6 +178,16 @@ pub fn convert(
         on_progress(update);
     };
     let outputs = match kind {
+        MediaKind::Audio | MediaKind::Video if settings.format == OutputFormat::Txt => {
+            vec![crate::transcription::convert_media_text(
+                &input,
+                conversion_dir,
+                settings,
+                tools,
+                cancel,
+                &mut conversion_progress,
+            )?]
+        }
         MediaKind::Audio | MediaKind::Video => vec![convert_media(
             &input,
             conversion_dir,
@@ -375,6 +385,7 @@ pub fn merge_pdfs(
 
 pub(crate) fn validate(s: &ConversionSettings) -> Result<()> {
     s.limits.validate()?;
+    crate::transcription::validate_settings(&s.speech)?;
     crate::media_options::validate(&s.media_options)?;
     if !(8..=512).contains(&s.audio.bitrate_kbps) {
         bail!(crate::trf!(
@@ -467,6 +478,15 @@ fn validate_for_input(input: &Path, settings: &ConversionSettings) -> Result<()>
         ));
     }
     validate(settings)?;
+    if matches!(kind, MediaKind::Audio | MediaKind::Video)
+        && settings.format == OutputFormat::Txt
+        && !settings.media_options.is_empty()
+    {
+        bail!(tr(
+            "Rimuovi le opzioni encoder FFmpeg per trascrivere in testo",
+            "Remove FFmpeg encoder options before transcribing to text"
+        ));
+    }
     if !settings.media_options.is_empty() && !matches!(kind, MediaKind::Audio | MediaKind::Video) {
         bail!(tr(
             "Le opzioni avanzate FFmpeg richiedono una sorgente audio o video; rimuovile per usare una sorgente immagine o documento",
@@ -690,32 +710,37 @@ fn convert_image(
     } else {
         input.to_owned()
     };
-    let mut decoder = image::ImageReader::open(&decoded)?
-        .with_guessed_format()?
-        .into_decoder()
-        .context(crate::i18n::tr(
+    let mut image = if crate::svg::is_svg_input(input) {
+        DynamicImage::ImageRgba8(crate::svg::render(input, cancel)?)
+    } else {
+        let mut decoder = image::ImageReader::open(&decoded)?
+            .with_guessed_format()?
+            .into_decoder()
+            .context(crate::i18n::tr(
+                "Immagine non leggibile o codec non supportato",
+                "Unreadable image or unsupported codec",
+            ))?;
+        // into_decoder does not reserve the decoded pixel allocation as ImageReader::decode does.
+        if let Some(limit) = image::Limits::default().max_alloc
+            && decoder.total_bytes() > limit
+        {
+            bail!(crate::trf!(
+                "L'immagine supera il limite di memoria per la decodifica",
+                "The image exceeds the decoding memory limit"
+            ));
+        }
+        let orientation = decoder.orientation().context(crate::i18n::tr(
+            "Orientamento immagine non leggibile",
+            "Unable to read image orientation",
+        ))?;
+        let mut image = DynamicImage::from_decoder(decoder).context(crate::i18n::tr(
             "Immagine non leggibile o codec non supportato",
             "Unreadable image or unsupported codec",
         ))?;
-    // into_decoder does not reserve the decoded pixel allocation as ImageReader::decode does.
-    if let Some(limit) = image::Limits::default().max_alloc
-        && decoder.total_bytes() > limit
-    {
-        bail!(crate::trf!(
-            "L'immagine supera il limite di memoria per la decodifica",
-            "The image exceeds the decoding memory limit"
-        ));
-    }
-    let orientation = decoder.orientation().context(crate::i18n::tr(
-        "Orientamento immagine non leggibile",
-        "Unable to read image orientation",
-    ))?;
-    let mut image = DynamicImage::from_decoder(decoder).context(crate::i18n::tr(
-        "Immagine non leggibile o codec non supportato",
-        "Unreadable image or unsupported codec",
-    ))?;
-    // Bake camera/smartphone EXIF rotation into pixels before resizing or embedding in PDF.
-    image.apply_orientation(orientation);
+        // Bake camera/smartphone EXIF rotation into pixels before resizing or embedding in PDF.
+        image.apply_orientation(orientation);
+        image
+    };
     cancelled(cancel)?;
     progress(Progress {
         fraction: 0.25,

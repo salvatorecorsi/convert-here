@@ -1,6 +1,7 @@
 use crate::{
     file_icons::FileIcons,
     image_editor::{self, EditorAction, ImageEditor},
+    media_editor::{MediaEditor, MediaEditorAction},
     profile_manager::{ProfileManager, ProfileManagerAction},
     settings_ui::{self, EngineAction},
     theme::{self, FluentIcon},
@@ -34,6 +35,14 @@ use the_converter::{
 };
 
 const PREFERENCES_SAVE_INTERVAL: std::time::Duration = std::time::Duration::from_millis(500);
+
+fn editable(path: &Path) -> bool {
+    image_editor::editable(path)
+        || matches!(
+            MediaKind::from_path(path),
+            MediaKind::Audio | MediaKind::Video
+        )
+}
 
 pub fn launch(
     files: Vec<PathBuf>,
@@ -75,7 +84,7 @@ fn launch_mode(
             let mut app = ConverterApp::new(files, target);
             if custom {
                 app.advanced = true;
-                if app.items.len() == 1 && image_editor::editable(&app.items[0].path) {
+                if app.items.len() == 1 && editable(&app.items[0].path) {
                     app.open_editor(Some(app.items[0].path.clone()), None);
                 }
             }
@@ -316,6 +325,7 @@ enum MainView {
 pub struct ConverterApp {
     pdf_merge: Option<crate::pdf_merge_app::PdfMergeApp>,
     image_editor: Option<ImageEditor>,
+    media_editor: Option<MediaEditor>,
     profile_manager: ProfileManager,
     view: MainView,
     conversion_started: Option<std::time::Instant>,
@@ -378,6 +388,7 @@ impl ConverterApp {
         let mut app = Self {
             pdf_merge: None,
             image_editor: None,
+            media_editor: None,
             profile_manager: ProfileManager::default(),
             view: MainView::Files,
             conversion_started: None,
@@ -602,7 +613,7 @@ impl ConverterApp {
                 .items
                 .iter()
                 .find(|item| {
-                    image_editor::editable(&item.path)
+                    editable(&item.path)
                         && profile.validate_for_inputs([item.path.as_path()]).is_ok()
                 })
                 .map(|item| item.path.clone());
@@ -654,6 +665,19 @@ impl ConverterApp {
             .enabled_output_formats
             .filter(OutputFormat::ALL)
             .collect();
+        if let Some(input) = input.as_ref().filter(|path| {
+            matches!(
+                MediaKind::from_path(path),
+                MediaKind::Audio | MediaKind::Video
+            )
+        }) {
+            let mut editor = MediaEditor::new(input.clone(), settings, self.tools.clone(), formats);
+            if editing_profile && let Some(profile) = profile {
+                editor.editing_profile(profile.id, profile.name, profile.show_in_menu);
+            }
+            self.media_editor = Some(editor);
+            return;
+        }
         let mut editor = ImageEditor::new(input, text, settings, self.tools.clone(), formats);
         if editing_profile && let Some(profile) = profile {
             editor.editing_profile(profile.id, profile.name, profile.show_in_menu);
@@ -693,6 +717,7 @@ impl ConverterApp {
         match action {
             EditorAction::Back => {
                 self.image_editor = None;
+                self.media_editor = None;
             }
             EditorAction::SetDefaults(settings) => {
                 self.saved.settings = settings;
@@ -717,6 +742,9 @@ impl ConverterApp {
                     .into()
                 };
                 if let Some(editor) = &mut self.image_editor {
+                    editor.notify(message.clone(), error);
+                }
+                if let Some(editor) = &mut self.media_editor {
                     editor.notify(message, error);
                 }
             }
@@ -753,6 +781,16 @@ impl ConverterApp {
                             "Queste modifiche non sono compatibili con gli ingressi del profilo. Modifica gli ingressi nella scheda Profili.",
                             "These edits are incompatible with the profile's inputs. Change its allowed inputs in Profiles.",
                         ).into(), true);
+                    }
+                    if let Some(editor) = &mut self.media_editor {
+                        editor.notify(
+                            tr(
+                                "Modifica gli ingressi del profilo nella scheda Profili.",
+                                "Change this profile's allowed inputs in Profiles.",
+                            )
+                            .into(),
+                            true,
+                        );
                     }
                     return;
                 }
@@ -799,6 +837,16 @@ impl ConverterApp {
                         }
                         if let Some(editor) = &mut self.image_editor {
                             if !error {
+                                editor.editing_profile(
+                                    id.clone(),
+                                    name.trim().into(),
+                                    show_in_menu,
+                                );
+                            }
+                            editor.notify(message.clone(), error);
+                        }
+                        if let Some(editor) = &mut self.media_editor {
+                            if !error {
                                 editor.editing_profile(id, name.trim().into(), show_in_menu);
                             }
                             editor.notify(message, error);
@@ -806,6 +854,9 @@ impl ConverterApp {
                     }
                     Err(error) => {
                         if let Some(editor) = &mut self.image_editor {
+                            editor.notify(format!("{error:#}"), true);
+                        }
+                        if let Some(editor) = &mut self.media_editor {
                             editor.notify(format!("{error:#}"), true);
                         }
                     }
@@ -952,7 +1003,9 @@ impl ConverterApp {
         if !installed.is_empty() {
             for (engine, directory) in installed {
                 for (key, path) in engine.tool_paths(&directory) {
-                    if executable_available(&path) {
+                    if executable_available(&path)
+                        || key == "whisper-model" && the_converter::tools::model_available(&path)
+                    {
                         self.saved.overrides.insert(key.into(), path);
                     }
                 }
@@ -1048,6 +1101,7 @@ impl ConverterApp {
             ui.label(theme::heading(tr("Installa motori opzionali", "Install optional engines"), theme::SUBTITLE));
             ui.label(tr("Scarica i motori dalle distribuzioni indicate e li verifica prima di estrarli. Il download richiede Internet; i tuoi file da convertire restano sul PC.", "Downloads engines from the listed distributions and verifies them before extraction. The download requires Internet; the files you convert stay on your PC."));
             ui.add_space(8.0);
+            egui::ScrollArea::vertical().max_height(400.0).show(ui, |ui| {
             for engine in &engines {
                 let manifest = engine.manifest();
                 ui.label(format!("{} {} · {:.1} MB · {}", manifest.name, manifest.version, manifest.download_bytes as f64 / 1_000_000.0, manifest.license_label()));
@@ -1055,13 +1109,36 @@ impl ConverterApp {
                 let source = match engine {
                     RuntimeEngine::Ffmpeg => "https://www.gyan.dev/ffmpeg/builds/",
                     RuntimeEngine::Poppler => "https://github.com/oschwartz10612/poppler-windows/releases/tag/v26.09.0-0",
+                    RuntimeEngine::Tesseract => "https://packages.msys2.org/packages/mingw-w64-ucrt-x86_64-tesseract-ocr",
+                    RuntimeEngine::Libheif => "https://packages.msys2.org/packages/mingw-w64-ucrt-x86_64-libheif",
+                    RuntimeEngine::Whisper => "https://github.com/ggml-org/whisper.cpp",
                 };
                 if ui.link(tr("Distribuzione e licenze", "Distribution and licenses")).on_hover_text(source).clicked()
                     && let Err(error) = platform::open_website(source)
                 {
                     self.notice = Some(format!("{error:#}"));
                 }
+                if *engine == RuntimeEngine::Tesseract {
+                    ui.label(tr("Lingue incluse: italiano e inglese", "Included languages: Italian and English"));
+                }
+                if *engine == RuntimeEngine::Whisper {
+                    ui.label(tr("Modello Tiny multilingue incluso (77,7 MB). Per leggere audio e video serve anche FFmpeg.", "Includes the multilingual Tiny model (77.7 MB). FFmpeg is also required to read audio and video."));
+                }
+                egui::CollapsingHeader::new(tr("File, provenienza e licenze", "Files, sources and licenses"))
+                    .id_salt(format!("runtime-artifacts-{engine:?}"))
+                    .show(ui, |ui| {
+                        egui::ScrollArea::vertical().max_height(220.0).show(ui, |ui| {
+                            for artifact in engine.artifacts() {
+                                ui.label(format!("{} {} · {:.1} MB", artifact.name, artifact.version, artifact.download_bytes as f64 / 1_000_000.0));
+                                ui.add(egui::Label::new(&artifact.license).wrap());
+                                ui.add(egui::Label::new(&artifact.source_url).wrap());
+                                ui.add(egui::Label::new(format!("SHA-256: {}", artifact.sha256)).wrap());
+                                ui.separator();
+                            }
+                        });
+                    });
             }
+            });
             if let Some(directory) = the_converter::tools::user_tools_dir() {
                 ui.add_space(8.0);
                 ui.label(tr("Cartella di installazione:", "Installation folder:"));
@@ -1311,16 +1388,6 @@ impl ConverterApp {
 
     fn header(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
-            if settings_ui::tool_button(
-                ui,
-                FluentIcon::Back,
-                tr("File da convertire", "Files to convert"),
-                self.view != MainView::Files,
-            )
-            .clicked()
-            {
-                self.view = MainView::Files;
-            }
             navigation_tabs(ui, &mut self.view);
         });
     }
@@ -1370,13 +1437,13 @@ impl ConverterApp {
         if let Some(path) = self
             .items
             .iter()
-            .find(|item| image_editor::editable(&item.path))
+            .find(|item| editable(&item.path))
             .map(|item| item.path.clone())
             && ui
-                .button(if MediaKind::from_path(&path) == MediaKind::Image {
-                    tr("Modifica immagine…", "Edit image…")
-                } else {
-                    tr("Impagina testo…", "Lay out text…")
+                .button(match MediaKind::from_path(&path) {
+                    MediaKind::Image => tr("Modifica immagine…", "Edit image…"),
+                    MediaKind::Audio | MediaKind::Video => tr("Taglia / guadagno…", "Trim / gain…"),
+                    _ => tr("Impagina testo…", "Lay out text…"),
                 })
                 .clicked()
         {
@@ -1403,9 +1470,18 @@ impl ConverterApp {
                         .show_ui(ui, |ui| {
                             for format in formats {
                                 let label = if format == OutputFormat::Txt
+                                    && self.items.iter().all(|item| {
+                                        matches!(
+                                            MediaKind::from_path(&item.path),
+                                            MediaKind::Audio | MediaKind::Video
+                                        )
+                                    }) {
+                                    tr("TXT · Trascrizione", "TXT · Transcription")
+                                } else if format == OutputFormat::Txt
                                     && self.items.iter().any(|item| {
                                         MediaKind::from_path(&item.path) == MediaKind::Image
-                                    }) {
+                                    })
+                                {
                                     tr("TXT · OCR locale", "TXT · Local OCR")
                                 } else if format == OutputFormat::Pdf
                                     && self.items.iter().all(|item| {
@@ -1576,6 +1652,24 @@ impl ConverterApp {
     }
 
     fn advanced_settings(&mut self, ui: &mut egui::Ui) {
+        if self.saved.settings.format == OutputFormat::Txt
+            && self.items.iter().any(|item| {
+                matches!(
+                    MediaKind::from_path(&item.path),
+                    MediaKind::Audio | MediaKind::Video
+                )
+            })
+        {
+            settings_ui::speech_controls(ui, &mut self.saved.settings.speech);
+            if self.items.iter().all(|item| {
+                matches!(
+                    MediaKind::from_path(&item.path),
+                    MediaKind::Audio | MediaKind::Video
+                )
+            }) {
+                return;
+            }
+        }
         if self.items.iter().any(|item| {
             item.path
                 .extension()
@@ -2160,11 +2254,7 @@ impl ConverterApp {
                             file_icon(ui, icons, &item.path);
                             let name_width = (ui.available_width()
                                 - if merging { 150.0 } else { 105.0 }
-                                - if image_editor::editable(&item.path) {
-                                    80.0
-                                } else {
-                                    0.0
-                                })
+                                - if editable(&item.path) { 80.0 } else { 0.0 })
                             .max(80.0);
                             ui.allocate_ui_with_layout(
                                 egui::vec2(name_width, 42.0),
@@ -2192,7 +2282,7 @@ impl ConverterApp {
                                     );
                                 },
                             );
-                            if image_editor::editable(&item.path)
+                            if editable(&item.path)
                                 && ui
                                     .add_enabled(
                                         !self.running,
@@ -2589,12 +2679,17 @@ impl ConverterApp {
                     match action {
                         EngineAction::Install(engines) => self.pending_runtime_install = Some(engines),
                         EngineAction::Select(key) => {
-                            if let Some(path) = rfd::FileDialog::new().set_title(trf!("Seleziona {key}.exe", "Select {key}.exe")).set_file_name(format!("{key}.exe")).add_filter("EXE", &["exe"]).pick_file() {
-                                if path.is_file() && path.extension().is_some_and(|extension| extension.eq_ignore_ascii_case("exe")) {
+                            let dialog = if key == "whisper-model" {
+                                rfd::FileDialog::new().set_title(tr("Seleziona modello Whisper", "Select Whisper model")).set_file_name("ggml-tiny.bin").add_filter("Whisper", &["bin"])
+                            } else {
+                                rfd::FileDialog::new().set_title(trf!("Seleziona {key}.exe", "Select {key}.exe")).set_file_name(format!("{key}.exe")).add_filter("EXE", &["exe"])
+                            };
+                            if let Some(path) = dialog.pick_file() {
+                                if (key == "whisper-model" && the_converter::tools::model_available(&path)) || (key != "whisper-model" && executable_available(&path)) {
                                     self.saved.overrides.insert(key.into(), path);
                                     self.tools = ToolPaths::configured(&self.saved.overrides);
                                     self.settings_dirty = true;
-                                } else { self.notice = Some(tr("Seleziona un programma .exe esistente.", "Select an existing .exe program.").into()); }
+                                } else { self.notice = Some(if key == "whisper-model" { tr("Seleziona un modello Whisper .bin esistente.", "Select an existing Whisper .bin model.") } else { tr("Seleziona un programma .exe esistente.", "Select an existing .exe program.") }.into()); }
                             }
                         }
                         EngineAction::Reset(keys) => {
@@ -2687,6 +2782,27 @@ impl eframe::App for ConverterApp {
             let action = editor.show(ctx);
             if let Some(action) = action {
                 self.editor_action(action);
+            }
+            return;
+        }
+        if let Some(editor) = &mut self.media_editor {
+            let action = editor.show(ctx);
+            if let Some(action) = action {
+                self.editor_action(match action {
+                    MediaEditorAction::Back => EditorAction::Back,
+                    MediaEditorAction::SetDefaults(settings) => EditorAction::SetDefaults(settings),
+                    MediaEditorAction::SaveProfile {
+                        id,
+                        name,
+                        show_in_menu,
+                        settings,
+                    } => EditorAction::SaveProfile {
+                        id,
+                        name,
+                        show_in_menu,
+                        settings,
+                    },
+                });
             }
             return;
         }
@@ -3422,7 +3538,6 @@ fn settings_path() -> Option<PathBuf> {
 
 fn navigation_tabs(ui: &mut egui::Ui, selected: &mut MainView) -> [egui::Rect; 4] {
     let mut rectangles = [egui::Rect::NOTHING; 4];
-    let colors = theme::palette(ui.ctx());
     for (index, (view, label, icon)) in [
         (
             MainView::Files,
@@ -3435,11 +3550,6 @@ fn navigation_tabs(ui: &mut egui::Ui, selected: &mut MainView) -> [egui::Rect; 4
             FluentIcon::History,
         ),
         (
-            MainView::Settings,
-            tr("Impostazioni", "Settings"),
-            FluentIcon::Settings,
-        ),
-        (
             MainView::Profiles,
             tr("Profili", "Profiles"),
             FluentIcon::Profiles,
@@ -3448,34 +3558,54 @@ fn navigation_tabs(ui: &mut egui::Ui, selected: &mut MainView) -> [egui::Rect; 4
     .into_iter()
     .enumerate()
     {
-        let response = ui.add(
-            egui::Button::new(theme::button_text(
-                icon,
-                label,
-                if *selected == view {
-                    colors.accent
-                } else {
-                    colors.text
-                },
-            ))
-            .frame(false),
-        );
-        rectangles[index] = response.rect;
-        if response.clicked() {
-            *selected = view;
-        }
-        if *selected == view {
-            let y = response.rect.bottom() + 4.0;
-            ui.painter().line_segment(
-                [
-                    egui::pos2(response.rect.left() + 8.0, y),
-                    egui::pos2(response.rect.right() - 8.0, y),
-                ],
-                egui::Stroke::new(2.0_f32, colors.accent),
-            );
-        }
+        rectangles[index] = navigation_tab(ui, selected, view, label, icon);
     }
+    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+        rectangles[3] = navigation_tab(
+            ui,
+            selected,
+            MainView::Settings,
+            tr("Impostazioni", "Settings"),
+            FluentIcon::Settings,
+        );
+    });
     rectangles
+}
+
+fn navigation_tab(
+    ui: &mut egui::Ui,
+    selected: &mut MainView,
+    view: MainView,
+    label: &str,
+    icon: FluentIcon,
+) -> egui::Rect {
+    let colors = theme::palette(ui.ctx());
+    let response = ui.add(
+        egui::Button::new(theme::button_text(
+            icon,
+            label,
+            if *selected == view {
+                colors.accent
+            } else {
+                colors.text
+            },
+        ))
+        .frame(false),
+    );
+    if response.clicked() {
+        *selected = view;
+    }
+    if *selected == view {
+        let y = response.rect.bottom() + 4.0;
+        ui.painter().line_segment(
+            [
+                egui::pos2(response.rect.left() + 8.0, y),
+                egui::pos2(response.rect.right() - 8.0, y),
+            ],
+            egui::Stroke::new(2.0_f32, colors.accent),
+        );
+    }
+    response.rect
 }
 
 fn icon_button(ui: &mut egui::Ui, icon: FluentIcon, tooltip: &str) -> egui::Response {
@@ -3923,10 +4053,17 @@ mod fluent_ui_tests {
                 ui.horizontal(|ui| rectangles = navigation_tabs(ui, &mut selected));
             });
         });
+        assert!(rectangles[0].right() < rectangles[1].left());
+        assert!(rectangles[1].right() < rectangles[2].left());
+        assert!(rectangles[2].right() < rectangles[3].left());
+        assert!(
+            rectangles[3].right() > 650.0,
+            "Settings stays at the right edge"
+        );
         for (index, expected) in [
             (1, MainView::History),
-            (2, MainView::Settings),
-            (3, MainView::Profiles),
+            (2, MainView::Profiles),
+            (3, MainView::Settings),
             (0, MainView::Files),
         ] {
             let point = rectangles[index].center();

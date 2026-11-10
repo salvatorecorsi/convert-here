@@ -1,0 +1,4 @@
+# These upstream license bytes are checked against their published SHA-256 pins.
+src/runtime_install/licenses/** -text -whitespace
+# The generated notices preserve upstream license and attribution text verbatim.
+docs/release-licenses/RUST-THIRD-PARTY-LICENSES.txt -whitespace

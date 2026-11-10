@@ -8,6 +8,8 @@ pub mod file_icons;
 pub mod gui_history;
 #[path = "../image_editor.rs"]
 pub mod image_editor;
+#[path = "../media_editor.rs"]
+pub mod media_editor;
 #[path = "../media_options_ui.rs"]
 pub mod media_options_ui;
 #[path = "../pdf_merge_app.rs"]

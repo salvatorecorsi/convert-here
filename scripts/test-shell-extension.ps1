@@ -357,6 +357,7 @@ public static class ConverterShellSmokeV2 {
                 if (fetched != 1) throw new Exception("Sottocomando mancante");
                 string title = Title(child);
                 if ((requested == "mp3" && title == "MP3") ||
+                    (requested == "txt" && title == "TXT · Trascrizione") ||
                     (requested == "custom" && (title == "Impostazioni personalizzate…" || title == "Custom settings…")) ||
                     (requested == "profile" && title == "Salva per web & città · WEBP") ||
                     (requested == "profile-merge" && title == "Raccolta PDF · PDF") ||
@@ -404,7 +405,7 @@ public static class ConverterShellSmokeV2 {
             Expect("Default FLAC", Visible(command, audio), new string[]{"MP3", "WAV", custom});
             Expect("Default PNG + PDF", Visible(command, supported, pdf), new string[]{"PNG", "JPEG", "PDF (Bulk)", "PDF (Merge)", custom});
             System.IO.File.WriteAllText(preferences, "{\"ui_language\":\"it\",\"enabled_output_formats\":[\"flac\",\"txt\",\"avif\",\"unknown\"]}");
-            Expect("FLAC attivato senza riavvio", Visible(command, audio), new string[]{"FLAC", custom});
+            Expect("FLAC attivato senza riavvio", Visible(command, audio), new string[]{"FLAC", "TXT · Trascrizione", custom});
             Expect("OCR attivato senza PDF", Visible(command, supported, pdf), new string[]{"TXT · OCR / testo PDF", custom});
             Expect("AVIF attivato", Visible(command, heif), new string[]{"TXT · OCR", "AVIF", custom});
             System.IO.File.WriteAllText(preferences, "{\"ui_language\":\"it\",\"enabled_output_formats\":[]}");
@@ -417,21 +418,22 @@ public static class ConverterShellSmokeV2 {
                 Expect("Preferenze non valide", Visible(command, audio), new string[]{"MP3", "WAV", Title(command) == "Convert to" ? "Custom settings…" : custom});
             }
             System.IO.File.WriteAllText(preferences, "{\"ui_language\":\"it\",\"enabled_output_formats\":[\"mp3\",\"wav\",\"flac\",\"aac\",\"ogg\",\"opus\",\"aiff\",\"mp4\",\"mkv\",\"mov\",\"webm\",\"avi\",\"gif\",\"png\",\"jpg\",\"webp\",\"bmp\",\"tiff\",\"ico\",\"pdf\",\"txt\",\"m4a\",\"wma\",\"ac3\",\"au\",\"caf\",\"mpeg\",\"wmv\",\"flv\",\"ts\",\"m4v\",\"3gp\",\"qoi\",\"tga\",\"ff\",\"exr\",\"hdr\",\"pnm\",\"csv\",\"xlsx\",\"docx\",\"html\",\"avif\",\"heic\"]}");
-            Expect("Audio + video", Visible(command, audio, video), new string[]{"MP3", "WAV", "FLAC", "AAC", "OGG", "Opus", "AIFF", "M4A", "WMA", "AC3", "AU", "CAF", custom});
+            Expect("Audio + video", Visible(command, audio, video), new string[]{"MP3", "WAV", "FLAC", "AAC", "OGG", "Opus", "AIFF", "TXT · Trascrizione", "M4A", "WMA", "AC3", "AU", "CAF", custom});
             Expect("PNG + PDF", Visible(command, supported, pdf), new string[]{"PNG", "JPEG", "PDF (Bulk)", "PDF (Merge)", "TXT · OCR / testo PDF", custom});
             Expect("DOCX + PNG", Visible(command, document, supported), new string[]{"PDF (Bulk)", "PDF (Merge)", custom});
             Expect("DOCX + PNG + PDF", Visible(command, document, supported, pdf), new string[]{"PDF (Bulk)", "PDF (Merge)", custom});
             Expect("Due PDF", Visible(command, pdf, pdf), new string[]{"PNG", "JPEG", "PDF (Bulk)", "PDF (Merge)", "TXT", "Word (DOCX) · testo", "HTML · testo", custom});
-            Expect("PNG + audio", Visible(command, supported, audio), new string[]{});
+            Expect("PNG + audio", Visible(command, supported, audio), new string[]{"TXT · OCR", custom});
             Expect("Testo", Visible(command, text), new string[]{"PDF", custom});
             Expect("Testo + audio", Visible(command, text, audio), new string[]{});
             Expect("Cartella WAV", Visible(command, directory), new string[]{});
             var audioFormats = new List<string>(new string[]{"MP3", "WAV", "FLAC", "AAC", "OGG", "Opus", "AIFF"});
+            audioFormats.Add("TXT · Trascrizione");
             audioFormats.AddRange(new string[]{"M4A", "WMA", "AC3", "AU", "CAF"});
             audioFormats.Add(custom);
             Expect("Audio e mpga", Visible(command, audio, mpga), audioFormats.ToArray());
             Expect("PDF", Visible(command, pdf), new string[]{"PNG", "JPEG", "PDF · comprimi", "TXT", "Word (DOCX) · testo", "HTML · testo", custom});
-            Expect("Audio + PDF", Visible(command, audio, pdf), new string[]{});
+            Expect("Audio + PDF", Visible(command, audio, pdf), new string[]{"TXT", custom});
             Expect("Excel e CSV", Visible(command, spreadsheet, csv), new string[]{"PDF (Bulk)", "PDF (Merge)", "CSV", "XLSX", custom});
             Expect("HTML", Visible(command, html), new string[]{"PDF", custom});
             Expect("HTML e Excel", Visible(command, html, spreadsheet), new string[]{"PDF (Bulk)", "PDF (Merge)", custom});
@@ -445,6 +447,7 @@ public static class ConverterShellSmokeV2 {
             if (Tooltip(command) != "Choose format, quality and destination") throw new Exception("English tooltip did not refresh");
             Expect("English PDF", Visible(command, pdf), new string[]{"PNG", "JPEG", "PDF · compress", "TXT", "Word (DOCX) · text", "HTML · text", "Custom settings…"});
             Expect("English mixed OCR", Visible(command, supported, pdf), new string[]{"PNG", "JPEG", "PDF (Bulk)", "PDF (Merge)", "TXT · OCR / PDF text", "Custom settings…"});
+            Expect("English transcription", Visible(command, audio, video), new string[]{"MP3", "WAV", "FLAC", "AAC", "OGG", "Opus", "AIFF", "TXT · Transcription", "M4A", "WMA", "AC3", "AU", "CAF", "Custom settings…"});
             System.IO.File.WriteAllText(preferences, italianPreferences);
             if (Title(command) != "Converti in") throw new Exception("Italian menu title did not refresh");
             ValidatePdfActions(command, supported, pdf, audio, preferences);
@@ -507,6 +510,7 @@ try {
     if ($InvokeCaptureFile) {
         foreach ($case in @(
             @{ Command = 'mp3'; Files = @($audio, $video); Prefix = @('--quick', '--target', 'mp3', '--selection-file') },
+            @{ Command = 'txt'; Files = @($audio, $video); Prefix = @('--quick', '--target', 'txt', '--selection-file') },
             @{ Command = 'custom'; Files = @($audio, $video); Prefix = @('--custom-settings', '--selection-file') },
             @{ Command = 'pdf-bulk'; Files = @($document, $supported, $pdf); Prefix = @('--quick', '--target', 'pdf', '--pdf-batch', 'bulk', '--selection-file') },
             @{ Command = 'pdf-merge'; Files = @($pdf, $supported, $document); Prefix = @('--target', 'pdf', '--pdf-batch', 'merge', '--selection-file') },

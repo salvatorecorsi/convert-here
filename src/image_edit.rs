@@ -206,6 +206,16 @@ pub fn load_image(
     mut progress: impl FnMut(Progress),
 ) -> Result<LoadedImage> {
     cancelled(cancel)?;
+    if crate::svg::is_svg_input(input) {
+        let pixels = crate::svg::render(input, cancel)?;
+        progress(Progress {
+            fraction: 1.0,
+            message: tr("SVG pronto per l’editor", "SVG ready for editing").into(),
+        });
+        return Ok(LoadedImage {
+            pixels: Arc::new(pixels),
+        });
+    }
     let workspace = if crate::modern_images::is_modern_input(input) {
         Some(
             tempfile::Builder::new()

@@ -3,7 +3,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)][string]$InstallDirectory,
-    [ValidateSet('ffmpeg', 'poppler')][string[]]$Engine = @('ffmpeg', 'poppler')
+    [ValidateSet('ffmpeg', 'poppler', 'tesseract', 'libheif', 'whisper')][string[]]$Engine = @('ffmpeg', 'poppler')
 )
 $ErrorActionPreference = 'Stop'
 $installRoot = (Resolve-Path -LiteralPath $InstallDirectory -ErrorAction Stop).ProviderPath

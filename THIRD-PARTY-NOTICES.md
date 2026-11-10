@@ -1,8 +1,8 @@
 # Licenza del progetto e componenti di terze parti
 
-Il codice originale di Convert Here e distribuito sotto **GPL-3.0-only**, Copyright (C) 2026 Salvatore Corsi. Il testo integrale e in [LICENSE](LICENSE), i [sorgenti del progetto](https://github.com/salvatorecorsi/convert-here) sono pubblici. La release 0.4.0 include `ConvertHere-0.4.0-source.zip`, con il commit corrispondente, entrambi i lockfile, dipendenze Cargo vendorizzate e istruzioni di build offline. Il ramo di sviluppo aggiunge l'editor e i profili; una nuova release non e ancora attestata. Dipendenze, font e motori esterni mantengono i propri copyright e le proprie licenze; la GPL del codice originale non sostituisce questi avvisi.
+Il codice originale di Convert Here e distribuito sotto **GPL-3.0-only**, Copyright (C) 2026 Salvatore Corsi. Il testo integrale e in [LICENSE](LICENSE), i [sorgenti del progetto](https://github.com/salvatorecorsi/convert-here) sono pubblici. Le release includono un archivio sorgente con il commit corrispondente, entrambi i lockfile, dipendenze Cargo vendorizzate e istruzioni di build offline. Dipendenze, font e motori esterni mantengono i propri copyright e le proprie licenze; la GPL del codice originale non sostituisce questi avvisi.
 
-## Codec WebP integrato nel ramo di sviluppo
+## Codec WebP integrato
 
 L'editor usa [libwebp-sys 0.14.4](https://crates.io/crates/libwebp-sys/0.14.4), collegato staticamente alla libreria C **libwebp 1.6.0** contenuta nel pacchetto, per la codifica WebP con qualita regolabile. Non e un motore da scaricare: la codifica avviene nel processo locale e non invia immagini a un servizio remoto.
 
@@ -12,11 +12,17 @@ La libreria C mantiene i file originali `vendor/COPYING` (BSD a tre clausole, co
 
 ## Motori esterni
 
-L'installer e l'archivio portable pubblici contengono l'app Rust e l'estensione Windows, con gli [avvisi delle dipendenze e dei font](docs/release-licenses/README.md). Non contengono binari FFmpeg, Poppler, LibreOffice, Tesseract o libheif, ne modelli OCR.
+L'installer e l'archivio portable pubblici contengono l'app Rust e l'estensione Windows, con gli [avvisi delle dipendenze e dei font](docs/release-licenses/README.md). Non contengono binari FFmpeg, Poppler, LibreOffice, Tesseract, libheif o Whisper, ne modelli OCR o di trascrizione.
 
-L'applicazione esegue i motori come processi separati. Nella 0.4.0 l'utente richiede FFmpeg, Poppler o entrambi da **Impostazioni → Motori**, dopo conferma di fonte, versione, dimensioni, licenze e cartella. Il downloader nativo Windows usa HTTPS e verifica dimensioni e SHA-256 prima di estrarre l'intero archivio nella cartella personale `%LOCALAPPDATA%\ConvertHere\tools`, conservando licenze, documentazione e DLL delle distribuzioni originali. Non carica i file da convertire. Non viene avviato dal setup e non esegue i programmi scaricati durante l'installazione.
+L'applicazione esegue i motori come processi separati. L'utente puo richiedere FFmpeg, Poppler, Tesseract con italiano e inglese, libheif oppure Whisper con il modello Tiny multilingue da **Impostazioni → Motori**, dopo conferma di fonte, versione, dimensioni, licenze e cartella. Il downloader nativo Windows usa HTTPS e verifica dimensioni e SHA-256 di tutti i componenti prima dell'estrazione nella cartella personale `%LOCALAPPDATA%\ConvertHere\tools`. Conserva licenze, documentazione e DLL delle distribuzioni originali, con eventuali avvisi supplementari indicati nel catalogo. Non carica i file da convertire. Non viene avviato dal setup e non esegue i programmi scaricati durante l'installazione.
 
-La CLI separata offre `--install-runtime ffmpeg` e `--install-runtime poppler`. Lo script facoltativo `install-runtime-tools.ps1` richiama questa CLI soltanto quando avviato esplicitamente, usando la stessa cartella personale; non e un secondo downloader. LibreOffice, Tesseract, i modelli OCR e libheif vengono configurati separatamente dall'utente. Le cartelle locali di sviluppo `tools/` e `.tools/` non sono tracciate in Git; i runtime estratti per i test e il bundle locale creato da `build-release.ps1` non sono quelli pubblicati su GitHub.
+La CLI separata offre `--install-runtime ffmpeg|poppler|tesseract|libheif|whisper`. Lo script facoltativo `install-runtime-tools.ps1` richiama questa CLI soltanto quando avviato esplicitamente, usando la stessa cartella personale; non e un secondo downloader. LibreOffice continua a essere selezionato da un'installazione locale. Le cartelle locali di sviluppo `tools/` e `.tools/` non sono tracciate in Git; i runtime estratti per i test e il bundle locale creato da `build-release.ps1` non sono quelli pubblicati su GitHub.
+
+Il [catalogo dei pacchetti portabili](src/runtime_install/portable-packages.json) conserva URL, versioni, dimensioni, SHA-256 e licenze dei singoli componenti di Tesseract, libheif e Whisper. Non equivale a un archivio sorgente dei motori: le distribuzioni e i relativi sorgenti restano presso i distributori indicati.
+
+## Rendering SVG integrato
+
+Gli SVG vengono rasterizzati localmente con `resvg`/`usvg` e `tiny-skia`, usando il font Ubuntu gia incorporato da egui. Non vengono scaricati font o risorse del documento. Versioni, licenze MIT/Apache/BSD e avvisi originali sono nell'inventario Rust generato dai lockfile. Non sono inclusi programmi SVG esterni.
 
 ## FFmpeg 9.0.2 essentials, Windows x64
 
@@ -45,23 +51,27 @@ Non incluso. L'app usa un'installazione disponibile sul computer. [Sorgenti e li
 
 ## Tesseract e modelli OCR
 
-Tesseract e i modelli delle lingue sono facoltativi, non inclusi e non scaricati automaticamente. L'app usa `tesseract.exe` come processo locale per immagini in TXT e scansioni PDF in TXT/DOCX/HTML; Poppler rasterizza le pagine PDF. I modelli nella cartella `tessdata` restano file separati dal programma.
+Tesseract e i modelli delle lingue sono facoltativi e non inclusi nei pacchetti dell'app. Il pulsante **Installa** nella relativa card scarica la distribuzione portabile MSYS2 UCRT64, le dipendenze e i modelli ufficiali `ita`/`eng` di `tessdata_fast`. L'app usa `tesseract.exe` come processo locale per immagini in TXT e scansioni PDF in TXT/DOCX/HTML; Poppler rasterizza le pagine PDF. I modelli nella cartella `tessdata` restano file separati dal programma.
 
 - [Progetto e sorgenti Tesseract](https://github.com/tesseract-ocr/tesseract), [licenza Apache-2.0](https://github.com/tesseract-ocr/tesseract/blob/main/LICENSE).
 - [Documentazione di installazione](https://tesseract-ocr.github.io/tessdoc/Installation.html), con il riferimento ai binari Windows di UB Mannheim.
 - [Modelli ufficiali tessdata_fast](https://github.com/tesseract-ocr/tessdata_fast), [licenza Apache-2.0 dei modelli](https://github.com/tesseract-ocr/tessdata_fast/blob/main/LICENSE).
 
-La verifica locale usa Tesseract `5.5.3.20260724` dalla [release Tesseract 5.5.3](https://github.com/tesseract-ocr/tesseract/releases/tag/5.5.3), estratto in `.tools/tesseract-validation/`, e i modelli `eng` e `ita` di `tessdata_fast`. Non costituisce un nuovo bundle pubblico. Le DLL e le altre dipendenze della build Tesseract mantengono le licenze riportate nella distribuzione di origine.
+Le DLL e le altre dipendenze della build Tesseract mantengono le licenze riportate nella distribuzione di origine. Il catalogo identifica gli archivi esatti e gli avvisi supplementari; le copie estratte in `.tools/` servono ai test e non fanno parte delle release pubbliche.
 
 ## libheif, HEIC e AVIF
 
-libheif e facoltativo, non incluso e non scaricato automaticamente. L'app invoca `heif-dec.exe` e `heif-enc.exe` come processi separati. DLL, plugin e codec HEVC/AV1 provengono dall'installazione scelta dall'utente.
+libheif e facoltativo e non incluso nei pacchetti dell'app. L'app invoca `heif-dec.exe` e `heif-enc.exe` come processi separati. Il pulsante **Installa** scarica la distribuzione MSYS2 UCRT64 con DLL, plugin e codec HEVC/AV1. Si puo anche selezionare un'installazione locale compatibile.
 
 - [Progetto e sorgenti libheif](https://github.com/strukturag/libheif).
 - [Licenze upstream](https://github.com/strukturag/libheif/blob/master/COPYING): libreria sotto GNU LGPL v3; applicazioni di esempio, inclusi gli strumenti CLI, e wrapper sotto MIT.
 - [Codec e plugin supportati](https://github.com/strukturag/libheif#supported-features): le librerie codec e le altre dipendenze mantengono le rispettive licenze.
 
-La disponibilita di un encoder o decoder dipende dalla build locale. La verifica usa il pacchetto MSYS2 UCRT64 `libheif 1.23.7-1`, con 35 dipendenze estratte sotto `.tools/libheif-validation/`: serve soltanto ai test e non viene incluso nelle release pubbliche. Archivio e hash esatti: [EXTERNAL-ENGINES.md](docs/release-licenses/EXTERNAL-ENGINES.md).
+La disponibilita di un encoder o decoder dipende dalla build locale. Archivi e hash esatti sono nel catalogo dei pacchetti portabili; i riferimenti ai distributori sono in [EXTERNAL-ENGINES.md](docs/release-licenses/EXTERNAL-ENGINES.md).
+
+## Whisper e modello Tiny multilingue
+
+La trascrizione usa il programma locale [whisper.cpp](https://github.com/ggml-org/whisper.cpp) con il [modello Tiny multilingue](https://huggingface.co/ggerganov/whisper.cpp). Entrambi sono facoltativi e conservano le proprie licenze MIT e gli avvisi originali. Il modello viene scaricato soltanto su richiesta, verificato e conservato come file locale; non viene interrogato un servizio di trascrizione remoto. FFmpeg prepara l'audio sul PC. Il catalogo riporta le revisioni e i file di licenza esatti del programma, del modello e delle dipendenze.
 
 ## Dipendenze Rust
 

@@ -16,6 +16,8 @@ pub struct ToolPaths {
     pub tesseract: Option<PathBuf>,
     pub heif_enc: Option<PathBuf>,
     pub heif_dec: Option<PathBuf>,
+    pub whisper_cli: Option<PathBuf>,
+    pub whisper_model: Option<PathBuf>,
 }
 
 impl ToolPaths {
@@ -30,6 +32,8 @@ impl ToolPaths {
             tesseract: find_tool("tesseract"),
             heif_enc: find_tool("heif-enc"),
             heif_dec: find_tool("heif-dec"),
+            whisper_cli: find_tool("whisper-cli"),
+            whisper_model: find_whisper_model(),
         }
     }
     /// Apply explicit user selections after automatic discovery. Companion tools
@@ -42,7 +46,22 @@ impl ToolPaths {
 
     fn apply_overrides(&mut self, overrides: &BTreeMap<String, PathBuf>) {
         for (key, path) in overrides {
-            self.set(key, path.clone());
+            if key == "whisper-model" {
+                self.set_model(path.clone());
+            } else {
+                self.set(key, path.clone());
+            }
+        }
+        if !overrides.contains_key("whisper-model")
+            && let Some(cli) = overrides.get("whisper-cli")
+            && let Some(model) = cli.parent().and_then(|directory| {
+                find_model_in_roots(&[
+                    directory.to_owned(),
+                    directory.parent().unwrap_or(directory).to_owned(),
+                ])
+            })
+        {
+            self.whisper_model = Some(model);
         }
         for (key, path) in overrides {
             let companion = match key.as_str() {
@@ -93,8 +112,12 @@ impl ToolPaths {
             "tesseract" => self.tesseract = path,
             "heif-enc" => self.heif_enc = path,
             "heif-dec" => self.heif_dec = path,
+            "whisper-cli" => self.whisper_cli = path,
             _ => {}
         }
+    }
+    fn set_model(&mut self, path: PathBuf) {
+        self.whisper_model = model_available(&path).then_some(path);
     }
     /// Prerequisites depend on the source codec and explicit OCR choice.
     pub fn missing_for_input(&self, input: &Path, settings: &ConversionSettings) -> Option<String> {
@@ -109,13 +132,13 @@ impl ToolPaths {
         }
         let modern_input = kind == MediaKind::Image && crate::modern_images::is_modern_input(input);
         if modern_input && !tool_exists(&self.heif_dec) {
-            return Some(tr("Per leggere HEIC/HEIF e AVIF serve libheif. Apri Impostazioni → Motori e seleziona heif-dec.exe con le sue DLL e i plugin.", "Reading HEIC/HEIF and AVIF requires libheif. Open Settings → Conversion engines and select heif-dec.exe with its DLLs and plugins.").into());
+            return Some(tr("Per leggere HEIC/HEIF e AVIF serve libheif. Apri Impostazioni → Motori → libheif → Installa.", "Reading HEIC/HEIF and AVIF requires libheif. Open Settings → Conversion engines → libheif → Install.").into());
         }
         if kind == MediaKind::Image
             && matches!(settings.format, OutputFormat::Avif | OutputFormat::Heic)
             && !tool_exists(&self.heif_enc)
         {
-            return Some(tr("Per creare HEIC e AVIF serve libheif con i relativi encoder. Apri Impostazioni → Motori e seleziona heif-enc.exe con le sue DLL e i plugin.", "Creating HEIC and AVIF requires libheif with the appropriate encoders. Open Settings → Conversion engines and select heif-enc.exe with its DLLs and plugins.").into());
+            return Some(tr("Per creare HEIC e AVIF serve libheif. Apri Impostazioni → Motori → libheif → Installa: il pacchetto include decoder ed encoder.", "Creating HEIC and AVIF requires libheif. Open Settings → Conversion engines → libheif → Install: the package includes decoders and encoders.").into());
         }
         let pdf_ocr = kind == MediaKind::Pdf
             && settings.ocr.enabled
@@ -125,7 +148,7 @@ impl ToolPaths {
             );
         if kind == MediaKind::Image && settings.format == OutputFormat::Txt || pdf_ocr {
             if !tool_exists(&self.tesseract) {
-                return Some(tr("Per riconoscere il testo serve Tesseract OCR con i dati delle lingue selezionate. Apri Impostazioni → Motori e seleziona tesseract.exe.", "Recognizing text requires Tesseract OCR with the selected language data. Open Settings → Conversion engines and select tesseract.exe.").into());
+                return Some(tr("Per riconoscere il testo apri Impostazioni → Motori → Tesseract OCR → Installa. Italiano e inglese sono inclusi.", "To recognize text, open Settings → Conversion engines → Tesseract OCR → Install. Italian and English are included.").into());
             }
             if pdf_ocr && !tool_exists(&self.pdftoppm) {
                 return Some(tr("Per riconoscere le pagine PDF con OCR serve anche Poppler. Apri Impostazioni → Motori per installarlo oppure seleziona pdftoppm.exe già presente.", "Recognizing PDF pages with OCR also requires Poppler. Open Settings → Conversion engines to install it or select an existing pdftoppm.exe.").into());
@@ -135,6 +158,22 @@ impl ToolPaths {
         self.missing_for(kind, settings.format)
     }
     pub fn missing_for(&self, kind: MediaKind, format: OutputFormat) -> Option<String> {
+        if matches!(kind, MediaKind::Audio | MediaKind::Video) && format == OutputFormat::Txt {
+            if !tool_exists(&self.ffmpeg) || !tool_exists(&self.ffprobe) {
+                return Some(tr("Per trascrivere audio e video servono FFmpeg e FFprobe. Installa FFmpeg in Impostazioni → Motori.","Transcribing audio and video requires FFmpeg and FFprobe. Install FFmpeg in Settings → Conversion engines.").into());
+            }
+            if !tool_exists(&self.whisper_cli) {
+                return Some(tr("Per la trascrizione locale serve Whisper. Installalo in Impostazioni → Motori.","Local transcription requires Whisper. Install it in Settings → Conversion engines.").into());
+            }
+            if !self
+                .whisper_model
+                .as_ref()
+                .is_some_and(|path| model_available(path))
+            {
+                return Some(tr("Manca il modello locale di Whisper. Installa Whisper con il modello Tiny multilingue in Impostazioni → Motori oppure seleziona un modello già presente.","The local Whisper model is missing. Install Whisper with multilingual Tiny in Settings → Conversion engines, or select an existing model.").into());
+            }
+            return None;
+        }
         let missing = match kind {
             MediaKind::Audio | MediaKind::Video if !tool_exists(&self.ffmpeg) => Some(tr(
                 "Per convertire audio e video serve FFmpeg. Apri Impostazioni → Motori per installarlo oppure seleziona ffmpeg.exe già presente sul PC.",
@@ -186,6 +225,43 @@ pub fn executable_available(path: &Path) -> bool {
             || path
                 .extension()
                 .is_some_and(|extension| extension.eq_ignore_ascii_case("exe")))
+}
+
+/// Model files are data and are never passed to Command as executable paths.
+pub fn model_available(path: &Path) -> bool {
+    path.is_file()
+}
+
+fn find_whisper_model() -> Option<PathBuf> {
+    let mut roots = Vec::new();
+    if let Some(root) = std::env::var_os("THE_CONVERTER_TOOLS")
+        .map(PathBuf::from)
+        .filter(|path| path.is_absolute())
+    {
+        roots.push(root);
+    }
+    roots.extend(user_tools_directories());
+    if let Ok(executable) = std::env::current_exe() {
+        roots.extend(application_roots(&executable));
+    }
+    find_model_in_roots(&roots)
+}
+
+fn find_model_in_roots(roots: &[PathBuf]) -> Option<PathBuf> {
+    for root in roots {
+        for suffix in [
+            "whisper/models/ggml-tiny.bin",
+            "whisper/ggml-tiny.bin",
+            "models/ggml-tiny.bin",
+            "ggml-tiny.bin",
+        ] {
+            let path = root.join(suffix);
+            if model_available(&path) {
+                return Some(path);
+            }
+        }
+    }
+    None
 }
 
 fn find_tool(name: &str) -> Option<PathBuf> {
@@ -313,8 +389,13 @@ fn find_in_roots(executable: &str, roots: &[PathBuf]) -> Option<PathBuf> {
             "poppler/bin",
             "LibreOffice/program",
             "libheif/bin",
+            "libheif/ucrt64/bin",
             "tesseract",
+            "tesseract/bin",
+            "tesseract/ucrt64/bin",
             "Tesseract-OCR",
+            "whisper/bin",
+            "whisper/Release",
         ] {
             let path = root.join(suffix).join(executable);
             if executable_available(&path) {
@@ -328,6 +409,85 @@ fn find_in_roots(executable: &str, roots: &[PathBuf]) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn whisper_model_is_data_companion_discovery_and_explicit_selection_wins() {
+        let root = tempfile::tempdir().unwrap();
+        let bin = root.path().join("whisper/bin");
+        let models = root.path().join("whisper/models");
+        std::fs::create_dir_all(&bin).unwrap();
+        std::fs::create_dir_all(&models).unwrap();
+        let cli = bin.join(executable_name("whisper-cli"));
+        let model = models.join("ggml-tiny.bin");
+        std::fs::write(&cli, b"inert exe").unwrap();
+        std::fs::write(&model, b"inert model").unwrap();
+        assert_eq!(
+            find_in_roots(&executable_name("whisper-cli"), &[root.path().to_owned()]),
+            Some(cli.clone())
+        );
+        assert_eq!(
+            find_model_in_roots(&[root.path().to_owned()]),
+            Some(model.clone())
+        );
+        let mut tools = ToolPaths::default();
+        tools.apply_overrides(&BTreeMap::from([("whisper-cli".into(), cli.clone())]));
+        assert_eq!(tools.whisper_model, Some(model));
+        let manual = root.path().join("my selected model.data");
+        std::fs::write(&manual, b"custom model").unwrap();
+        tools.apply_overrides(&BTreeMap::from([
+            ("whisper-cli".into(), cli.clone()),
+            ("whisper-model".into(), manual.clone()),
+        ]));
+        assert_eq!(tools.whisper_model, Some(manual));
+        tools.apply_overrides(&BTreeMap::from([
+            ("whisper-cli".into(), cli),
+            ("whisper-model".into(), root.path().join("missing-model")),
+        ]));
+        assert!(
+            tools.whisper_model.is_none(),
+            "Invalid explicit data must not silently choose another model"
+        );
+    }
+
+    #[test]
+    fn local_transcription_requires_probe_cli_and_model_without_affecting_audio_conversion() {
+        let root = tempfile::tempdir().unwrap();
+        let mut tools = ToolPaths::default();
+        for kind in [MediaKind::Audio, MediaKind::Video] {
+            assert!(tools.missing_for(kind, OutputFormat::Txt).is_some());
+        }
+        let ffmpeg = root.path().join(executable_name("ffmpeg"));
+        std::fs::write(&ffmpeg, b"inert exe").unwrap();
+        tools.ffmpeg = Some(ffmpeg);
+        assert!(
+            tools
+                .missing_for(MediaKind::Audio, OutputFormat::Mp3)
+                .is_none()
+        );
+        assert!(
+            tools
+                .missing_for(MediaKind::Audio, OutputFormat::Txt)
+                .unwrap()
+                .contains("FFprobe")
+        );
+        for name in ["ffprobe", "whisper-cli"] {
+            let path = root.path().join(executable_name(name));
+            std::fs::write(&path, b"inert exe").unwrap();
+            tools.set(name, path);
+        }
+        assert!(
+            tools
+                .missing_for(MediaKind::Audio, OutputFormat::Txt)
+                .is_some()
+        );
+        let data = root.path().join("tiny.bin");
+        std::fs::write(&data, b"inert model").unwrap();
+        tools.set_model(data);
+        for kind in [MediaKind::Audio, MediaKind::Video] {
+            assert!(tools.missing_for(kind, OutputFormat::Txt).is_none());
+        }
+        assert!(tools.tesseract.is_none());
+    }
 
     #[test]
     fn personal_tools_prefer_the_new_location_and_keep_legacy_discovery() {

@@ -4,6 +4,7 @@ mod command;
 pub mod file_icons;
 pub mod gui_history;
 pub mod image_editor;
+pub mod media_editor;
 pub mod media_options_ui;
 pub mod pdf_merge_app;
 pub mod pdf_merge_ui;

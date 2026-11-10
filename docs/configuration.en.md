@@ -4,11 +4,13 @@
 
 This guide describes Convert Here's settings. Start with the [README](../README.en.md); see the [format guide](conversions.en.md) for available conversions.
 
+**0.8.0 candidate, not yet published:** SVG, the audio/video editor, transcription and additional engine downloads described as in development belong to this candidate, not the published release linked in the README.
+
 ## Interface language
 
-In **Settings → Language**, choose **System**, **Italiano** or **English**. System follows the Windows display language: Italian for Italian Windows, English otherwise. The choice is stored in the `ui_language` field of `preferences.json` as `system`, `it` or `en`. Existing settings without that field use System. It does not change OCR language, conversion formats, output filenames or other preferences.
+In **Settings → Language**, choose **System**, **Italiano** or **English**. System follows the Windows display language: Italian for Italian Windows, English otherwise. The choice is stored in the `ui_language` field of `preferences.json` as `system`, `it` or `en`. Existing settings without that field use System. It does not change OCR or speech language, conversion formats, output filenames or other preferences.
 
-The 0.5.0 installer and portable packages include the bilingual interface ready to use. The setup is also available in Italian and English.
+The interface and setup are available in Italian and English.
 
 For one CLI invocation, pass `--language system|it|en`. This overrides the saved choice without rewriting it. Messages produced by Windows and external engines may follow their own language settings. [CLI guide](command-line.en.md).
 
@@ -28,37 +30,51 @@ For OCR, configure `tesseract.exe` and keep `tessdata` beside it with the requir
 
 For libheif, keep `heif-dec.exe` and `heif-enc.exe` with DLLs and plugins from the same distribution. The build must include the necessary HEVC/AV1 decoders and encoders.
 
-## Optional FFmpeg and Poppler downloads
+For transcription in development, configure `whisper-cli.exe` and the `ggml-tiny.bin` model. FFmpeg and ffprobe are also required: the Whisper runtime alone does not read every audio/video container directly. Speech language and CPU threads are configured in transcription controls, separately from interface and OCR language. Automatic language detection is the default; profiles store `speech.language` and `speech.threads`.
 
-Public packages do not contain the engines. Request FFmpeg, Poppler or both in **Settings → Conversion engines**. The confirmation displays the source, version, size, licenses and destination. Installation uses only the personal folder `%LOCALAPPDATA%\ConvertHere\tools`.
+## Optional engine downloads
 
-The 0.5.0 engine configuration downloads [FFmpeg 9.0.2 from Gyan's distribution](https://github.com/GyanD/codexffmpeg/releases/tag/9.0.2) and [Poppler 26.09.0 for Windows](https://github.com/oschwartz10612/poppler-windows/releases/tag/v26.09.0-0): 158478032 bytes in total, about 159 MB. About 615 MB of free space is needed during downloading and extraction. SHA-256 is checked before extraction; upstream licenses and documentation are preserved.
+App packages do not contain external engines or the speech model. Request only those needed in **Settings → Conversion engines**. The development branch adds Tesseract, libheif and Whisper + Tiny to FFmpeg and Poppler downloads. Confirmation displays the source, version, download size, extracted space, licenses and destination. Installation uses only the personal folder `%LOCALAPPDATA%\ConvertHere\tools`, without UAC or a system installer.
 
-HTTPS requests reach the distributors and their CDNs, which receive the IP address and normal HTTP request data, including a User-Agent with the app version. Files to convert are not uploaded. Cancellation and errors attempt to remove temporary staging; an unexpected shutdown may leave residual files.
+| Engine | Pinned distribution | Download |
+| --- | --- | --- |
+| FFmpeg + Poppler | [FFmpeg 9.0.2 Gyan](https://github.com/GyanD/codexffmpeg/releases/tag/9.0.2) and [Poppler 26.09.0](https://github.com/oschwartz10612/poppler-windows/releases/tag/v26.09.0-0) | 158,478,032 bytes combined; about 615 MB free during downloading/extraction |
+| Tesseract + ita/eng, in development | [Tesseract 5.5.4 from MSYS2](https://packages.msys2.org/packages/mingw-w64-ucrt-x86_64-tesseract-ocr) and OCR models | 38,276,135 bytes; about 60 MB extracted |
+| libheif, in development | [libheif 1.23.7 from MSYS2](https://packages.msys2.org/packages/mingw-w64-ucrt-x86_64-libheif) | 28,215,281 bytes; about 71.4 MB extracted |
+| Whisper + Tiny, in development | [Whisper 1.9.5.r258 from MSYS2](https://packages.msys2.org/packages/mingw-w64-ucrt-x86_64-whisper.cpp) and [Tiny multilingual](https://huggingface.co/ggerganov/whisper.cpp) | 87,939,016 bytes, including the 77,691,713-byte model; about 101.5 MB extracted |
 
-The setup does not start downloads or add a Start menu shortcut for installing engines. Configure LibreOffice, libheif, Tesseract and OCR models from local installations. Development copies under `.tools/` are excluded from public packages.
+The [portable package catalogue](../src/runtime_install/portable-packages.json) records pinned versions, sources and SHA-256 values for Tesseract, libheif and Whisper/Tiny. SHA-256 is checked before extraction; licenses and documentation are preserved. Downloading does not execute the tools. Portable distributions include the required dependencies; Whisper provides a generic CPU backend without requiring manual Visual C++ runtime installation.
+
+Selecting Whisper in the app also adds FFmpeg to the confirmation request when FFmpeg or ffprobe is missing. Its size is separate from Whisper + Tiny's 87,939,016 bytes. No engine or model downloads automatically when the app starts.
+
+HTTPS requests reach distributors and their CDNs: GitHub/Gyan for existing engines, MSYS2 and its mirrors, GitHub for licenses/OCR models, and Hugging Face and CDNs for Tiny. They receive the IP address and normal HTTP request data, including a User-Agent with the app version. Files to convert are not uploaded. Cancellation and errors attempt to remove temporary staging; an unexpected shutdown may leave residual files.
+
+The setup does not start downloads or add a Start menu shortcut for installing engines. Install and select LibreOffice separately; existing local copies of the other engines remain supported. Development copies under `.tools/` are excluded from public packages.
 
 ### Command-line alternative
 
 ```powershell
 .\the-converter-cli.exe --install-runtime ffmpeg
 .\the-converter-cli.exe --install-runtime poppler
+.\the-converter-cli.exe --install-runtime tesseract
+.\the-converter-cli.exe --install-runtime libheif
+.\the-converter-cli.exe --install-runtime whisper
 .\scripts\install-runtime-tools.ps1 -InstallDirectory "C:\Programs\ConvertHere" -Engine ffmpeg
 ```
 
-The script calls the same CLI; omitting `-Engine` requests both engines. `-InstallDirectory` locates the app folder, not the engine destination. Distributors are contacted only when you run the command. [CLI guide](command-line.en.md).
+The three additional commands belong to the development branch. The CLI installs only the requested engine: install FFmpeg separately for transcription. The script calls the same CLI; omitting `-Engine` requests **FFmpeg and Poppler**, not every engine. `-InstallDirectory` locates the app folder, not the engine destination. Distributors are contacted only when you run the command. [CLI guide](command-line.en.md).
 
 ## Visible formats and appearance
 
-In **Settings → Output formats**, choose which destinations appear in the app and Explorer menu, grouped into audio, video, images and documents. The initial eight outputs are MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4.
+In **Settings → Output formats**, choose which destinations appear in the app and Explorer menu, grouped into audio, video, images, documents and **Raw**. The initial eight outputs remain MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4. Enable **TXT** in Raw to show OCR and transcription.
 
-Choices are saved and the menu rereads them without restarting Explorer. **Custom settings…** stays available even if all outputs are disabled. The filter does not block the CLI, explicit `--quick` requests or already queued jobs. All 44 engine formats and 93 input extensions remain supported.
+Choices are saved and the menu rereads them without restarting Explorer. **Custom settings…** stays available even if all outputs are disabled. The filter does not disable inputs, the CLI, explicit `--quick` requests or already queued jobs. The development branch retains 44 output formats and recognizes 94 input extensions, including SVG. **Files**, **History** and **Profiles** sit on the left of navigation; **Settings** is on the right.
 
 For appearance, follow the Windows theme or select **Light** or **Dark**.
 
 ## Personal profiles
 
-The new **Profiles** tab creates, edits, duplicates, renames and deletes recipes and selects a default. Store up to **32 profiles**, with **8 visible in Convert to** when their output is enabled and every selected input is compatible. Allow all compatible inputs or restrict a recipe to selected extensions; this does not change the app's 93 recognized input extensions. Reopen the Explorer menu after changing a profile. Already queued jobs retain their recipe. PDF Merge profiles require at least two files and open page ordering.
+The **Profiles** tab creates, edits, duplicates, renames and deletes recipes and selects a default. Store up to **32 profiles**, with **8 visible in Convert to** when their output is enabled and every selected input is compatible. Allow all compatible inputs or restrict a recipe to selected extensions; this does not change the development branch's 94 recognized input extensions. Reopen the Explorer menu after changing a profile. Already queued jobs retain their recipe. PDF Merge profiles require at least two files and open page ordering.
 
 **Import JSON…**, **Export…** and **Export all…** transfer recipes. JSON contains parameters, input filters, visibility and an optional output folder, without engine paths or sample content. Import is atomic, creates new copies and never overwrites profiles. Recipes beyond the eight visible entries are imported hidden; files over 256 KiB or imports exceeding 32 total profiles are rejected. User-defined names are not translated. [Complete guide and JSON example](image-editor-profiles.en.md).
 
@@ -66,9 +82,11 @@ The new **Profiles** tab creates, edits, duplicates, renames and deletes recipes
 
 The common **maximum size per file** is checked before publishing each output. Older image limits remain supported; when both exist, the smaller one wins. The JPEG/WebP editor can find a suitable quality and resize only with permission. Other routes fail if their output remains too large; audio/video limits do not promise automatic bitrate adjustment.
 
-**Maximum audio/video duration** applies to audio/video sources, including audio extraction and GIF, after the selected start and combined with the trim end. It does not change images or text.
+**Maximum audio/video duration** applies to audio/video sources, including audio extraction, GIF and transcription, after the selected start and combined with the trim end. It does not truncate image or TXT inputs.
 
 **Advanced** provides searchable typed codec, filter, metadata and performance controls. Encoder-specific options are discovered from configured local FFmpeg, not an online service. Availability depends on the build, codec and container; incompatible or unverifiable options produce an error. Recipes with FFmpeg options require audio/video inputs, including for GIF output. The catalogue accepts no free-form commands, scripts or executable paths.
+
+In the audio/video editor, gain and mute become `media_options.audio_volume`; trimming uses `video.trim_start` and `video.trim_end` for audio too. TXT applies only trimming, limits and speech settings: gain, mute and encoding options are excluded. **Use these settings** updates active settings; **Save profile…** stores parameters without source content or the full transcript.
 
 ## Preferences and reports
 

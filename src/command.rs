@@ -94,6 +94,9 @@ struct Args {
 enum RuntimeCommand {
     Ffmpeg,
     Poppler,
+    Tesseract,
+    Libheif,
+    Whisper,
 }
 
 impl From<RuntimeCommand> for RuntimeEngine {
@@ -101,6 +104,9 @@ impl From<RuntimeCommand> for RuntimeEngine {
         match value {
             RuntimeCommand::Ffmpeg => Self::Ffmpeg,
             RuntimeCommand::Poppler => Self::Poppler,
+            RuntimeCommand::Tesseract => Self::Tesseract,
+            RuntimeCommand::Libheif => Self::Libheif,
+            RuntimeCommand::Whisper => Self::Whisper,
         }
     }
 }

@@ -791,6 +791,48 @@ mod tests {
     use super::*;
 
     #[test]
+    fn speech_profiles_round_trip_and_language_changes_invalidate_menu_revision() {
+        let mut profiles = ConversionProfiles::default();
+        let mut settings = ConversionSettings {
+            format: OutputFormat::Txt,
+            ..Default::default()
+        };
+        settings.speech.language = "it".into();
+        settings.speech.threads = 2;
+        settings.video.trim_start = Some(3.0);
+        settings.limits.max_duration = Some(60.0);
+        let id = profiles
+            .create_with_inputs(
+                "Trascrivi".into(),
+                true,
+                settings.clone(),
+                vec!["mp3".into(), "mp4".into()],
+            )
+            .unwrap();
+        let revision = profiles.get(&id).unwrap().revision;
+        let mut imported = ConversionProfiles::default();
+        imported
+            .import_json(&profiles.export_json(Some(&id)).unwrap())
+            .unwrap();
+        let restored = imported.iter().next().unwrap();
+        assert_eq!(restored.settings.speech, settings.speech);
+        assert_eq!(restored.settings.video.trim_start, Some(3.0));
+        assert_eq!(restored.settings.limits.max_duration, Some(60.0));
+        assert_eq!(restored.input_extensions, ["mp3", "mp4"]);
+        settings.speech.language = "en".into();
+        profiles
+            .update_with_inputs(
+                &id,
+                "Trascrivi".into(),
+                true,
+                settings,
+                vec!["mp3".into(), "mp4".into()],
+            )
+            .unwrap();
+        assert!(profiles.resolve(&id, Some(revision)).is_err());
+    }
+
+    #[test]
     fn input_filters_normalize_preserve_legacy_revisions_and_gate_every_selected_file() {
         let mut profiles = ConversionProfiles::default();
         let id = profiles

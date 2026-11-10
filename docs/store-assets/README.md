@@ -1,6 +1,10 @@
 # Materiale visivo Store
 
-## Galleria corrente 0.7.1
+## Galleria corrente 0.8.0
+
+Le quattro [catture native 0.8.0](0.8.0/README.md) mostrano formati, motori, timeline e trascrizione locale. Sono PNG **2562 × 1441**, acquisiti con zoom dell'app al 150%, senza puntatore, ritocchi o ingrandimenti successivi. Il registro distingue build debug, JPEG originali e conversione PNG.
+
+## Galleria precedente 0.7.1
 
 Le due [catture correnti](0.7.1/README.md) mostrano [Impostazioni](0.7.1/01-impostazioni-it.png) e [Profili](0.7.1/02-profili-it.png), entrambe PNG **2562 × 1430**. Sono state acquisite il 9 novembre 2026 dalla build debug nativa **0.7.0**, con interfaccia invariata nella 0.7.1 e **zoom dell'app al 150%**, senza ingrandimento successivo. La CLI release 0.7.0 ha convertito i JPEG nativi in PNG senza ridimensionamento. Il registro riporta provenienza, dimensioni, byte e SHA-256. Non sono catture di una build 0.7.1 e non attestano installazione del candidato Store, WACK o collaudo del menu Windows 10.
 

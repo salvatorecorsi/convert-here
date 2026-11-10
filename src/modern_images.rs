@@ -37,9 +37,10 @@ pub(crate) fn decode(
     progress: &mut impl FnMut(Progress),
 ) -> Result<PathBuf> {
     cancelled(cancel)?;
-    let executable = tools.heif_dec.as_ref().context(
-        tr("Per leggere HEIC/AVIF serve libheif. Apri Impostazioni → Motori e seleziona heif-dec.exe con le sue DLL.", "Reading HEIC/AVIF requires libheif. Open Settings → Conversion engines and select heif-dec.exe with its DLLs."),
-    )?;
+    let executable = tools.heif_dec.as_ref().context(tr(
+        "Per leggere HEIC/AVIF apri Impostazioni → Motori → libheif → Installa.",
+        "To read HEIC/AVIF open Settings → Engines → libheif → Install.",
+    ))?;
     let output = workspace.join("decoded.png");
     progress(Progress {
         fraction: 0.05,
@@ -96,9 +97,10 @@ pub(crate) fn encode(
         );
     }
     cancelled(cancel)?;
-    let executable = tools.heif_enc.as_ref().context(
-        tr("Per creare HEIC/AVIF serve libheif. Apri Impostazioni → Motori e seleziona heif-enc.exe con le sue DLL e gli encoder HEVC/AV1.", "Creating HEIC/AVIF requires libheif. Open Settings → Conversion engines and select heif-enc.exe with its DLLs and HEVC/AV1 encoders."),
-    )?;
+    let executable = tools.heif_enc.as_ref().context(tr(
+        "Per creare HEIC/AVIF apri Impostazioni → Motori → libheif → Installa.",
+        "To create HEIC/AVIF open Settings → Engines → libheif → Install.",
+    ))?;
     let stage = tempfile::Builder::new()
         .prefix(".the-converter-heif-")
         .tempdir_in(dir)?;

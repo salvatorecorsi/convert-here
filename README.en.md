@@ -12,15 +12,20 @@ Developed by **[Salvatore Corsi](https://github.com/salvatorecorsi)**, Convert H
 
 **0.7.1 is published on GitHub** as of 9 November 2026, with a workaround for the Store package's Windows 10 context menu and refreshed app captures. The menu change has not yet been verified on a real Windows 10 host. [English notes](docs/release-notes-0.7.1.en.md) / [Italian](docs/release-notes-0.7.1.md). Features from 0.7.0 remain unchanged. The **Store 1.0.7.0 update is in certification**, with automatic publication after approval; the preceding 1.0.6.0 update was already approved. [Store status](docs/store-submission.md).
 
-![Convert Here: profile manager and four tabs, shown in Italian](docs/store-assets/0.7.1/02-profili-it.png)
+**0.8.0 candidate, not yet published:** native SVG input, an audio/video timeline editor, local audio/video-to-TXT transcription, and in-app downloads for Tesseract, libheif and Whisper + Tiny. The relevant sections describe this candidate; package links above still point to published 0.7.1. Candidate status does not imply approval or availability of a new Store update.
 
-*Profiles: named recipes, allowed inputs, duplication, JSON import/export and defaults. Native capture of debug build 0.7.0, whose interface is unchanged in 0.7.1, at 150% UI zoom without later upscaling. Italian is shown; English is also available. [Capture provenance](docs/store-assets/0.7.1/README.md).*
+The [historical captures of preceding version 0.7.1](docs/store-assets/0.7.1/README.md) do not represent the 0.8.0 candidate interface.
+
+![Audio and video editor with a timeline and selected clip interval, shown in Italian](docs/store-assets/0.8.0/03-timeline-it.png)
+
+*Native 0.8.0 build, 2562 × 1441, 150% UI zoom, without the pointer. [New capture provenance](docs/store-assets/0.8.0/README.md).*
 
 ## What you can do
 
-- **Convert multiple files together**, with 44 output formats and 93 recognized input extensions.
+- **Convert multiple files together**, with 44 output formats and, in the 0.8.0 candidate, 94 recognized input extensions including SVG.
 - **Use the right-click menu** to queue quick conversions with your saved preferences or open custom settings.
 - **Convert audio and video**, extract audio from video, create animated GIFs and adjust quality, dimensions and time range.
+- **Trim audio/video on a timeline** and adjust gain/mute; transcribe speech to TXT with local Whisper in the candidate's new features.
 - **Convert and resize images**, create PDFs from images and work with HEIC/HEIF, AVIF, OpenEXR and HDR.
 - **Compress, split and merge PDFs**, including arranging individual pages from different images and documents.
 - **Extract text from images to TXT and from PDFs to TXT, Word DOCX or HTML**, with local OCR for scans.
@@ -61,7 +66,7 @@ To uninstall, use **Windows Settings → Apps → Installed apps → Convert Her
 
 Preferences are saved between sessions. Originals and existing results are preserved: the app adds a number when a name is already taken. The interactive queue uses one format shared by the selection; convert categories in separate groups if they have no common destination.
 
-Four tabs separate the tasks: **Files** prepares conversions, **History** shows active jobs and previous results, **Settings** configures engines, outputs and appearance, and **Profiles** manages recipes. History also retains results from the main window, editor and PDF Merge between sessions.
+The sections separate tasks: **Files** prepares conversions, **History** shows active jobs and previous results, **Settings** configures engines, outputs and appearance, and **Profiles** manages recipes. In the 0.8.0 candidate, Files, History and Profiles are on the left, with Settings on the right. History also retains results from the main window, editors and PDF Merge between sessions.
 
 ### From the File Explorer context menu
 
@@ -78,9 +83,7 @@ With multiple files that can become PDFs:
 
 Open **Settings → Output formats** and enable the destinations you use. Your choices apply to both the app selector and File Explorer, without restarting Explorer. **MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4** are enabled initially. Each selection shows only compatible destinations.
 
-![Settings: five output-format columns and an engine grid, shown in Italian](docs/store-assets/0.7.1/01-impostazioni-it.png)
-
-*Enable every format, restore the common formats or choose individual outputs. This is a display filter: all inputs remain recognized and the CLI keeps every destination. The Language section lets you choose System, Italiano or English.*
+Enable every format, restore the common formats or choose individual outputs. This is a display filter: all inputs remain recognized and the CLI keeps every destination. The Language section lets you choose System, Italiano or English.
 
 ## Formats and conversions
 
@@ -93,6 +96,8 @@ Open **Settings → Output formats** and enable the destinations you use. Your c
 | DOC/DOCX, ODT, RTF, TXT, PPT/PPTX, ODP | PDF | LibreOffice |
 | XLS/XLSX/XLSM, ODS, CSV | CSV, Excel XLSX, PDF | LibreOffice |
 | HTML/HTM | PDF | LibreOffice |
+
+The 0.8.0 candidate also accepts **SVG** as image/PDF input, rasterized locally with resvg without external engines. It accepts self-contained static UTF-8 SVG; SVGZ, external resources and embedded raster images are unsupported. SVG is not a new output format.
 
 Adjust audio bitrate, sample rate, channels and normalization; video H.264/H.265 codec, quality, width, FPS and trimming; image resizing, JPEG quality and PDF DPI. The app shows the relevant controls for each format. Available audio/video codecs depend on the configured FFmpeg build.
 
@@ -126,6 +131,14 @@ OCR uses **Tesseract** with installed language models; PDFs also require **Poppl
 
 Recognized text stays on your PC. Review it for errors: OCR does not recreate the layout or add a searchable layer to the original PDF. PDF-to-DOCX/HTML exports reconstruct text and page separation without original images, tables or formatting.
 
+### Audio/video timeline and transcription — 0.8.0 candidate
+
+**Edit…** beside an audio or video opens a single track with a source waveform and frame strip. Drag the start/end handles or use numeric times and the keyboard; adjust gain from **−60 to +20 dB** or mute. **Save as…** converts only that file to a new destination; **Use these settings** returns trimming and options to the active settings. You can save the recipe as a profile. Previews show the source before effects; the editor has no playback or multitrack editing.
+
+To transcribe, enable **TXT** in **Settings → Output formats → Raw**, then select TXT for audio/video. It requires **FFmpeg and Whisper + Tiny multilingual**, downloaded on request; no account, API key or cloud service is needed. TXT mode in the editor applies only trimming and recognition settings, without gain or encoder options. Language defaults to automatic detection; choose Italian, English or another supported Whisper code and configure threads. Profiles retain these parameters without the recording or transcript content.
+
+Recognition runs locally on the CPU using temporary WAV/TXT chunks of at most ten minutes. Text may need correction; the video's visual content is not reconstructed. **Whisper + Tiny** downloads about **88 MB**, including **77,691,713 bytes** for the model. If FFmpeg or ffprobe is missing, the app's installation button adds FFmpeg to the request; its download is separate.
+
 ### Excel, CSV, HEIC and AVIF
 
 With LibreOffice, convert spreadsheets to XLSX, CSV or PDF. For CSV, choose **comma, semicolon, tab or pipe**: the same separator is used for import and export. CSV is UTF-8; export keeps the displayed values of the **first sheet**, without formulas, formatting or other sheets. Import keeps quoted fields as text and does not evaluate formulas.
@@ -143,14 +156,15 @@ Open **Settings → Conversion engines** to detect installed tools or choose the
 | **FFmpeg** | Audio, video, audio extraction and GIFs from video | Download in the app or select `ffmpeg.exe` |
 | **Poppler** | PDF images, embedded text and page preparation for OCR | Download in the app or select `pdftoppm.exe`, `pdftotext.exe` and `pdfinfo.exe` |
 | **LibreOffice** | Office documents, Excel/CSV and HTML | Local installation and `soffice.exe` path |
-| **Tesseract** | OCR | `tesseract.exe` path and `tessdata` folder with the required models |
-| **libheif** | Reading and creating HEIC/HEIF and AVIF | `heif-dec.exe` and `heif-enc.exe` paths, with DLLs and plugins |
+| **Tesseract** | OCR | In development: a download with Italian/English; existing `tesseract.exe` and language models remain selectable |
+| **libheif** | Reading and creating HEIC/HEIF and AVIF | In development: a portable download; existing `heif-dec.exe` and `heif-enc.exe` with DLLs/plugins remain selectable |
+| **Whisper + Tiny** | Audio/video → TXT, in development | Download the CPU runtime and multilingual model; FFmpeg required |
 
 **Download FFmpeg and Poppler directly from the app**, including the portable edition. Before confirmation, you see the source, version, size, licenses and installation folder. In 0.7.1, both archives require about **159 MB of downloads** and about **615 MB of free space** during download and extraction. SHA-256 checksums are verified and licenses and documentation are retained.
 
 Downloading starts only after confirmation. Engines use your user folder; files to convert stay on your PC. [Historical confirmation dialog](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/screenshots/en-download-engines.jpg).
 
-Configure LibreOffice, libheif, Tesseract and OCR models from local installations. See the [configuration guide](docs/configuration.en.md) for paths, preferences, manual scripts and queue recovery.
+The 0.8.0 candidate adds portable **Tesseract 5.5.4** with `ita`/`eng`, **libheif 1.23.7**, and **Whisper + Tiny**, retaining MSYS2 UCRT64 dependencies and licenses. These are optional downloads into your personal folder, not system installers; LibreOffice remains separately configured. See the [configuration guide](docs/configuration.en.md) for paths, sources, preferences and queue recovery.
 
 ## Languages
 
@@ -164,7 +178,7 @@ The installer and portable packages in [GitHub release 0.7.1](https://github.com
 
 ## Data and privacy
 
-Conversion and OCR run locally. Preferences, queue records and reports are stored on the device and may contain paths and errors. There is no telemetry, advertising or app account registration.
+Conversion, OCR and the transcription under development run locally. Preferences, queue records and reports are stored on the device and may contain paths and errors. There is no telemetry, advertising or app account registration. Optional downloads contact engine/model providers without uploading the content to process.
 
 Optional engine downloads require Internet access and contact the distributors; opening HTML may load linked images or CSS, including remote resources, through LibreOffice. The app preserves originals and does not send files to a developer server. [Privacy statement (Italian and English)](docs/privacy.md).
 

@@ -12,15 +12,20 @@ Sviluppato da **[Salvatore Corsi](https://github.com/salvatorecorsi)**, Convert 
 
 La **0.7.1 è pubblicata su GitHub** dal 9 novembre 2026, con un workaround per il menu del pacchetto Store su Windows 10 e nuove catture dell'app. La modifica del menu non è ancora verificata su un host Windows 10 reale. [Note IT](docs/release-notes-0.7.1.md) / [EN](docs/release-notes-0.7.1.en.md). Le funzioni della 0.7.0 restano invariate. L'aggiornamento **Store 1.0.7.0 è in certificazione**, con pubblicazione automatica appena approvato; il precedente 1.0.6.0 era già approvato. [Stato Store](docs/store-submission.md).
 
-![Convert Here: manager dei profili e quattro schede](docs/store-assets/0.7.1/02-profili-it.png)
+**Candidata 0.8.0, non ancora pubblicata:** ingresso SVG nativo, editor audio/video con timeline, trascrizione locale audio/video → TXT e download dall'app anche per Tesseract, libheif e Whisper + Tiny. Le sezioni dedicate descrivono questa candidata; i collegamenti ai pacchetti qui sopra restano quelli della 0.7.1 pubblicata. La candidata non implica approvazione o disponibilità di un nuovo aggiornamento Store.
 
-*Profili: ricette con nome, ingressi consentiti, duplicazione, import/export JSON e predefiniti. Cattura nativa della build debug 0.7.0, con interfaccia invariata nella 0.7.1 e zoom al 150%, senza ingrandimento successivo. [Provenienza delle catture](docs/store-assets/0.7.1/README.md).*
+Le [catture storiche della versione precedente 0.7.1](docs/store-assets/0.7.1/README.md) non rappresentano l'interfaccia della candidata 0.8.0.
+
+![Editor audio e video con timeline e taglio della clip](docs/store-assets/0.8.0/03-timeline-it.png)
+
+*Build nativa 0.8.0, 2562 × 1441, zoom 150%, senza puntatore. [Provenienza delle nuove schermate](docs/store-assets/0.8.0/README.md).*
 
 ## Cosa puoi fare
 
-- **Convertire più file insieme**, con 44 formati di destinazione e 93 estensioni di ingresso riconosciute.
+- **Convertire più file insieme**, con 44 formati di destinazione e, nella candidata 0.8.0, 94 estensioni di ingresso riconosciute, compresa SVG.
 - **Usare il tasto destro** per accodare conversioni rapide con le preferenze salvate, oppure aprire le impostazioni personalizzate.
 - **Convertire audio e video**, estrarre l'audio da un video, creare GIF animate, regolare qualità, dimensioni e intervallo temporale.
+- **Tagliare audio/video da una timeline** e regolare gain/muto; trascrivere il parlato in TXT con Whisper locale, nelle nuove funzioni della candidata.
 - **Convertire e ridimensionare immagini**, creare PDF da immagini e lavorare anche con HEIC/HEIF, AVIF, OpenEXR e HDR.
 - **Comprimere, dividere e unire PDF**, ordinando anche le singole pagine di immagini e documenti diversi.
 - **Estrarre testo dalle immagini in TXT e dai PDF in TXT, Word DOCX o HTML**, con OCR locale per le scansioni.
@@ -61,7 +66,7 @@ Per disinstallare usa **Impostazioni Windows → App → App installate → Conv
 
 Le preferenze restano salvate tra gli avvii. Gli originali e i risultati già presenti vengono conservati: se un nome è occupato, l'app aggiunge un numero. La coda interattiva usa un formato comune alla selezione; se le categorie non hanno una destinazione comune, convertile in gruppi separati.
 
-Le quattro schede separano le attività: **File** per preparare le conversioni, **Cronologia** per lavori attivi e risultati precedenti, **Impostazioni** per motori, uscite e aspetto, **Profili** per gestire le ricette. La cronologia conserva anche i risultati della finestra principale, dell'editor e di PDF Merge tra gli avvii.
+Le sezioni separano le attività: **File** per preparare le conversioni, **Cronologia** per lavori attivi e risultati precedenti, **Impostazioni** per motori, uscite e aspetto, **Profili** per gestire le ricette. Nella candidata 0.8.0 File, Cronologia e Profili sono a sinistra, Impostazioni a destra. La cronologia conserva anche i risultati della finestra principale, degli editor e di PDF Merge tra gli avvii.
 
 ### Dal tasto destro in Esplora file
 
@@ -78,9 +83,7 @@ Con più file convertibili in PDF:
 
 Apri **Impostazioni → Formati di uscita** e abilita le destinazioni che usi. Le scelte valgono sia nel selettore dell'app sia nel menu di Esplora file, senza riavviare Explorer. All'inizio sono attivi **MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4**. Ogni selezione mostra soltanto le destinazioni compatibili.
 
-![Impostazioni: cinque colonne per i formati di uscita e griglia dei motori](docs/store-assets/0.7.1/01-impostazioni-it.png)
-
-*Puoi attivare tutti i formati, ripristinare i più comuni o scegliere le singole uscite. Il filtro riguarda la visualizzazione: tutti gli ingressi restano riconosciuti e la CLI mantiene tutte le destinazioni.*
+Puoi attivare tutti i formati, ripristinare i più comuni o scegliere le singole uscite. Il filtro riguarda la visualizzazione: tutti gli ingressi restano riconosciuti e la CLI mantiene tutte le destinazioni.
 
 ## Formati e conversioni
 
@@ -93,6 +96,8 @@ Apri **Impostazioni → Formati di uscita** e abilita le destinazioni che usi. L
 | DOC/DOCX, ODT, RTF, TXT, PPT/PPTX, ODP | PDF | LibreOffice |
 | XLS/XLSX/XLSM, ODS, CSV | CSV, Excel XLSX, PDF | LibreOffice |
 | HTML/HTM | PDF | LibreOffice |
+
+Nella candidata 0.8.0, **SVG** è un ulteriore ingresso per immagini e PDF: viene rasterizzato localmente con resvg, senza motori esterni. Sono accettati SVG statici UTF-8 autosufficienti; SVGZ, risorse esterne e immagini raster incorporate non sono supportati. SVG non è una nuova destinazione di uscita.
 
 Puoi regolare bitrate, frequenza, canali e normalizzazione audio; codec H.264/H.265, qualità, larghezza, FPS e taglio dei video; ridimensionamento, qualità JPEG e DPI dei PDF. L'app mostra i controlli pertinenti al formato. La disponibilità dei codec audio/video dipende dalla build di FFmpeg configurata.
 
@@ -126,6 +131,14 @@ L'OCR usa **Tesseract** con i modelli installati; sui PDF richiede anche **Poppl
 
 Il testo riconosciuto resta sul PC. Rileggilo per correggere eventuali errori: l'OCR non ricrea l'impaginazione e non aggiunge uno strato ricercabile al PDF originale. Le esportazioni PDF in DOCX/HTML ricostruiscono il testo e la separazione delle pagine, senza immagini, tabelle o formattazione originale.
 
+### Timeline audio/video e trascrizione — candidata 0.8.0
+
+**Modifica…** accanto a un audio o video apre una traccia singola con forma d'onda e striscia di fotogrammi della sorgente. Trascina le maniglie di inizio/fine oppure usa i tempi numerici e la tastiera; regola il gain da **−60 a +20 dB** o il muto. **Salva con nome…** converte soltanto quel file in una nuova destinazione; **Usa queste impostazioni** riporta taglio e opzioni alle impostazioni attive. Puoi salvare la ricetta in un profilo. Le anteprime sono della sorgente, prima degli effetti; l'editor non offre riproduzione o montaggio multitraccia.
+
+Per trascrivere, abilita **TXT** in **Impostazioni → Formati di uscita → Raw**, quindi scegli TXT per un audio/video. Servono **FFmpeg e Whisper + Tiny multilingual**, scaricabili su richiesta; non occorrono account, chiavi API o servizi cloud. Nell'editor TXT si applicano soltanto il taglio e le opzioni di riconoscimento, senza gain o parametri encoder. La lingua predefinita è automatica; puoi scegliere italiano, inglese o un codice Whisper supportato e impostare i thread. I profili conservano questi parametri, senza il contenuto della registrazione o della trascrizione.
+
+Il riconoscimento lavora localmente sulla CPU, usando segmenti temporanei WAV/TXT di massimo dieci minuti. Il testo può richiedere correzioni; non viene ricostruito il contenuto visivo del video. Il download **Whisper + Tiny** comprende circa **88 MB**, di cui **77.691.713 byte** per il modello. Se FFmpeg o ffprobe mancano, il pulsante di installazione nell'app aggiunge FFmpeg alla richiesta; il relativo download è separato.
+
 ### Excel, CSV, HEIC e AVIF
 
 Con LibreOffice puoi convertire fogli di calcolo in XLSX, CSV o PDF. Per i CSV scegli **virgola, punto e virgola, tab o pipe**: lo stesso separatore viene usato in ingresso e in uscita. Il CSV è UTF-8; l'esportazione conserva i valori del **primo foglio**, senza formule, formattazione o altri fogli. L'importazione conserva come testo i campi quotati e non valuta le formule.
@@ -143,14 +156,15 @@ Apri **Impostazioni → Motori** per rilevare gli strumenti già installati o sc
 | **FFmpeg** | Audio, video, estrazione audio e GIF da video | Download dall'app oppure percorso di `ffmpeg.exe` |
 | **Poppler** | PDF in immagini, testo incorporato e preparazione pagine per OCR | Download dall'app oppure percorsi di `pdftoppm.exe`, `pdftotext.exe` e `pdfinfo.exe` |
 | **LibreOffice** | Documenti Office, Excel/CSV e HTML | Installazione locale e percorso di `soffice.exe` |
-| **Tesseract** | OCR | Percorso di `tesseract.exe` e cartella `tessdata` con i modelli necessari |
-| **libheif** | Lettura e creazione HEIC/HEIF e AVIF | Percorsi di `heif-dec.exe` e `heif-enc.exe`, con DLL e plugin |
+| **Tesseract** | OCR | Nel ramo di sviluppo: download con italiano/inglese; resta possibile scegliere `tesseract.exe` e i modelli locali |
+| **libheif** | Lettura e creazione HEIC/HEIF e AVIF | Nel ramo di sviluppo: download portabile; restano selezionabili `heif-dec.exe` e `heif-enc.exe` con DLL/plugin |
+| **Whisper + Tiny** | Audio/video → TXT, in sviluppo | Download del runtime CPU e del modello multilingue; FFmpeg richiesto |
 
 **FFmpeg e Poppler si possono scaricare direttamente dall'app**, anche nella versione portable. Prima della conferma vedi origine, versione, dimensioni, licenze e cartella di installazione. Nella 0.7.1 i due archivi richiedono circa **159 MB di download** e circa **615 MB liberi** durante download ed estrazione. Gli archivi vengono verificati con SHA-256; licenze e documentazione restano incluse.
 
 Il download parte soltanto dopo la conferma. I motori vengono installati nella cartella dell'utente; i file da convertire restano sul PC. [Cattura storica del dialogo](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/screenshots/download-motori.png).
 
-LibreOffice, libheif, Tesseract e i modelli OCR si configurano da installazioni locali. Per percorsi, preferenze, script manuali e recupero della coda consulta la [guida alla configurazione](docs/configuration.md).
+La candidata 0.8.0 aggiunge i pacchetti portabili **Tesseract 5.5.4** con `ita`/`eng`, **libheif 1.23.7** e **Whisper + Tiny**, con dipendenze MSYS2 UCRT64 e licenze conservate. Sono download opzionali nella cartella personale, non installer di sistema; LibreOffice continua a essere configurato separatamente. Per percorsi, fonti, preferenze e recupero della coda consulta la [guida alla configurazione](docs/configuration.md).
 
 ## Lingue
 
@@ -164,7 +178,7 @@ L'**OCR supporta le lingue dei modelli Tesseract installati**: italiano e ingles
 
 ## Dati e privacy
 
-Conversioni e OCR vengono eseguiti localmente. Preferenze, coda e resoconti sono file sul dispositivo e possono contenere percorsi ed errori. Non ci sono telemetria, pubblicità o registrazione di un account dell'app.
+Conversioni, OCR e la trascrizione in sviluppo vengono eseguiti localmente. Preferenze, coda e resoconti sono file sul dispositivo e possono contenere percorsi ed errori. Non ci sono telemetria, pubblicità o registrazione di un account dell'app. I download opzionali contattano i distributori dei motori e dei modelli, non inviano i contenuti da elaborare.
 
 Il download facoltativo dei motori richiede Internet e contatta i distributori; l'apertura di HTML può caricare immagini o CSS collegati, anche remoti, tramite LibreOffice. L'app conserva gli originali e non invia i file a un server dello sviluppatore. [Informativa privacy](docs/privacy.md).
 

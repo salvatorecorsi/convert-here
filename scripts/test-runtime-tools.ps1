@@ -31,6 +31,9 @@ try {
     & $wrapper -InstallDirectory $installRoot -Engine @('poppler', 'poppler') | Out-Null
     Assert ($global:convertHereRuntimeWrapperCalls.Count -eq 1 -and $global:convertHereRuntimeWrapperCalls[0] -ceq '--install-runtime|poppler') 'Explicit engine selection must be deduplicated.'
     $global:convertHereRuntimeWrapperCalls.Clear()
+    & $wrapper -InstallDirectory $installRoot -Engine @('tesseract', 'libheif', 'whisper', 'whisper') | Out-Null
+    Assert (($global:convertHereRuntimeWrapperCalls -join ',') -ceq '--install-runtime|tesseract,--install-runtime|libheif,--install-runtime|whisper') 'Portable OCR, HEIF and local speech must delegate with exact arguments and no duplicate downloads.'
+    $global:convertHereRuntimeWrapperCalls.Clear()
     $global:convertHereRuntimeWrapperFail = $true
     $rejected = $false
     try { & $wrapper -InstallDirectory $installRoot | Out-Null } catch { $rejected = $_.Exception.Message.Contains('codice 7') }

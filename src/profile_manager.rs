@@ -611,6 +611,9 @@ fn draft_editor(
         if format == OutputFormat::Gif {
             video_controls(ui, &mut draft.settings);
         }
+        if format == OutputFormat::Txt {
+            crate::settings_ui::speech_controls(ui, &mut draft.settings.speech);
+        }
         if ffmpeg {
             egui::CollapsingHeader::new(tr("Avanzate", "Advanced"))
                 .id_salt("profile_media_advanced")

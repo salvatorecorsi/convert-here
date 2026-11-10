@@ -4,12 +4,17 @@
 
 Convert Here's CLI converts files, automates processing and installs optional engines. Run the PowerShell examples from the app folder. See the [format guide](conversions.en.md) for conversion requirements.
 
+**0.8.0 candidate, not yet published:** SVG, audio/video → TXT, the media editor and Tesseract/libheif/Whisper installation examples require this candidate described in the README. References to development describe the candidate.
+
 Use the dedicated console executable for output, diagnostics and reliable exit codes:
 
 ```powershell
 .\the-converter-cli.exe --language en --diagnose
 .\the-converter-cli.exe --install-runtime ffmpeg
 .\the-converter-cli.exe --install-runtime poppler
+.\the-converter-cli.exe --install-runtime tesseract
+.\the-converter-cli.exe --install-runtime libheif
+.\the-converter-cli.exe --install-runtime whisper
 .\the-converter-cli.exe --convert --target mp3 --preset quality --files "C:\Video\clip.mp4"
 .\the-converter-cli.exe --convert --target png --output-dir "C:\Results" --files "C:\Documents\file.pdf"
 .\the-converter-cli.exe --convert --target csv --files "C:\Documents\table.xlsx"
@@ -18,6 +23,10 @@ Use the dedicated console executable for output, diagnostics and reliable exit c
 .\the-converter-cli.exe --convert --target docx --ocr --ocr-language ita+eng --files "C:\Documents\scan.pdf"
 .\the-converter-cli.exe --convert --target txt --ocr-language ita+eng --files "C:\Documents\scan.png"
 .\the-converter-cli.exe --convert --target avif --files "C:\Images\photo.heic"
+.\the-converter-cli.exe --convert --target png --files "C:\Images\illustration.svg"
+.\the-converter-cli.exe --convert --target pdf --files "C:\Images\illustration.svg"
+.\the-converter-cli.exe --convert --target txt --files "C:\Audio\recording.wav"
+.\the-converter-cli.exe --custom-settings --target txt --files "C:\Audio\recording.wav"
 .\the-converter-cli.exe --convert --target pdf --files "C:\Documents\page.html"
 .\the-converter-cli.exe --convert --target pdf --pdf-action compress --files "C:\Documents\file.pdf"
 .\the-converter-cli.exe --convert --target pdf --pdf-action split --files "C:\Documents\file.pdf"
@@ -30,7 +39,9 @@ Use the dedicated console executable for output, diagnostics and reliable exit c
 
 `--convert` runs without a UI, continues with other files after an error and exits with a nonzero code if any conversion fails. Ctrl+C cancels processing and cleans temporary files. Paths are passed directly to processes without shell interpolation.
 
-`--install-runtime ffmpeg|poppler` is a separate mode: it explicitly downloads a pinned, verified engine, without conversion options or input files. It writes into the user's engine folder, preserves licenses and documentation and does not execute the downloaded program. Ctrl+C cancels the operation. The optional `install-runtime-tools.ps1 -InstallDirectory <app-folder> -Engine ffmpeg` script calls the same CLI; omit `-Engine` to request both engines. The app folder locates the CLI; it is not the engine destination.
+`--install-runtime ffmpeg|poppler|tesseract|libheif|whisper` is a separate mode: it explicitly downloads a pinned, verified engine, without conversion options or input files. The last three values are additions in development. It writes into `%LOCALAPPDATA%\ConvertHere\tools`, preserves licenses and documentation and does not execute the downloaded program. Tesseract includes `ita`/`eng` models; Whisper includes Tiny multilingual. Ctrl+C cancels the operation. The optional `install-runtime-tools.ps1 -InstallDirectory <app-folder> -Engine ffmpeg` script calls the same CLI; omit `-Engine` to request **FFmpeg and Poppler**. The app folder locates the CLI; it is not the engine destination.
+
+For audio/video → TXT, install **both FFmpeg and Whisper**: the CLI Whisper command does not automatically add FFmpeg. Transcription runs on the PC, without an account or API key. Without specific settings, language is detected automatically. `--language` selects the app language and `--ocr-language` selects OCR language; neither selects speech language. Set `speech.language` in JSON for the latter.
 
 `--pdf-action compress|split|merge` requires PDF output. `compress` and `split` accept only PDFs; `merge` accepts the PDF-compatible files described in the [conversion guide](conversions.en.md#compress-split-and-merge-pdfs). The default is `compress`. CLI merging follows argument order and page order within each source; use the graphical editor to interleave individual pages.
 
@@ -44,11 +55,28 @@ Example settings JSON; omitted fields use their defaults:
   "audio": { "bitrate_kbps": 256, "sample_rate": 48000, "channels": 2, "normalize": true },
   "video": { "trim_start": 5.0, "trim_end": 35.0 },
   "limits": { "max_bytes": 3000000, "max_duration": 30.0 },
-  "media_options": { "threads": "1" }
+  "media_options": { "threads": "1", "audio_volume": "0.5" }
 }
 ```
 
-Common limits and `media_options` are part of the new 0.7.0. `max_bytes` limits each output; an oversized result is not published. `max_duration` limits audio/video inputs after `trim_start`, combined with any `trim_end`; it does not change images or text. FFmpeg options are typed catalogue values, not arbitrary arguments. Active `media_options` reject non-audio/video inputs, including native image-to-GIF. Browse the available catalogue in **Profiles → Advanced**.
+`max_bytes` limits each output; an oversized result is not published. `max_duration` limits audio/video inputs after `trim_start`, combined with any `trim_end`, including transcription; it does not truncate image or TXT inputs. FFmpeg options are typed catalogue values, not arbitrary arguments. Here `audio_volume: "0.5"` halves the amplitude, about −6 dB; gain is applied after any normalization. Active `media_options` reject non-audio/video inputs, including native image-to-GIF. Browse the available catalogue in **Profiles → Advanced**.
+
+Example `speech-settings.json` transcribing seconds 5–35 in Italian with four CPU threads:
+
+```json
+{
+  "format": "Txt",
+  "video": { "trim_start": 5.0, "trim_end": 35.0 },
+  "speech": { "language": "it", "threads": 4 },
+  "limits": { "max_duration": 30.0, "max_bytes": 100000 }
+}
+```
+
+```powershell
+.\the-converter-cli.exe --convert --settings .\speech-settings.json --files "C:\Audio\recording.wav"
+```
+
+`video.trim_start` and `video.trim_end` apply to audio too. Omit `speech.language` or use `auto` for automatic detection; `it` and `en` select Italian and English. Gain/mute and encoding `media_options` are not accepted for TXT. The job uses temporary mono 16 kHz WAV and TXT in chunks of at most 10 minutes, removed on completion or cancellation. Final output does not overwrite an existing file.
 
 To use a saved recipe, `--quick --profile <id> --profile-revision <revision> --files ...` uses the current profile only when its revision matches and inputs are allowed. Explorer supplies these values automatically. Normal profiles queue a settings snapshot; PDF Merge profiles require at least two files and open page ordering. `--custom-settings` opens the compatible editor or window options without starting a conversion. Profile import/export belongs to the **Profiles** tab; its portable JSON differs from the individual `settings.json` shown above.
 

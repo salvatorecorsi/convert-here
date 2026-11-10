@@ -93,10 +93,10 @@ fn modern_images_explain_missing_engines_before_creating_outputs() {
     image_fixture(&native);
     let modern = dir.path().join("source.heic");
     fs::write(&modern, b"validation must precede decoding").unwrap();
-    for (input, target, executable) in [
-        (&native, OutputFormat::Heic, "heif-enc"),
-        (&native, OutputFormat::Avif, "heif-enc"),
-        (&modern, OutputFormat::Png, "heif-dec"),
+    for (input, target) in [
+        (&native, OutputFormat::Heic),
+        (&native, OutputFormat::Avif),
+        (&modern, OutputFormat::Png),
     ] {
         let mut conversion = settings(target);
         conversion.output_dir = Some(dir.path().join("must-not-exist"));
@@ -109,7 +109,10 @@ fn modern_images_explain_missing_engines_before_creating_outputs() {
         )
         .unwrap_err()
         .to_string();
-        assert!(error.contains(executable), "{error}");
+        assert!(
+            error.contains("libheif") && error.contains("Installa"),
+            "{error}"
+        );
         assert!(!conversion.output_dir.unwrap().exists());
     }
     assert_eq!(fs::read_dir(dir.path()).unwrap().count(), 2);

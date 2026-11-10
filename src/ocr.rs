@@ -71,7 +71,7 @@ pub(crate) fn extract_text(
     cancelled(cancel)?;
     validate_language(&settings.ocr.language)?;
     let tesseract = tools.tesseract.as_ref().context(
-        tr("Per OCR locale serve Tesseract. Apri Impostazioni → Motori e seleziona tesseract.exe con i modelli delle lingue richieste.", "Local OCR requires Tesseract. Open Settings → Conversion engines and select tesseract.exe with the required language models."),
+        tr("Per OCR locale apri Impostazioni → Motori → Tesseract → Installa. Italiano e inglese sono inclusi.", "For local OCR open Settings → Engines → Tesseract → Install. Italian and English are included."),
     )?;
     let tessdata = adjacent_tessdata(tesseract, &settings.ocr.language)?;
     let stage = tempfile::Builder::new()
@@ -160,27 +160,32 @@ pub(crate) fn extract_text(
             } else {
                 input.to_owned()
             };
-            let mut decoder = image::ImageReader::open(&source)?
-                .with_guessed_format()?
-                .into_decoder()
-                .context(tr(
-                    "Immagine non leggibile per OCR",
-                    "Image cannot be read for OCR",
-                ))?;
-            if let Some(limit) = image::Limits::default().max_alloc
-                && decoder.total_bytes() > limit
-            {
-                bail!(
-                    "{}",
-                    crate::trf!(
-                        "L'immagine supera il limite di memoria per OCR",
-                        "The image exceeds the OCR memory limit"
-                    )
-                );
-            }
-            let orientation = decoder.orientation()?;
-            let mut image = DynamicImage::from_decoder(decoder)?;
-            image.apply_orientation(orientation);
+            let image = if crate::svg::is_svg_input(input) {
+                DynamicImage::ImageRgba8(crate::svg::render(input, cancel)?)
+            } else {
+                let mut decoder = image::ImageReader::open(&source)?
+                    .with_guessed_format()?
+                    .into_decoder()
+                    .context(tr(
+                        "Immagine non leggibile per OCR",
+                        "Image cannot be read for OCR",
+                    ))?;
+                if let Some(limit) = image::Limits::default().max_alloc
+                    && decoder.total_bytes() > limit
+                {
+                    bail!(
+                        "{}",
+                        crate::trf!(
+                            "L'immagine supera il limite di memoria per OCR",
+                            "The image exceeds the OCR memory limit"
+                        )
+                    );
+                }
+                let orientation = decoder.orientation()?;
+                let mut image = DynamicImage::from_decoder(decoder)?;
+                image.apply_orientation(orientation);
+                image
+            };
             cancelled(cancel)?;
             let mut rgb = image::RgbImage::new(image.width(), image.height());
             for (x, y, pixel) in image.to_rgba8().enumerate_pixels() {

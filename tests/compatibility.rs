@@ -15,9 +15,11 @@ fn selection_offers_only_shared_local_routes() {
         (&["note.txt", "clip.mp4"], &[]),
         (
             &["song.WAV", "clip.mp4"],
-            &[Mp3, Wav, Flac, Aac, Ogg, Opus, Aiff, M4a, Wma, Ac3, Au, Caf],
+            &[
+                Mp3, Wav, Flac, Aac, Ogg, Opus, Aiff, M4a, Wma, Ac3, Au, Caf, Txt,
+            ],
         ),
-        (&["song.wav", "report.pdf"], &[]),
+        (&["song.wav", "report.pdf"], &[Txt]),
         (&["report.pdf"], &[Png, Jpg, Txt, Docx, Html, Pdf]),
         (&["report.xlsx", "data.csv"], &[Pdf, Csv, Xlsx]),
         (&["report.xlsx", "notes.docx", "page.html"], &[Pdf]),
@@ -31,7 +33,7 @@ fn selection_offers_only_shared_local_routes() {
                 Avif, Heic, Txt,
             ],
         ),
-        (&["song.wav", "photo.heic"], &[]),
+        (&["song.wav", "photo.heic"], &[Txt]),
         (&["song.wav", "file.xyz"], &[]),
     ];
     for (inputs, expected) in cases {
@@ -43,9 +45,11 @@ fn selection_offers_only_shared_local_routes() {
     }
     assert_eq!(
         supported_formats(MediaKind::Audio),
-        vec![Mp3, Wav, Flac, Aac, Ogg, Opus, Aiff, M4a, Wma, Ac3, Au, Caf]
+        vec![
+            Mp3, Wav, Flac, Aac, Ogg, Opus, Aiff, M4a, Wma, Ac3, Au, Caf, Txt
+        ]
     );
-    assert!(!common_formats([Path::new("song.wav")]).contains(&Txt));
+    assert!(common_formats([Path::new("song.wav")]).contains(&Txt));
     assert!(supported_formats(MediaKind::Image).contains(&Txt));
     assert!(supported_formats(MediaKind::Pdf).contains(&Txt));
 }
@@ -177,15 +181,14 @@ fn old_settings_load_and_obsolete_fields_are_not_written_back() {
 }
 
 #[test]
-fn obsolete_audio_text_settings_are_rejected_before_output_or_progress() {
+fn invalid_speech_settings_are_rejected_before_output_or_progress() {
     let directory = tempfile::tempdir().unwrap();
     let audio = directory.path().join("recording.wav");
     let original = b"audio input bytes must not be changed";
     std::fs::write(&audio, original).unwrap();
-    let mut settings: ConversionSettings = serde_json::from_str(
-        r#"{"format":"Txt","transcription":{"language":"obsolete-language"}}"#,
-    )
-    .unwrap();
+    let mut settings: ConversionSettings =
+        serde_json::from_str(r#"{"format":"Txt","speech":{"language":"invalid-language"}}"#)
+            .unwrap();
     let output = directory.path().join("not-created");
     settings.output_dir = Some(output.clone());
     let mut progressed = false;
@@ -197,20 +200,20 @@ fn obsolete_audio_text_settings_are_rejected_before_output_or_progress() {
         |_| progressed = true,
     )
     .unwrap_err();
-    assert!(error.to_string().contains("Conversione non supportata"));
+    assert!(error.to_string().contains("Lingua trascrizione non valida"));
     assert!(!progressed && !output.exists());
     assert!(
         engine::prepare(&audio, &settings, &ToolPaths::default())
             .unwrap_err()
             .to_string()
-            .contains("Conversione non supportata")
+            .contains("Lingua trascrizione non valida")
     );
     assert!(!output.exists());
     assert_eq!(std::fs::read(audio).unwrap(), original);
 }
 
 #[test]
-fn cli_rejects_obsolete_audio_text_settings_without_creating_outputs() {
+fn cli_rejects_invalid_speech_settings_without_creating_outputs() {
     let directory = tempfile::tempdir().unwrap();
     let audio = directory.path().join("recording.wav");
     let settings = directory.path().join("old-settings.json");
@@ -218,7 +221,7 @@ fn cli_rejects_obsolete_audio_text_settings_without_creating_outputs() {
     std::fs::write(&audio, b"original audio").unwrap();
     std::fs::write(
         &settings,
-        br#"{"format":"Txt","transcription":{"language":"it"}}"#,
+        br#"{"format":"Txt","speech":{"language":"invalid-language"}}"#,
     )
     .unwrap();
     let config = directory.path().join("config");
@@ -226,8 +229,8 @@ fn cli_rejects_obsolete_audio_text_settings_without_creating_outputs() {
     let preferences = br#"{"ui_language":"system","settings":{"format":"Flac"}}"#;
     std::fs::write(config.join("preferences.json"), preferences).unwrap();
     for (language, expected) in [
-        ("it", "Conversione non supportata"),
-        ("en", "Unsupported conversion"),
+        ("it", "Lingua trascrizione non valida"),
+        ("en", "Invalid transcription language"),
     ] {
         let result = std::process::Command::new(env!("CARGO_BIN_EXE_the-converter-cli"))
             .env("THE_CONVERTER_CONFIG_DIR", &config)
