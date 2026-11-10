@@ -4,7 +4,7 @@
 
 Questa guida descrive le impostazioni di Convert Here, inclusa la scelta fra italiano e inglese. Per iniziare, vedi il [README](../README.md); per le conversioni disponibili, la [guida ai formati](conversions.md).
 
-**Stato al 10 novembre 2026:** [0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) pubblicata su GitHub alle **12:09:39 UTC**, commit `f1f3f95fceed52507ef715fa4ac6893acc63544a`. Store **1.0.8.0**, Submission 5 (`1152921505702365703`): **Update in certification**, non ancora approvata o pubblicata sullo Store.
+**Stato al 10 novembre 2026:** [0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) e Store **1.0.8.0**, Submission 5 (`1152921505702365703`), risultano pubblicate. Questa guida include le sezioni contrassegnate della **candidata 0.8.1 / Store previsto 1.0.9.0**, in preparazione: non attestano una nuova build finale, release o submission. I collegamenti ai pacchetti pubblici restano quelli della 0.8.0.
 
 ## Lingua dell'interfaccia
 
@@ -32,6 +32,22 @@ Per libheif mantieni `heif-dec.exe` e `heif-enc.exe` insieme alle DLL e ai plugi
 
 Per la trascrizione configura `whisper-cli.exe` e il modello `ggml-tiny.bin`. Servono anche FFmpeg e ffprobe: il solo runtime Whisper non legge direttamente tutti i contenitori audio/video. La lingua del parlato e i thread CPU si configurano nei controlli di trascrizione, separati dalla lingua dell'interfaccia e dall'OCR. Il default rileva automaticamente la lingua; i profili salvano `speech.language` e `speech.threads`.
 
+## Configurazione guidata — candidata 0.8.1
+
+Al primo avvio normale della finestra principale **senza file o formato preimpostato**, la procedura propone i cinque motori scaricabili dall'app. I motori mancanti sono preselezionati; puoi modificare la scelta prima di confermare:
+
+- **FFmpeg** per audio e video.
+- **Poppler** per esportare PDF in immagini o testo e preparare scansioni per OCR.
+- **Tesseract con italiano e inglese** per OCR.
+- **libheif** per HEIC/HEIF e AVIF.
+- **Whisper con Tiny multilingue** per trascrivere audio/video in TXT.
+
+**LibreOffice** dispone del collegamento al sito ufficiale e resta un'installazione separata. Se selezioni Whisper e manca FFmpeg o ffprobe, viene inclusa una sola richiesta FFmpeg. La conferma mostra fonti, versioni, dimensioni, licenze e destinazione; dopo l'approvazione, il programma scarica e installa **un motore alla volta**, usando la cartella personale e i controlli SHA-256 già descritti sotto.
+
+Saltando o terminando la procedura, l'app salva **`engine-setup-v1.done`** nella stessa cartella di `preferences.json`. Memorizzare questa scelta non riscrive le preferenze: il marker separato conserva lo stato anche se un'altra finestra salva impostazioni precedenti. Le installazioni riuscite aggiornano normalmente i percorsi dei motori nelle preferenze. Un errore di scrittura del marker viene segnalato; file e cartelle già esistenti vengono conservati.
+
+Puoi riaprire la procedura da **Impostazioni → Motori → Configurazione guidata**. CLI, conversioni rapide, stato della coda, PDF Merge e avvio con impostazioni personalizzate mantengono i loro percorsi senza aprirla automaticamente. Nessun download parte prima della conferma. [Note della candidata](release-notes-0.8.1.md).
+
 ## Download facoltativi dei motori
 
 I pacchetti dell'app non contengono i motori esterni o il modello vocale. In **Impostazioni → Motori** richiedi soltanto quelli necessari. La versione 0.8.0 aggiunge Tesseract, libheif e Whisper + Tiny ai download di FFmpeg e Poppler. La conferma mostra origine, versione, dimensioni, spazio estratto, licenze e destinazione. L'installazione avviene nella sola cartella personale `%LOCALAPPDATA%\ConvertHere\tools`, senza UAC o installer di sistema.
@@ -49,7 +65,7 @@ Se scegli Whisper dall'app e manca FFmpeg oppure ffprobe, viene aggiunto anche F
 
 Le richieste HTTPS raggiungono i distributori e i loro CDN: GitHub/Gyan per i motori esistenti, MSYS2 e relativi mirror, GitHub per licenze/modelli OCR, Hugging Face e CDN per Tiny. Ricevono IP e normali dati HTTP, incluso User-Agent con versione dell'app. I file da convertire non vengono caricati. Annullamento ed errore tentano di rimuovere lo staging temporaneo; un arresto improvviso può lasciare residui.
 
-Il setup non avvia download e non aggiunge un collegamento Start per installare i motori. LibreOffice resta da installare e selezionare separatamente; puoi continuare a usare copie locali degli altri motori. Le copie di sviluppo sotto `.tools/` non fanno parte dei pacchetti pubblici.
+Il programma di installazione dell'app non avvia download dei motori e non aggiunge un collegamento Start dedicato. LibreOffice resta da installare e selezionare separatamente; puoi continuare a usare copie locali degli altri motori. Le copie di sviluppo sotto `.tools/` non fanno parte dei pacchetti pubblici.
 
 ### Alternativa dalla riga di comando
 
@@ -67,6 +83,8 @@ I tre comandi aggiuntivi sono disponibili dalla versione 0.8.0. La CLI installa 
 ## Formati visibili e aspetto
 
 In **Impostazioni → Formati di uscita** scegli le destinazioni da mostrare nell'app e nel menu Explorer, raggruppate per audio, video, immagini, documenti e **Raw**. Le otto uscite iniziali restano MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4. Abilita **TXT** in Raw per rendere visibili OCR e trascrizione.
+
+Nella **candidata 0.8.1**, in fondo a ogni categoria trovi **Seleziona tutti** al posto dei due pulsanti con spunta e croce. Spuntala per attivare l'intera categoria o togli la spunta per disattivarla. Le singole estensioni restano cliccabili: disattivandone una, si deseleziona anche il controllo collettivo; selezionandole tutte, torna spuntato. **Più comuni** ripristina gli otto formati iniziali.
 
 Le scelte vengono salvate e il menu le rilegge senza riavviare Esplora file. Anche disabilitando tutte le uscite resta disponibile **Impostazioni personalizzate…**. Il filtro non disabilita ingressi, CLI, richieste `--quick` esplicite o lavori già accodati. La versione 0.8.0 mantiene 44 formati di uscita e riconosce 94 estensioni di ingresso, inclusa SVG. **File**, **Cronologia** e **Profili** sono a sinistra nella navigazione; **Impostazioni** è a destra.
 

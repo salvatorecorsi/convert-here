@@ -1,6 +1,8 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 mod app;
 mod command;
+mod engine_setup;
+mod engine_setup_state;
 pub mod file_icons;
 pub mod gui_history;
 pub mod image_editor;

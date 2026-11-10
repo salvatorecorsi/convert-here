@@ -4,7 +4,7 @@
 
 This guide describes Convert Here's settings. Start with the [README](../README.en.md); see the [format guide](conversions.en.md) for available conversions.
 
-**Status on 10 November 2026:** [0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) published on GitHub at **12:09:39 UTC**, commit `f1f3f95fceed52507ef715fa4ac6893acc63544a`. Store **1.0.8.0**, Submission 5 (`1152921505702365703`): **Update in certification**, not yet approved or published in the Store.
+**Status on 10 November 2026:** [0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) and Store **1.0.8.0**, Submission 5 (`1152921505702365703`), are published. This guide includes marked sections for the **0.8.1 candidate / planned Store 1.0.9.0**, still in preparation; they do not attest a new final build, release or submission. Public package links remain those of 0.8.0.
 
 ## Interface language
 
@@ -32,6 +32,22 @@ For libheif, keep `heif-dec.exe` and `heif-enc.exe` with DLLs and plugins from t
 
 For transcription, configure `whisper-cli.exe` and the `ggml-tiny.bin` model. FFmpeg and ffprobe are also required: the Whisper runtime alone does not read every audio/video container directly. Speech language and CPU threads are configured in transcription controls, separately from interface and OCR language. Automatic language detection is the default; profiles store `speech.language` and `speech.threads`.
 
+## Setup wizard — 0.8.1 candidate
+
+The first normal main-window launch **without files or a preselected target** offers the five engines downloadable in the app. Missing engines are preselected; change the selection before confirming:
+
+- **FFmpeg** for audio and video.
+- **Poppler** for PDF image/text export and preparing scanned pages for OCR.
+- **Tesseract with Italian and English** for OCR.
+- **libheif** for HEIC/HEIF and AVIF.
+- **Whisper with multilingual Tiny** for audio/video-to-TXT transcription.
+
+**LibreOffice** links to its official website and remains a separate installation. Selecting Whisper when FFmpeg or ffprobe is missing includes one FFmpeg request. Confirmation shows sources, versions, sizes, licenses and destination. Once approved, the app downloads and installs **one engine at a time**, using the personal folder and SHA-256 checks described below.
+
+Skipping or finishing the wizard saves **`engine-setup-v1.done`** beside `preferences.json`. Recording this choice does not rewrite preferences: the separate marker retains acknowledgement if another open window saves older settings. Successful engine installations save their paths through the normal preferences flow. Marker write errors are reported; existing files and folders are preserved.
+
+Reopen the wizard from **Settings → Conversion engines → Setup wizard**. CLI, quick conversions, queue status, PDF Merge and custom-settings launches keep their existing routes without opening it automatically. Downloads begin only after confirmation. [Candidate notes](release-notes-0.8.1.en.md).
+
 ## Optional engine downloads
 
 App packages do not contain external engines or the speech model. Request only those needed in **Settings → Conversion engines**. Version 0.8.0 adds Tesseract, libheif and Whisper + Tiny to FFmpeg and Poppler downloads. Confirmation displays the source, version, download size, extracted space, licenses and destination. Installation uses only the personal folder `%LOCALAPPDATA%\ConvertHere\tools`, without UAC or a system installer.
@@ -49,7 +65,7 @@ Selecting Whisper in the app also adds FFmpeg to the confirmation request when F
 
 HTTPS requests reach distributors and their CDNs: GitHub/Gyan for existing engines, MSYS2 and its mirrors, GitHub for licenses/OCR models, and Hugging Face and CDNs for Tiny. They receive the IP address and normal HTTP request data, including a User-Agent with the app version. Files to convert are not uploaded. Cancellation and errors attempt to remove temporary staging; an unexpected shutdown may leave residual files.
 
-The setup does not start downloads or add a Start menu shortcut for installing engines. Install and select LibreOffice separately; existing local copies of the other engines remain supported. Development copies under `.tools/` are excluded from public packages.
+The app installer does not start engine downloads or add a dedicated Start menu shortcut. Install and select LibreOffice separately; existing local copies of the other engines remain supported. Development copies under `.tools/` are excluded from public packages.
 
 ### Command-line alternative
 
@@ -67,6 +83,8 @@ The three additional commands are available in version 0.8.0. The CLI installs o
 ## Visible formats and appearance
 
 In **Settings → Output formats**, choose which destinations appear in the app and Explorer menu, grouped into audio, video, images, documents and **Raw**. The initial eight outputs remain MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4. Enable **TXT** in Raw to show OCR and transcription.
+
+In the **0.8.1 candidate**, **Select all** below each category replaces the check and cross buttons. Check it to enable the whole category or clear it to disable the category. Individual extensions remain clickable: clearing one also clears the collective control; selecting all of them checks it again. **Most common** restores the original eight formats.
 
 Choices are saved and the menu rereads them without restarting Explorer. **Custom settings…** stays available even if all outputs are disabled. The filter does not disable inputs, the CLI, explicit `--quick` requests or already queued jobs. Version 0.8.0 retains 44 output formats and recognizes 94 input extensions, including SVG. **Files**, **History** and **Profiles** sit on the left of navigation; **Settings** is on the right.
 

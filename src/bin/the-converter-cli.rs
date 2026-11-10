@@ -2,6 +2,10 @@
 mod app;
 #[path = "../command.rs"]
 mod command;
+#[path = "../engine_setup.rs"]
+mod engine_setup;
+#[path = "../engine_setup_state.rs"]
+mod engine_setup_state;
 #[path = "../file_icons.rs"]
 pub mod file_icons;
 #[path = "../gui_history.rs"]

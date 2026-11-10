@@ -1,20 +1,22 @@
 # Microsoft Store listing — English (en-US)
 
-**Convert Here 0.8.0 / Store 1.0.8.0**, developer and publisher **Salvatore Corsi**. English listing **saved and reread** in **Submission 5, ID 1152921505702365703**, with **20 features and four PNGs**; package uploaded, saved and **Validated**. GitHub release published on 10 November 2026 at 12:09:39 UTC; Submission 5 submitted at about 12:10 UTC, status **Update in certification**. Preceding Store 1.0.7.0 was verified published on 10 November 2026; this does not attest approval of 1.0.8.0. No physical Windows 10 host test or WACK. Do not copy this preamble into public fields.
+**Draft for Convert Here 0.8.1 / planned Store 1.0.9.0**, developer and publisher **Salvatore Corsi**. The preceding **0.8.0 / Store 1.0.8.0 is published**. Text, 20 features and the gallery below are prepared for a new submission; no final build, GitHub publication, portal upload or listing persistence of 0.8.1 is yet attested. The proposed gallery uses two new 0.8.1 captures and two historical 0.8.0 captures of the unchanged editor. No physical Windows 10 host test or WACK. Do not copy this preamble into public fields.
 
 ## Short description
 
-Local conversion for Windows 10/11, image and audio/video editors, profiles and PDFs. Optional install buttons add OCR and speech transcription. Italian/English UI.
+Local conversion for Windows 10/11, editors, profiles and PDFs. An engine setup wizard helps add OCR, audio/video and speech transcription. Italian/English UI.
 
 ## Description
 
 Convert Here brings conversion to the folder where you work, on Windows 10 version 2004 or later (build 19041), x64, and Windows 11. Choose Convert to and a compatible format in the context menu to queue a job with saved settings. A placeholder shows where the result will appear and lets you check progress or cancel. Originals and existing outputs are preserved; numbered names resolve conflicts.
 
-There are 44 outputs and 94 recognized input extensions. Default visible outputs remain MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4. Enable others in Settings > Output formats; TXT is under Raw. This filters outputs, and the menu refreshes without restarting Explorer. The interface and menu support Italian and English.
+There are 44 outputs and 94 recognized input extensions. Default visible outputs remain MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4. Enable others in Settings > Output formats; TXT is under Raw. This filters outputs, and the menu refreshes without restarting Explorer. The interface and menu support Italian and English. Select all below each category enables or clears every output in that list. Individual extensions remain clickable: clearing one also clears the collective checkbox.
 
 Native images, static SVG, image-to-PDF and PDF compression/splitting/merging work without external engines. Audio/video requires FFmpeg; PDF export requires Poppler; Office, Excel/CSV and HTML-to-PDF requires LibreOffice. HEIC/HEIF and AVIF use libheif. OCR uses Tesseract and language models, plus Poppler for scanned PDFs. Transcription uses FFmpeg/ffprobe and Whisper with multilingual Tiny.
 
-In Settings > Conversion engines, request FFmpeg, Poppler, Tesseract with Italian/English, libheif or Whisper with Tiny. Each download requires confirmation of sources, versions, sizes, licenses and destination. Assets are checked with SHA-256 before extraction; original licenses and provenance remain in the user folder. Engines and models are neither bundled nor downloaded without a request. LibreOffice remains separate. Internet is needed to acquire engines; files selected for conversion, OCR or transcription are not uploaded to the providers.
+The first normal main-window launch without files or a preselected target offers an engine setup wizard. Missing engines are preselected: FFmpeg, Poppler, Tesseract with Italian/English, libheif and Whisper with Tiny. Change the selection, skip the wizard or reopen it from Settings > Conversion engines > Setup wizard. LibreOffice links to its official website and remains a separate installation.
+
+Before downloading, confirm sources, versions, sizes, licenses and destination. Selected engines download and install one at a time; Whisper includes FFmpeg if FFmpeg or ffprobe is missing. After cancellation or an error, completed engines are retained and remaining engines can be retried. Assets are checked with SHA-256 before extraction; original licenses and provenance remain in the user folder. Engines and models are neither bundled nor downloaded before confirmation. Internet is needed to acquire engines; files selected for conversion, OCR or transcription are not uploaded to the providers.
 
 Convert images to PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR and PNM, or create PDFs. Integrated resvg rasterizes static UTF-8 SVG locally; vectors are not retained. External resources, scripts, DTDs, foreignObject and embedded images are rejected. SVGZ is unsupported, and size and complexity limits apply.
 
@@ -49,7 +51,7 @@ Enter each line in a separate feature field, without bullet characters:
 ```text
 Convert to in the Windows 10 classic and Windows 11 modern menus, from build 19041 x64
 Unified history for work in progress, queued and completed
-44 outputs and 94 inputs; eight default outputs and opt-in TXT under Raw
+44 outputs and 94 inputs; Select all by category, eight default outputs and opt-in TXT under Raw
 Native images and locally rasterized static SVG without external resources
 Image editor with crop, resize, canvas and preview of the bytes to save
 Images, typed text and UTF-8 TXT on A4/A5 PDF pages with an embedded font
@@ -66,7 +68,7 @@ PDF images/text with Poppler; compression, splitting and merging with draggable 
 Excel/CSV with four delimiters and Word/HTML to PDF with LibreOffice
 Preserve originals and existing files; queued jobs retain their recipe
 Local processing with no account or payment required to keep using it
-Engine downloads on request with confirmation, SHA-256 and original licenses retained
+First-launch engine setup wizard: sequential downloads, confirmation, SHA-256 and licenses retained
 ```
 
 ## Search terms
@@ -94,17 +96,17 @@ Transcription requires FFmpeg/ffprobe, Whisper CPU and multilingual Tiny. Whispe
 ## What's new
 
 ```text
-Native static SVG, an audio/video timeline with trimming and gain, and local TXT transcription with multilingual Whisper Tiny. Install Tesseract with Italian/English or libheif using one button, confirmation and SHA-256 verification. Eight default outputs remain; enable TXT under Raw. Recognizes 94 inputs.
+A first-launch setup wizard lets you choose engines, review sources and sizes, then download them one at a time. Skip it or reopen it from Settings. Select all below each format category replaces the check/cross buttons; individual extensions stay editable. The eight default outputs are unchanged.
 ```
 
 ## Screenshot captions
 
-1. Output formats by category and the new tab bar. Italian interface shown.
-2. Local engines: install OCR, libheif and Whisper with one button. Italian interface shown.
-3. Audio/video editor: timeline, selected interval and gain. Italian interface shown.
-4. Local TXT transcription with language selection and clip trimming. Italian interface shown.
+1. Output formats with Select all below each category. Italian interface shown.
+2. Engine setup wizard: choices, dependencies and sizes before confirmation. Italian interface shown.
+3. Audio/video editor: timeline, interval and gain. Italian interface; reused 0.8.0 capture of the unchanged UI.
+4. Local TXT transcription with language and trimming. Italian interface; reused 0.8.0 capture of the unchanged UI.
 
-The [four native 0.8.0 captures](store-assets/0.8.0/README.md) are **2562 × 1441 PNGs**, without the pointer, from debug build 0.8.0 at 150% UI zoom, without later upscaling. They are saved and reread in Submission 5's English listing; the previous gallery remains historical. They are not captures of the newly installed MSIX.
+Proposed gallery order: [0.8.1 02-formati-it.png](store-assets/0.8.1/02-formati-it.png), [0.8.1 01-wizard-it.png](store-assets/0.8.1/01-wizard-it.png), [0.8.0 03-timeline-it.png](store-assets/0.8.0/03-timeline-it.png), [0.8.0 04-trascrizione-it.png](store-assets/0.8.0/04-trascrizione-it.png). All are **2562 × 1441 PNGs** from native debug builds at 150% UI zoom, without the pointer or later upscaling. The last two reuse the unchanged editor and retain their historical provenance. [0.8.1 capture record and limits](store-assets/0.8.1/README.md). Uploading and saving the new gallery are not yet attested.
 
 ## Copyright and additional license terms
 
@@ -112,10 +114,10 @@ The [four native 0.8.0 captures](store-assets/0.8.0/README.md) are **2562 × 144
 Copyright (C) 2026 Salvatore Corsi.
 ```
 
-The project is GPL-3.0-only. The [full text at public tag v0.8.0](https://github.com/salvatorecorsi/convert-here/blob/v0.8.0/LICENSE) is saved in the license field. Final `ConvertHere-0.8.0-source.zip`, with vendored dependencies and offline instructions, is verified and published in [GitHub release 0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0). Third parties retain original licenses and copyright.
+The project is GPL-3.0-only: [current full license](../LICENSE). The planned new-listing reference is `https://github.com/salvatorecorsi/convert-here/blob/v0.8.1/LICENSE`, to use after tag publication. The planned source asset is `ConvertHere-0.8.1-source.zip`, with vendored dependencies and offline instructions; it is not yet attested as built or published. Third parties retain original licenses and copyright.
 
 ## Submission references
 
-Data controller, developer and publisher: **Salvatore Corsi**. Support/privacy: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [0.8.0 privacy statement](privacy.md), [engine pins and licenses](release-licenses/EXTERNAL-ENGINES.md), [0.8.0 testing](store-testing-0.8.0.en.md), [submission procedure and status](store-submission.md).
+Data controller, developer and publisher: **Salvatore Corsi**. Support/privacy: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Current privacy statement](privacy.md), [engine pins and licenses](release-licenses/EXTERNAL-ENGINES.md), [candidate 0.8.1 testing](store-testing-0.8.1.en.md), [submission procedure and status](store-submission.md).
 
-Text, **20 features**, captions and four screenshots are saved and verified after rereading the portal; local record `.tools/store-listing-080-en-verified.json`. Privacy and license point to tag v0.8.0. Uploading and saving do not imply 1.0.8.0 certification or publication. Description: 10,000 characters maximum; short description: 1,000; features: 200 characters each; release notes: 1,500. [MSIX field limits](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).
+The **0.8.1 / Store 1.0.9.0 listing is a local draft**, with **20 features** and four prepared images. Previous Submission 5 persistence records do not attest saving or submitting the new version. Baseline 0.8.0 / Store 1.0.8.0 is published. Record the clean commit, final artifacts, publication, privacy/license URLs and actual portal state after verification. Description: 10,000 characters maximum; short description: 1,000; features: 200 characters each; release notes: 1,500. [MSIX field limits](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).

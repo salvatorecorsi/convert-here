@@ -1,8 +1,8 @@
 # Convert Here — informativa sulla privacy / privacy statement
 
-Informativa aggiornata al **10 novembre 2026**. [0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) pubblicata su GitHub alle **12:09:39 UTC**, commit `f1f3f95fceed52507ef715fa4ac6893acc63544a`. Store **1.0.8.0**, Submission 5 (`1152921505702365703`): **Update in certification**, non ancora approvata o pubblicata sullo Store.
+Informativa aggiornata al **10 novembre 2026**. Descrive conversione, OCR, trascrizione locale e installazione facoltativa dei motori di Convert Here. Per versioni e disponibilità, consulta lo [stato delle pubblicazioni](store-submission.md).
 
-Updated **10 November 2026**. [0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) published on GitHub at **12:09:39 UTC**, commit `f1f3f95fceed52507ef715fa4ac6893acc63544a`. Store **1.0.8.0**, Submission 5 (`1152921505702365703`): **Update in certification**, not yet approved or published in the Store.
+Updated **10 November 2026**. Covers conversion, OCR, local speech transcription and optional engine installation in Convert Here. See the [publication record](store-submission.md) for versions and availability.
 
 | Dato | Valore |
 | --- | --- |
@@ -35,6 +35,8 @@ Compressione, divisione e unione dei PDF avvengono nell'app sul PC, senza un ser
 
 
 ### Informazioni conservate sul dispositivo
+
+La configurazione guidata propone i motori al primo avvio della finestra principale. Dopo il completamento o la scelta di saltarla, un indicatore locale (`engine-setup-v1.done`) accanto alle preferenze evita di riproporla. Le selezioni del wizard restano nella sessione; i percorsi dei motori installati vengono salvati nelle preferenze. I download iniziano soltanto dopo la conferma delle origini, dimensioni e licenze. Puoi riaprire la guida dalle Impostazioni.
 
 L'app salva preferenze di conversione, elenco dei formati di uscita visibili, lingua dell'interfaccia, lingua e attivazione OCR, lingua del parlato e thread CPU, separatore CSV, operazione PDF, cartella di destinazione e percorsi degli strumenti nelle proprie cartelle utente. Salva inoltre profili con nome, opzioni, visibilità nel menu e scelta del predefinito: possono includere ritaglio relativo, dimensioni, tela, colore, qualità, limite di peso e impostazioni pagina/testo, oltre all'eventuale cartella di destinazione. I profili non includono il file di prova, il suo contenuto, il testo scritto nell'editor o la trascrizione completa. La coda rapida registra nomi e percorsi dei file, destinazioni, formato, impostazioni, motori utilizzati, date, avanzamento ed eventuali errori. L'ultimo resoconto contiene data, formato, risultati e messaggi di errore, che possono includere percorsi o diagnostica dei motori.
 
@@ -90,6 +92,8 @@ PDF compression, splitting and merging run in the app on your PC without a remot
 
 
 ### Information stored on your device
+
+The setup wizard offers engines on the first launch of the main window. Completing or skipping it stores a local marker (`engine-setup-v1.done`) beside preferences so it is not shown again automatically. Wizard selections remain in the session; installed engine paths are saved in preferences. Downloads begin only after confirmation of sources, sizes and licenses. You can reopen the wizard from Settings.
 
 The app stores conversion preferences, the list of visible output formats, interface language, OCR language and enablement, speech language and CPU threads, CSV delimiter, PDF operation, output-folder and tool paths. It also stores named profiles, their options, menu visibility and default selection. Options can include relative crop, dimensions, canvas, color, quality, byte limit and page/text layout, plus a configured output folder. Profiles do not contain the sample file, its content, text written in the editor or the full transcript. The persistent quick-conversion queue stores source and destination paths, formats, settings, tool paths, timestamps, progress and errors. The latest report stores its date, format, results and error messages, which may contain paths or engine diagnostics.
 

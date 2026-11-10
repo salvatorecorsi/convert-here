@@ -10,6 +10,7 @@ use the_converter::{
 };
 
 pub(crate) enum EngineAction {
+    Setup,
     Install(Vec<RuntimeEngine>),
     Select(&'static str),
     Reset(&'static [&'static str]),
@@ -27,26 +28,6 @@ pub(crate) fn formats(ui: &mut egui::Ui, enabled: &mut OutputPreferences) {
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             if ui.button(tr("Più comuni", "Most common")).clicked() {
                 enabled.reset_common();
-            }
-            if tool_button(
-                ui,
-                FluentIcon::Cancel,
-                tr("Disattiva tutti", "Disable all"),
-                true,
-            )
-            .clicked()
-            {
-                enabled.disable_all();
-            }
-            if tool_button(
-                ui,
-                FluentIcon::Check,
-                tr("Attiva tutti", "Enable all"),
-                true,
-            )
-            .clicked()
-            {
-                enabled.enable_all();
             }
         });
     });
@@ -76,29 +57,8 @@ pub(crate) fn formats(ui: &mut egui::Ui, enabled: &mut OutputPreferences) {
                                     .into_iter()
                                     .filter(|format| FormatFamily::of_output(*format) == family)
                                     .collect();
-                                ui.horizontal(|ui| {
-                                    if tool_button(ui, FluentIcon::Check, tr("Tutti", "All"), true)
-                                        .clicked()
-                                    {
-                                        for format in &choices {
-                                            enabled.set_enabled(*format, true);
-                                        }
-                                    }
-                                    if tool_button(
-                                        ui,
-                                        FluentIcon::Cancel,
-                                        tr("Nessuno", "None"),
-                                        true,
-                                    )
-                                    .clicked()
-                                    {
-                                        for format in &choices {
-                                            enabled.set_enabled(*format, false);
-                                        }
-                                    }
-                                });
                                 ui.separator();
-                                for format in choices {
+                                for &format in &choices {
                                     let mut checked = enabled.contains(format);
                                     if ui
                                         .checkbox(
@@ -109,6 +69,20 @@ pub(crate) fn formats(ui: &mut egui::Ui, enabled: &mut OutputPreferences) {
                                         .changed()
                                     {
                                         enabled.set_enabled(format, checked);
+                                    }
+                                }
+                                ui.separator();
+                                let mut all_selected =
+                                    choices.iter().all(|format| enabled.contains(*format));
+                                if ui
+                                    .checkbox(
+                                        &mut all_selected,
+                                        tr("Seleziona tutti", "Select all"),
+                                    )
+                                    .changed()
+                                {
+                                    for format in choices {
+                                        enabled.set_enabled(format, all_selected);
                                     }
                                 }
                             });
@@ -160,15 +134,12 @@ pub(crate) fn engines(
             if tool_button(
                 ui,
                 FluentIcon::Download,
-                tr("Installa FFmpeg e Poppler", "Install FFmpeg and Poppler"),
+                tr("Configurazione guidata", "Setup wizard"),
                 !installing,
             )
             .clicked()
             {
-                action = Some(EngineAction::Install(vec![
-                    RuntimeEngine::Ffmpeg,
-                    RuntimeEngine::Poppler,
-                ]));
+                action = Some(EngineAction::Setup);
             }
         });
     });

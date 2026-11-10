@@ -1,4 +1,6 @@
 use crate::{
+    engine_setup::{EngineSetup, EngineSetupAction},
+    engine_setup_state,
     file_icons::FileIcons,
     image_editor::{self, EditorAction, ImageEditor},
     media_editor::{MediaEditor, MediaEditorAction},
@@ -66,6 +68,12 @@ fn launch_mode(
     startup_warning: Option<String>,
     custom: bool,
 ) -> eframe::Result {
+    let setup_eligible = engine_setup_state::should_offer(
+        custom,
+        !files.is_empty(),
+        target.is_some(),
+        engine_setup_state::was_seen(settings_path().as_deref()),
+    );
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Convert Here")
@@ -82,6 +90,9 @@ fn launch_mode(
         Box::new(move |cc| {
             configure_style(&cc.egui_ctx);
             let mut app = ConverterApp::new(files, target);
+            if setup_eligible {
+                app.offer_engine_setup();
+            }
             if custom {
                 app.advanced = true;
                 if app.items.len() == 1 && editable(&app.items[0].path) {
@@ -344,6 +355,8 @@ pub struct ConverterApp {
     cancel: Arc<AtomicBool>,
     receiver: Option<mpsc::Receiver<Event>>,
     pending_runtime_install: Option<Vec<RuntimeEngine>>,
+    engine_setup: Option<EngineSetup>,
+    setup_install_active: bool,
     runtime_install: Option<RuntimeInstallTask>,
     runtime_notice: Option<(String, bool)>,
     show_license: bool,
@@ -407,6 +420,8 @@ impl ConverterApp {
             cancel: Arc::new(AtomicBool::new(false)),
             receiver: None,
             pending_runtime_install: None,
+            engine_setup: None,
+            setup_install_active: false,
             runtime_install: None,
             runtime_notice: None,
             show_license: false,
@@ -936,6 +951,11 @@ impl ConverterApp {
         if self.runtime_install.is_some() || engines.is_empty() {
             return;
         }
+        if self.setup_install_active
+            && let Some(setup) = &mut self.engine_setup
+        {
+            setup.start(engines.clone());
+        }
         let engine = engines[0];
         let cancel = Arc::new(AtomicBool::new(false));
         let (sender, receiver) = mpsc::channel();
@@ -1002,6 +1022,11 @@ impl ConverterApp {
         }
         if !installed.is_empty() {
             for (engine, directory) in installed {
+                if self.setup_install_active
+                    && let Some(setup) = &mut self.engine_setup
+                {
+                    setup.installed(engine);
+                }
                 for (key, path) in engine.tool_paths(&directory) {
                     if executable_available(&path)
                         || key == "whisper-model" && the_converter::tools::model_available(&path)
@@ -1015,6 +1040,12 @@ impl ConverterApp {
             self.persist_with_force(true);
         }
         if let Some(result) = finished {
+            if self.setup_install_active {
+                if let Some(setup) = &mut self.engine_setup {
+                    setup.finish(result.clone());
+                }
+                self.setup_install_active = false;
+            }
             self.runtime_install = None;
             self.runtime_notice = Some(match result {
                 Ok(()) => (
@@ -1033,6 +1064,61 @@ impl ConverterApp {
             self.sync_output_choice();
             self.settings_dirty = true;
             self.persist_with_force(true);
+        }
+    }
+
+    fn offer_engine_setup(&mut self) {
+        if !engine_setup_state::was_seen(settings_path().as_deref()) {
+            self.engine_setup = Some(EngineSetup::new(&self.tools));
+        }
+    }
+
+    fn engine_setup_dialog(&mut self, ctx: &egui::Context) {
+        let progress = self.runtime_install.as_ref().map(|task| &task.progress);
+        let cancelling = self
+            .runtime_install
+            .as_ref()
+            .is_some_and(|task| task.cancel.load(Ordering::Relaxed));
+        let action = self
+            .engine_setup
+            .as_mut()
+            .and_then(|setup| setup.show(ctx, &self.tools, progress, cancelling));
+        match action {
+            Some(EngineSetupAction::Review(engines))
+                if self.runtime_install.is_none() && !engines.is_empty() =>
+            {
+                self.setup_install_active = true;
+                self.pending_runtime_install = Some(engines);
+                ctx.request_repaint();
+            }
+            Some(EngineSetupAction::Cancel) => {
+                if let Some(task) = &self.runtime_install {
+                    task.cancel.store(true, Ordering::Relaxed);
+                }
+            }
+            Some(EngineSetupAction::Close) if self.runtime_install.is_none() => {
+                self.engine_setup = None;
+                let result = settings_path()
+                    .ok_or_else(|| {
+                        std::io::Error::other(tr(
+                            "Cartella delle preferenze non disponibile",
+                            "Preferences folder is unavailable",
+                        ))
+                    })
+                    .and_then(|path| engine_setup_state::mark_seen(&path));
+                if let Err(error) = result {
+                    self.notice = Some(trf!(
+                        "Impossibile salvare la scelta della configurazione guidata: {error}",
+                        "Unable to save the setup wizard choice: {error}"
+                    ));
+                }
+            }
+            Some(EngineSetupAction::Website(url)) => {
+                if let Err(error) = platform::open_website(url) {
+                    self.notice = Some(format!("{error:#}"));
+                }
+            }
+            _ => {}
         }
     }
 
@@ -1097,11 +1183,11 @@ impl ConverterApp {
         let mut confirmed = false;
         let mut dismissed = false;
         egui::Modal::new(egui::Id::new("confirm_runtime_install")).show(ctx, |ui| {
-            ui.set_width(490.0);
-            ui.label(theme::heading(tr("Installa motori opzionali", "Install optional engines"), theme::SUBTITLE));
+            ui.set_width(490.0_f32.min((ctx.content_rect().width() - 64.0).max(280.0)));
+            ui.label(theme::heading(if self.setup_install_active { tr("2. Conferma i download", "2. Confirm downloads") } else { tr("Installa motori opzionali", "Install optional engines") }, theme::SUBTITLE));
             ui.label(tr("Scarica i motori dalle distribuzioni indicate e li verifica prima di estrarli. Il download richiede Internet; i tuoi file da convertire restano sul PC.", "Downloads engines from the listed distributions and verifies them before extraction. The download requires Internet; the files you convert stay on your PC."));
             ui.add_space(8.0);
-            egui::ScrollArea::vertical().max_height(400.0).show(ui, |ui| {
+            egui::ScrollArea::vertical().max_height((ctx.content_rect().height() - 350.0).clamp(100.0, 400.0)).show(ui, |ui| {
             for engine in &engines {
                 let manifest = engine.manifest();
                 ui.label(format!("{} {} · {:.1} MB · {}", manifest.name, manifest.version, manifest.download_bytes as f64 / 1_000_000.0, manifest.license_label()));
@@ -1156,6 +1242,7 @@ impl ConverterApp {
             self.begin_runtime_install(engines, ctx);
         } else if dismissed || ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
             self.pending_runtime_install = None;
+            self.setup_install_active = false;
         }
     }
 
@@ -2677,6 +2764,9 @@ impl ConverterApp {
                 ui.add_space(24.0);
                 if let Some(action) = settings_ui::engines(ui, &self.tools, &self.saved.overrides, self.runtime_install.is_some()) {
                     match action {
+                        EngineAction::Setup => {
+                            self.engine_setup = Some(EngineSetup::new(&self.tools));
+                        }
                         EngineAction::Install(engines) => self.pending_runtime_install = Some(engines),
                         EngineAction::Select(key) => {
                             let dialog = if key == "whisper-model" {
@@ -2967,7 +3057,11 @@ impl eframe::App for ConverterApp {
         if self.settings_dirty && (!self.running || self.language_dirty) {
             self.persist_with_force(self.language_dirty);
         }
-        self.runtime_install_confirmation(ctx);
+        if self.pending_runtime_install.is_some() {
+            self.runtime_install_confirmation(ctx);
+        } else {
+            self.engine_setup_dialog(ctx);
+        }
         self.license_dialog(ctx);
         if self.running {
             ctx.request_repaint_after(std::time::Duration::from_millis(100));

@@ -1,0 +1,70 @@
+{
+  "application_version": "0.8.1",
+  "capture_date": "2026-11-10",
+  "capture_build": "native debug, 150% application zoom, uncommitted 0.8.1 working tree",
+  "source_base_commit": "1d75f5298db01bb134c63c232b6a43c42d2590bd",
+  "binary_sha256": "bfba78128e3ee6bf10bf38b71a7deb3a4d31b3af65a2b12bc200d580919bd969",
+  "native_capture": "JPEG, cursor and halo parked outside the captured window; no image retouching",
+  "png_conversion": "Convert Here 0.8.1 CLI, PNG, no resize or crop",
+  "files": [
+    {
+      "file": "01-wizard-it.jpg",
+      "format": "JPEG",
+      "width": 2562,
+      "height": 1441,
+      "bytes": 193964,
+      "sha256": "90ebbc28bda6ce1ac902c416fd06d7170f05c5446757dc0524f0aefb0d1ae790"
+    },
+    {
+      "file": "01-wizard-it.png",
+      "format": "PNG",
+      "width": 2562,
+      "height": 1441,
+      "bytes": 558733,
+      "sha256": "91530f8c1f9bd592c31825346e224ed6d93fae748a54784471544fd453fba4fd"
+    },
+    {
+      "file": "02-formati-it.jpg",
+      "format": "JPEG",
+      "width": 2562,
+      "height": 1441,
+      "bytes": 161741,
+      "sha256": "b66006131316c8044b3bea0c38f212f925b67a43fcd0dff9b08e78ba330e7ac8"
+    },
+    {
+      "file": "02-formati-it.png",
+      "format": "PNG",
+      "width": 2562,
+      "height": 1441,
+      "bytes": 423770,
+      "sha256": "42323f196a3e93840aec4b27c9e8bcf021d2f8b9dcbbb713f2d5a003fb2adc1b"
+    }
+  ],
+  "proposed_store_gallery": [
+    {
+      "order": 1,
+      "file": "02-formati-it.png",
+      "capture_version": "0.8.1"
+    },
+    {
+      "order": 2,
+      "file": "01-wizard-it.png",
+      "capture_version": "0.8.1"
+    },
+    {
+      "order": 3,
+      "file": "../0.8.0/03-timeline-it.png",
+      "capture_version": "0.8.0",
+      "reuse": "unchanged audio/video editor UI",
+      "sha256": "cb8d9ca53ef92e1333527b9a39858ff8368487700bed5b3b20bbd6d52564eaa9"
+    },
+    {
+      "order": 4,
+      "file": "../0.8.0/04-trascrizione-it.png",
+      "capture_version": "0.8.0",
+      "reuse": "unchanged transcription editor UI",
+      "sha256": "a27a0d83b28055e8b32d98f71187b97626bb85d8688a512ffcc70bf7b2c69762"
+    }
+  ],
+  "portal_status": "Not uploaded or saved for 0.8.1 at capture time; candidate only"
+}

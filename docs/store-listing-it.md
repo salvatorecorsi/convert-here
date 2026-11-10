@@ -1,20 +1,22 @@
 # Scheda Microsoft Store — italiano (it-IT)
 
-**Convert Here 0.8.0 / Store 1.0.8.0**, sviluppatore e publisher **Salvatore Corsi**. Scheda italiana **salvata e riletta** nella **Submission 5, ID 1152921505702365703**, con **20 funzionalità e quattro PNG**; pacchetto caricato, salvato e **Validated**. Release GitHub pubblicata il 10 novembre 2026 alle 12:09:39 UTC; Submission 5 inviata intorno alle 12:10 UTC, stato **Update in certification**. La precedente Store 1.0.7.0 è stata verificata pubblicata il 10 novembre 2026; questo non attesta approvazione della 1.0.8.0. Nessun test su host Windows 10 reale o WACK. Non copiare questo preambolo nei campi pubblici.
+**Bozza per Convert Here 0.8.1 / Store previsto 1.0.9.0**, sviluppatore e publisher **Salvatore Corsi**. La precedente **0.8.0 / Store 1.0.8.0 è pubblicata**. Testi, 20 funzionalità e galleria qui sotto sono preparati per la nuova submission: non sono ancora attestati build finale, pubblicazione GitHub, caricamento o salvataggio nel portale della 0.8.1. La galleria propone due catture nuove 0.8.1 e due storiche 0.8.0 dell’editor invariato. Nessun test su host Windows 10 reale o WACK. Non copiare questo preambolo nei campi pubblici.
 
 ## Descrizione breve
 
-Conversioni locali per Windows 10 e 11, editor immagini e audio/video, profili e PDF. OCR e trascrizione con motori installabili su richiesta.
+Conversioni locali per Windows 10 e 11, editor, profili e PDF. Configurazione guidata dei motori per OCR, audio/video e trascrizione.
 
 ## Descrizione
 
 Convert Here porta le conversioni nella cartella in cui lavori, su Windows 10 versione 2004 o successivo (build 19041), x64, e Windows 11. Dal menu contestuale scegli Converti in e un formato compatibile: il lavoro entra in coda con le impostazioni salvate. Un segnaposto indica dove comparirà il risultato e permette di controllare lo stato o annullare. Originali e file già esistenti sono conservati; i conflitti di nome ricevono un numero.
 
-Sono disponibili 44 destinazioni e 94 estensioni di ingresso riconosciute. Le uscite visibili per default restano MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4. Abilita le altre da Impostazioni → Formati di uscita; TXT si trova in Raw. Il filtro riguarda le uscite e il menu si aggiorna senza riavviare Explorer. Interfaccia e menu sono disponibili in italiano e inglese.
+Sono disponibili 44 destinazioni e 94 estensioni di ingresso riconosciute. Le uscite visibili per default restano MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4. Abilita le altre da Impostazioni → Formati di uscita; TXT si trova in Raw. Il filtro riguarda le uscite e il menu si aggiorna senza riavviare Explorer. Interfaccia e menu sono disponibili in italiano e inglese. In fondo a ogni categoria, Seleziona tutti attiva o disattiva tutte le uscite della lista. Le singole estensioni restano cliccabili: togliendone una, il controllo collettivo si deseleziona.
 
 Immagini native, SVG statico, immagini in PDF e compressione/divisione/unione PDF funzionano senza motori esterni. Audio/video richiedono FFmpeg; esportazione PDF richiede Poppler; Office, Excel/CSV e HTML in PDF richiedono LibreOffice. HEIC/HEIF e AVIF usano libheif; OCR usa Tesseract e modelli delle lingue, con Poppler per le scansioni PDF. La trascrizione usa FFmpeg/ffprobe e Whisper con Tiny multilingue.
 
-Da Impostazioni → Motori puoi richiedere FFmpeg, Poppler, Tesseract con italiano/inglese, libheif o Whisper con Tiny. Ogni download richiede conferma di origine, versione, dimensioni, licenze e cartella. Gli asset sono verificati con SHA-256 prima dell'estrazione; licenze e provenienza restano nella cartella personale. Motori e modelli non sono inclusi nell'app né scaricati senza richiesta. LibreOffice resta separato. Internet serve per acquisire i motori; i file scelti per conversione, OCR o trascrizione non vengono caricati ai distributori.
+Al primo avvio normale della finestra principale senza file o formato preimpostato, la configurazione guidata propone i motori mancanti, preselezionati: FFmpeg, Poppler, Tesseract con italiano/inglese, libheif e Whisper con Tiny. Puoi cambiare la scelta, saltare la procedura o riaprirla da Impostazioni → Motori → Configurazione guidata. LibreOffice offre il sito ufficiale e resta un’installazione separata.
+
+Prima del download confermi origine, versione, dimensioni, licenze e cartella. I motori scelti vengono scaricati e installati uno alla volta; Whisper include FFmpeg se manca FFmpeg o ffprobe. In caso di annullamento o errore, i motori completati sono conservati e puoi riprovare quelli ancora mancanti. Gli asset sono verificati con SHA-256 prima dell’estrazione; licenze e provenienza restano nella cartella personale. Motori e modelli non sono inclusi nell’app né scaricati prima della conferma. Internet serve per acquisire i motori; i file scelti per conversione, OCR o trascrizione non vengono caricati ai distributori.
 
 Converti immagini in PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, QOI, TGA, Farbfeld, OpenEXR, HDR e PNM, oppure crea PDF. Gli SVG UTF-8 statici vengono rasterizzati localmente con resvg integrato: non vengono conservati i vettori. Risorse esterne, script, DTD, foreignObject e immagini incorporate vengono rifiutati. SVGZ non è supportato e valgono limiti di dimensioni e complessità.
 
@@ -49,7 +51,7 @@ Inserire ciascuna riga in un campo separato, senza il trattino iniziale:
 ```text
 Converti in nel menu classico di Windows 10 e moderno di Windows 11, da build 19041 x64
 Cronologia unificata per lavori in corso, in coda e completati
-44 destinazioni e 94 ingressi; otto uscite predefinite e TXT attivabile in Raw
+44 destinazioni e 94 ingressi; Seleziona tutti per categoria, otto uscite predefinite e TXT in Raw
 Immagini native e SVG statici rasterizzati localmente senza risorse esterne
 Editor immagini con ritaglio, scala, tela e anteprima dei byte da salvare
 Immagini, testo scritto e TXT UTF-8 su PDF A4/A5 con font incorporato
@@ -66,7 +68,7 @@ PDF in immagini e testo con Poppler; compressione, divisione e unione con pagine
 Excel/CSV con quattro separatori e Word/HTML in PDF con LibreOffice
 Originali e file esistenti conservati; i lavori accodati mantengono la ricetta
 Elaborazione locale, nessun account o pagamento richiesto per continuare l'uso
-Download motori su richiesta con conferma, SHA-256 e licenze originali conservate
+Configurazione guidata al primo avvio: motori in sequenza, conferma, SHA-256 e licenze conservate
 ```
 
 ## Termini di ricerca
@@ -94,17 +96,17 @@ Trascrizione: FFmpeg/ffprobe, Whisper CPU e Tiny multilingue. Download Whisper c
 ## Novità
 
 ```text
-SVG statico nativo, editor audio/video con timeline e taglio/gain, trascrizione locale in TXT con Whisper Tiny multilingue. Tesseract con italiano/inglese e libheif si installano da un pulsante con conferma e verifica SHA-256. Le uscite predefinite restano otto; abilita TXT in Raw. Sono riconosciuti 94 ingressi.
+Configurazione guidata al primo avvio: scegli i motori, controlla fonti e dimensioni e scaricali uno alla volta. Puoi saltarla o riaprirla dalle Impostazioni. Seleziona tutti in fondo a ogni categoria sostituisce i pulsanti spunta/croce; le singole estensioni restano modificabili. Otto uscite predefinite invariate.
 ```
 
 ## Didascalie delle schermate
 
-1. Formati di uscita per categoria e nuova barra delle schede. Interfaccia italiana.
-2. Motori locali: installazione di OCR, libheif e Whisper con un pulsante. Interfaccia italiana.
-3. Editor audio/video: timeline, intervallo selezionato e gain. Interfaccia italiana.
-4. Trascrizione locale in TXT con scelta della lingua e taglio della clip. Interfaccia italiana.
+1. Formati di uscita con Seleziona tutti in fondo a ogni categoria. Interfaccia italiana.
+2. Configurazione guidata: motori, dipendenze e dimensioni prima della conferma. Interfaccia italiana.
+3. Editor audio/video: timeline, intervallo e gain. Interfaccia italiana; cattura 0.8.0 riusata, UI invariata.
+4. Trascrizione locale in TXT con lingua e taglio. Interfaccia italiana; cattura 0.8.0 riusata, UI invariata.
 
-Le [quattro catture native 0.8.0](store-assets/0.8.0/README.md) sono PNG **2562 × 1441**, senza puntatore, da build debug 0.8.0 con zoom 150% e senza ingrandimento successivo. Sono salvate e rilette nella scheda italiana della Submission 5; la galleria precedente resta storica. Non sono catture del nuovo MSIX installato.
+Ordine della galleria proposta: [02-formati-it.png della 0.8.1](store-assets/0.8.1/02-formati-it.png), [01-wizard-it.png della 0.8.1](store-assets/0.8.1/01-wizard-it.png), [03-timeline-it.png della 0.8.0](store-assets/0.8.0/03-timeline-it.png), [04-trascrizione-it.png della 0.8.0](store-assets/0.8.0/04-trascrizione-it.png). Tutte sono PNG **2562 × 1441**, senza puntatore, da build debug native con zoom 150%, senza ingrandimenti successivi. Le ultime due riusano l’editor rimasto invariato e conservano la provenienza storica. [Registro e limiti delle catture 0.8.1](store-assets/0.8.1/README.md). Upload e salvataggio della nuova galleria non sono ancora attestati.
 
 ## Copyright e termini di licenza aggiuntivi
 
@@ -112,10 +114,10 @@ Le [quattro catture native 0.8.0](store-assets/0.8.0/README.md) sono PNG **2562 
 Copyright (C) 2026 Salvatore Corsi.
 ```
 
-Il progetto è GPL-3.0-only. Il [testo integrale al tag pubblico v0.8.0](https://github.com/salvatorecorsi/convert-here/blob/v0.8.0/LICENSE) è salvato nel campo licenza. L'asset finale `ConvertHere-0.8.0-source.zip`, con dipendenze vendorizzate e istruzioni offline, è verificato e pubblicato nella [release GitHub 0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0). Terze parti mantengono licenze e copyright originali.
+Il progetto è GPL-3.0-only: [testo integrale attuale](../LICENSE). Per la nuova scheda il riferimento previsto è `https://github.com/salvatorecorsi/convert-here/blob/v0.8.1/LICENSE`, da usare dopo pubblicazione del tag. L’asset sorgente previsto è `ConvertHere-0.8.1-source.zip`, con dipendenze vendorizzate e istruzioni offline; non è ancora attestato come costruito o pubblicato. Terze parti mantengono licenze e copyright originali.
 
 ## Riferimenti submission
 
-Titolare, sviluppatore e publisher: **Salvatore Corsi**. Supporto/privacy: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Privacy 0.8.0](privacy.md), [pin e licenze dei motori](release-licenses/EXTERNAL-ENGINES.md), [verifiche 0.8.0](store-testing-0.8.0.md), [procedura e stato Store](store-submission.md).
+Titolare, sviluppatore e publisher: **Salvatore Corsi**. Supporto/privacy: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Privacy attuale](privacy.md), [pin e licenze dei motori](release-licenses/EXTERNAL-ENGINES.md), [verifiche candidata 0.8.1](store-testing-0.8.1.md), [procedura e stato Store](store-submission.md).
 
-Testi, **20 funzionalità**, didascalie e quattro schermate sono salvati e verificati dopo la rilettura nel portale; record locale `.tools/store-listing-080-it-verified.json`. Privacy e licenza puntano al tag v0.8.0. Upload e salvataggio non implicano certificazione o pubblicazione della 1.0.8.0. Descrizione entro 10.000 caratteri, breve entro 1.000, funzionalità entro 200 caratteri ciascuna e novità entro 1.500. [Limiti dei campi MSIX](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).
+La scheda della **0.8.1 / Store 1.0.9.0 è una bozza locale**, con **20 funzionalità** e quattro immagini preparate. Il record di salvataggio della precedente Submission 5 non attesta persistenza o invio della nuova versione. La baseline 0.8.0 / Store 1.0.8.0 è pubblicata. Dopo le verifiche vanno registrati commit, artefatti finali, pubblicazione, URL privacy/licenza e stato effettivo nel portale. Descrizione entro 10.000 caratteri, breve entro 1.000, funzionalità entro 200 caratteri ciascuna e novità entro 1.500. [Limiti dei campi MSIX](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).
