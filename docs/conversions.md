@@ -36,7 +36,7 @@ Immagini, TXT UTF-8 e testo digitato possono essere impaginati nativamente su A4
 
 Gli SVG vengono rasterizzati localmente con **resvg 0.49** prima di usare i normali encoder immagine o il percorso PDF. Non vengono esportati SVG né conservati i vettori nel PDF risultante. Il testo usa il font Ubuntu incorporato: font o funzioni non supportati possono cambiare l'aspetto rispetto all'app di origine.
 
-Sono accettati SVG UTF-8 non compressi fino a **4 MiB**, con un'immagine di massimo **40 milioni di pixel** e **32768 pixel per lato**. SVGZ, DTD, script, `foreignObject`, risorse esterne e immagini raster incorporate vengono rifiutati. Non vengono scaricati font, immagini o CSS. Il renderer limita inoltre nodi, espansioni `use` e memoria di lavoro; un documento oltre i limiti viene rifiutato invece di eseguire risorse esterne.
+Sono accettati SVG UTF-8 non compressi fino a **4 MiB**, con un'immagine di massimo **40 milioni di pixel** e **32768 pixel per lato**. SVGZ, DTD, script, `foreignObject`, `marker`, `tref`, risorse esterne e immagini raster incorporate vengono rifiutati. Non vengono scaricati font, immagini o CSS. Prima della conversione il renderer limita nodi, tracciati e testo anche dopo le espansioni `use` e i riferimenti `textPath`; per prudenza, il budget di **4 MiB** per attributi e CSS considera ogni valore applicato a tutti i nodi espansi, inclusa l'ereditarietà. Il renderer limita inoltre la memoria di lavoro e rifiuta i documenti troppo complessi.
 
 ## Editor audio/video — in sviluppo
 

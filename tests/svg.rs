@@ -129,3 +129,42 @@ fn malformed_or_external_svg_has_no_published_result() {
         assert_eq!(fs::read(&input).unwrap(), contents);
     }
 }
+
+#[test]
+fn expanded_svg_complexity_failure_preserves_sources_and_unrelated_outputs() {
+    let dir = tempfile::tempdir().unwrap();
+    let input = dir.path().join("repeated.svg");
+    let source = format!(
+        "<svg width='16' height='16'><defs><path id='p' d='M0 0{}'/></defs>{}</svg>",
+        "l1 0".repeat(2048),
+        "<use href='#p'/>".repeat(64)
+    );
+    fs::write(&input, &source).unwrap();
+    let existing = [
+        dir.path().join("repeated.png"),
+        dir.path().join("repeated.pdf"),
+    ];
+    for path in &existing {
+        fs::write(path, b"unrelated existing result").unwrap();
+    }
+    for format in [OutputFormat::Png, OutputFormat::Pdf] {
+        assert!(
+            engine::convert(
+                &input,
+                &ConversionSettings {
+                    format,
+                    ..Default::default()
+                },
+                &ToolPaths::default(),
+                &AtomicBool::new(false),
+                |_| {},
+            )
+            .is_err()
+        );
+        assert_eq!(fs::read(&input).unwrap(), source.as_bytes());
+        for path in &existing {
+            assert_eq!(fs::read(path).unwrap(), b"unrelated existing result");
+        }
+        assert_eq!(fs::read_dir(dir.path()).unwrap().count(), 3);
+    }
+}

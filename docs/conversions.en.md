@@ -42,7 +42,7 @@ Images, UTF-8 TXT and typed text can be laid out natively on A4/A5 with custom m
 
 Static SVG uses built-in **resvg 0.49** and enters the same image editor and encoders as raster images. It can be resized, converted to native image formats or laid out in PDF without FFmpeg or LibreOffice. PDF output contains a rasterized image, not editable vectors. Text uses the bundled Ubuntu-Light font; unavailable fonts can change the appearance.
 
-Input must be uncompressed UTF-8 SVG, at most **4 MiB**. Raster dimensions are limited to **40 million pixels** and **32,768 pixels per side**. SVGZ, DTDs, scripts, `foreignObject`, external resources and embedded raster images are rejected. Node count, nested `use` expansion and rendering memory are also bounded. SVG is an input format; there is no SVG output.
+Input must be uncompressed UTF-8 SVG, at most **4 MiB**. Raster dimensions are limited to **40 million pixels** and **32,768 pixels per side**. SVGZ, DTDs, scripts, `foreignObject`, `marker`, `tref`, external resources and embedded raster images are rejected. Before conversion, the renderer bounds nodes, paths and text including `use` expansions and `textPath` references. The conservative **4 MiB** attribute/CSS budget treats every value as applied to every expanded node, including inheritance; rendering memory is also bounded. SVG is an input format; there is no SVG output.
 
 ## Audio/video editor — in development
 

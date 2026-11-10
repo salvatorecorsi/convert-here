@@ -21,7 +21,9 @@ const MAX_NODES: u32 = 20_000;
 const MAX_DEPTH: usize = 64;
 const MAX_TEXT_BYTES: usize = 8192;
 const MAX_PATH_BYTES: usize = 512 * 1024;
+const MAX_ATTRIBUTE_BYTES: u64 = MAX_INPUT_BYTES;
 const MAX_WORK_BYTES: u64 = 512 * 1024 * 1024;
+const XLINK_NS: &str = "http://www.w3.org/1999/xlink";
 
 pub fn is_svg_input(input: &Path) -> bool {
     input
@@ -84,16 +86,72 @@ fn check_css(value: &str) -> Result<()> {
     Ok(())
 }
 
-fn expanded_nodes<'a>(
+#[derive(Clone, Copy, Default)]
+struct ExpandedCost {
+    nodes: u64,
+    path_bytes: u64,
+    text_bytes: u64,
+    attribute_bytes: u64,
+}
+
+impl ExpandedCost {
+    fn validate(self) -> Result<()> {
+        ensure!(
+            self.nodes <= u64::from(MAX_NODES)
+                && self.path_bytes <= MAX_PATH_BYTES as u64
+                && self.text_bytes <= MAX_TEXT_BYTES as u64
+                && self.attribute_bytes <= MAX_ATTRIBUTE_BYTES,
+            limit_error()
+        );
+        Ok(())
+    }
+
+    fn add(&mut self, other: Self) -> Result<()> {
+        self.nodes = self.nodes.saturating_add(other.nodes);
+        self.path_bytes = self.path_bytes.saturating_add(other.path_bytes);
+        self.text_bytes = self.text_bytes.saturating_add(other.text_bytes);
+        self.attribute_bytes = self.attribute_bytes.saturating_add(other.attribute_bytes);
+        self.validate()
+    }
+}
+
+fn use_href<'a>(node: usvg::roxmltree::Node<'a, 'a>) -> Option<&'a str> {
+    // Match usvg's resolve_href: unprefixed href wins over xlink:href,
+    // regardless of source order. Other namespaces are not links.
+    node.attributes()
+        .find(|a| a.name() == "href" && a.namespace().is_none())
+        .or_else(|| {
+            node.attributes()
+                .find(|a| a.name() == "href" && a.namespace() == Some(XLINK_NS))
+        })
+        .map(|a| a.value())
+}
+
+fn fragment_id(value: &str) -> Option<&str> {
+    // Match svgtypes 0.16 IRI parsing used by usvg: consume exactly one #,
+    // then read until ASCII space; only SVG whitespace may follow the ID.
+    let value = value.trim_start_matches([' ', '\t', '\r', '\n']);
+    let fragment = value.strip_prefix('#')?;
+    let end = fragment.find(' ').unwrap_or(fragment.len());
+    let (id, trailing) = fragment.split_at(end);
+    (!id.is_empty()
+        && trailing
+            .bytes()
+            .all(|byte| matches!(byte, b' ' | b'\t' | b'\r' | b'\n')))
+    .then_some(id)
+}
+
+fn expanded_cost<'a>(
     node: usvg::roxmltree::Node<'a, 'a>,
     ids: &HashMap<&'a str, usvg::roxmltree::Node<'a, 'a>>,
+    own_costs: &HashMap<usvg::roxmltree::NodeId, ExpandedCost>,
     active: &mut HashSet<usvg::roxmltree::NodeId>,
-    memo: &mut HashMap<usvg::roxmltree::NodeId, u64>,
+    memo: &mut HashMap<usvg::roxmltree::NodeId, ExpandedCost>,
     depth: usize,
-) -> Result<u64> {
+) -> Result<ExpandedCost> {
     ensure!(depth <= MAX_DEPTH, limit_error());
-    if let Some(count) = memo.get(&node.id()) {
-        return Ok(*count);
+    if let Some(cost) = memo.get(&node.id()) {
+        return Ok(*cost);
     }
     ensure!(
         active.insert(node.id()),
@@ -102,21 +160,38 @@ fn expanded_nodes<'a>(
             "The SVG contains recursive references"
         )
     );
-    let mut count = 1u64;
+    let mut cost = own_costs[&node.id()];
     for child in node.children().filter(|n| n.is_element()) {
-        count = count.saturating_add(expanded_nodes(child, ids, active, memo, depth + 1)?);
-        ensure!(count <= u64::from(MAX_NODES), limit_error());
+        cost.add(expanded_cost(
+            child,
+            ids,
+            own_costs,
+            active,
+            memo,
+            depth + 1,
+        )?)?;
     }
-    if node.has_tag_name("use")
-        && let Some(href) = node.attributes().find(|a| a.name() == "href")
-        && let Some(target) = ids.get(href.value().trim().trim_start_matches('#'))
+    if matches!(node.tag_name().name(), "use" | "textPath")
+        && let Some(href) = use_href(node)
+        && let Some(id) = fragment_id(href)
+        && let Some(target) = ids.get(id)
     {
-        count = count.saturating_add(expanded_nodes(*target, ids, active, memo, depth + 1)?);
+        // usvg reparses geometry for each use or textPath reference and
+        // shapes text for each shadow copy. Arc<Path> does not cache these
+        // separate conversions.
+        cost.add(expanded_cost(
+            *target,
+            ids,
+            own_costs,
+            active,
+            memo,
+            depth + 1,
+        )?)?;
     }
-    ensure!(count <= u64::from(MAX_NODES), limit_error());
+    cost.validate()?;
     active.remove(&node.id());
-    memo.insert(node.id(), count);
-    Ok(count)
+    memo.insert(node.id(), cost);
+    Ok(cost)
 }
 
 fn preflight<'a>(text: &'a str, cancel: &AtomicBool) -> Result<usvg::roxmltree::Document<'a>> {
@@ -144,8 +219,9 @@ fn preflight<'a>(text: &'a str, cancel: &AtomicBool) -> Result<usvg::roxmltree::
         )
     );
     let mut ids = HashMap::new();
-    let mut path_bytes = 0usize;
-    let mut text_bytes = 0usize;
+    let mut own_costs = HashMap::new();
+    let mut source_attribute_bytes = 0u64;
+    let mut css_bytes = 0u64;
     let face = ttf_parser::Face::parse(embedded_font(), 0).context("Embedded Ubuntu font")?;
     for node in doc.descendants() {
         cancelled(cancel)?;
@@ -165,6 +241,16 @@ fn preflight<'a>(text: &'a str, cancel: &AtomicBool) -> Result<usvg::roxmltree::
                 "image" | "feImage" | "script" | "foreignObject"
             ),
             reference_error()
+        );
+        // usvg expands tref text and repeats marker subtrees per path vertex.
+        // They need different multiplicity rules from use/textPath, so leave
+        // them outside this conservative static SVG surface.
+        ensure!(
+            !matches!(node.tag_name().name(), "tref" | "marker"),
+            tr(
+                "Il renderer SVG locale non supporta marker o tref: convertili in tracciati o testo semplice prima di riprovare",
+                "The local SVG renderer does not support marker or tref: convert them to paths or plain text before retrying"
+            )
         );
         // These controls can multiply CPU work independently of image size.
         if node.has_tag_name("feTurbulence") {
@@ -203,16 +289,28 @@ fn preflight<'a>(text: &'a str, cancel: &AtomicBool) -> Result<usvg::roxmltree::
                 limit_error()
             );
         }
-        if let Some(id) = node.attribute("id") {
+        let mut has_id = false;
+        // usvg's ID map uses roxmltree's local-name lookup. Refuse duplicate
+        // IDs and ambiguous namespace aliases instead of selecting a target.
+        for id in node.attributes().filter(|a| a.name() == "id") {
             ensure!(
-                ids.insert(id, node).is_none(),
+                !has_id && ids.insert(id.value(), node).is_none(),
                 tr(
                     "L’SVG contiene identificatori duplicati",
                     "The SVG contains duplicate identifiers"
                 )
             );
+            has_id = true;
         }
+        let mut cost = ExpandedCost {
+            nodes: 1,
+            ..Default::default()
+        };
         for attribute in node.attributes() {
+            cost.attribute_bytes = cost
+                .attribute_bytes
+                .saturating_add(attribute.name().len() as u64)
+                .saturating_add(attribute.value().len() as u64);
             if attribute.name() == "href" {
                 let value = attribute.value().trim();
                 ensure!(value.starts_with('#') && value.len() > 1, reference_error());
@@ -222,7 +320,9 @@ fn preflight<'a>(text: &'a str, cancel: &AtomicBool) -> Result<usvg::roxmltree::
             }
             check_css(attribute.value())?;
             if matches!(attribute.name(), "d" | "points") {
-                path_bytes = path_bytes.saturating_add(attribute.value().len());
+                cost.path_bytes = cost
+                    .path_bytes
+                    .saturating_add(attribute.value().len() as u64);
             }
             if attribute.name().starts_with("on") {
                 return Err(anyhow::anyhow!(reference_error()));
@@ -230,7 +330,9 @@ fn preflight<'a>(text: &'a str, cancel: &AtomicBool) -> Result<usvg::roxmltree::
         }
         if node.has_tag_name("style") {
             for child in node.children().filter(|n| n.is_text()) {
-                check_css(child.text().unwrap_or_default())?;
+                let value = child.text().unwrap_or_default();
+                check_css(value)?;
+                css_bytes = css_bytes.saturating_add(value.len() as u64);
             }
         }
         if node
@@ -239,7 +341,7 @@ fn preflight<'a>(text: &'a str, cancel: &AtomicBool) -> Result<usvg::roxmltree::
         {
             for child in node.children().filter(|n| n.is_text()) {
                 let value = child.text().unwrap_or_default();
-                text_bytes = text_bytes.saturating_add(value.len());
+                cost.text_bytes = cost.text_bytes.saturating_add(value.len() as u64);
                 ensure!(
                     value
                         .chars()
@@ -252,18 +354,29 @@ fn preflight<'a>(text: &'a str, cancel: &AtomicBool) -> Result<usvg::roxmltree::
                 );
             }
         }
-        ensure!(
-            path_bytes <= MAX_PATH_BYTES && text_bytes <= MAX_TEXT_BYTES,
-            limit_error()
-        );
+        cost.validate()?;
+        source_attribute_bytes = source_attribute_bytes.saturating_add(cost.attribute_bytes);
+        own_costs.insert(node.id(), cost);
     }
-    expanded_nodes(
+    let cost = expanded_cost(
         doc.root_element(),
         &ids,
+        &own_costs,
         &mut HashSet::new(),
         &mut HashMap::new(),
         0,
     )?;
+    // usvg reparses inherited lists (dash arrays, font families, etc.) for
+    // each descendant and copies CSS declarations into matching nodes. Bound
+    // the conservative case where every source attribute/style applies to
+    // every expanded node, without trying to reproduce its cascade rules.
+    ensure!(
+        source_attribute_bytes
+            .saturating_add(css_bytes)
+            .saturating_mul(cost.nodes)
+            <= MAX_ATTRIBUTE_BYTES,
+        limit_error()
+    );
     Ok(doc)
 }
 
@@ -628,6 +741,177 @@ mod tests {
         }
         source.push_str("</defs><use href='#n19'/></svg>");
         assert!(raster(&source).is_err());
+    }
+
+    #[test]
+    fn expanded_path_text_and_attribute_costs_are_checked_before_usvg() {
+        let path = format!("M0 0{}", "l1 0".repeat(2048));
+        let cases = [
+            format!("<path id='p' d='{path}'/>"),
+            format!("<text id='p'>{}</text>", "a".repeat(128)),
+            format!(
+                "<path id='p' d='M0 0l1 1' stroke-dasharray='{}'/>",
+                "1 ".repeat(32768)
+            ),
+        ];
+        for definition in cases {
+            let source = format!(
+                "<svg width='16' height='16'><defs>{definition}</defs>{}</svg>",
+                "<use href='#p'/>".repeat(64)
+            );
+            // These small XML documents passed the old source-byte and
+            // expanded-node-only checks. Never hand them to usvg in this test.
+            assert!(source.len() < MAX_INPUT_BYTES as usize);
+            assert!(preflight(&source, &AtomicBool::new(false)).is_err());
+        }
+        let mut nested = format!("<svg width='16' height='16'><defs><path id='n0' d='{path}'/>");
+        for index in 1..=6 {
+            nested.push_str(&format!(
+                "<g id='n{index}'><use href='#n{}'/><use href='#n{}'/></g>",
+                index - 1,
+                index - 1
+            ));
+        }
+        nested.push_str("</defs><use href='#n6'/></svg>");
+        assert!(preflight(&nested, &AtomicBool::new(false)).is_err());
+    }
+
+    #[test]
+    fn css_copy_cost_is_bounded_for_original_and_expanded_nodes() {
+        let css = format!("path{{font-family:{}}}", "a".repeat(4096));
+        for body in [
+            "<path d='M0 0l1 1'/>".repeat(1100),
+            format!(
+                "<defs><path id='p' d='M0 0l1 1'/></defs>{}",
+                "<use href='#p'/>".repeat(550)
+            ),
+        ] {
+            let source = format!("<svg width='16' height='16'><style>{css}</style>{body}</svg>");
+            assert!(source.len() < MAX_INPUT_BYTES as usize);
+            assert!(preflight(&source, &AtomicBool::new(false)).is_err());
+        }
+        let ordinary = "<svg width='16' height='16'><style>path{fill:red}</style><defs><path id='p' d='M0 0h4v4z'/></defs><use href='#p'/><use href='#p' x='8'/></svg>";
+        assert!(preflight(ordinary, &AtomicBool::new(false)).is_ok());
+    }
+
+    #[test]
+    fn use_href_precedence_matches_usvg_in_either_attribute_order() {
+        assert_eq!(fragment_id(" #p \t "), Some("p"));
+        assert_eq!(fragment_id("##p"), Some("#p"));
+        assert_eq!(fragment_id("#p\t"), Some("p\t"));
+        assert_eq!(fragment_id("#p trailing"), None);
+        let path = format!("M0 0{}", "l1 0".repeat(2048));
+        let definition =
+            format!("<defs><path id='heavy' d='{path}'/><path id='small' d='M0 0l1 1'/></defs>");
+        for attributes in [
+            "xlink:href='#small' href='#heavy'",
+            "href='#heavy' xlink:href='#small'",
+        ] {
+            let source = format!(
+                "<svg xmlns:xlink='{XLINK_NS}' width='16' height='16'>{definition}{}</svg>",
+                format!("<use {attributes}/>").repeat(64)
+            );
+            assert!(preflight(&source, &AtomicBool::new(false)).is_err());
+        }
+        for attributes in [
+            "xlink:href='#heavy' href='#small'",
+            "href='#small' xlink:href='#heavy'",
+            "other:href='#heavy' xlink:href='#small'",
+            "other:href='#heavy'",
+        ] {
+            let source = format!(
+                "<svg xmlns:xlink='{XLINK_NS}' xmlns:other='urn:not-xlink' width='16' height='16'>{definition}{}</svg>",
+                format!("<use {attributes}/>").repeat(64)
+            );
+            assert!(preflight(&source, &AtomicBool::new(false)).is_ok());
+        }
+        for (id, href) in [("#heavy", "##heavy"), ("heavy&#9;", "#heavy&#9;")] {
+            let source = format!(
+                "<svg width='16' height='16'><defs><path id='{id}' d='{path}'/><path id='heavy' d='M0 0l1 1'/></defs>{}</svg>",
+                format!("<use href='{href}'/>").repeat(64)
+            );
+            assert!(preflight(&source, &AtomicBool::new(false)).is_err());
+        }
+    }
+
+    #[test]
+    fn duplicate_and_namespace_ambiguous_ids_are_rejected() {
+        for definitions in [
+            "<path id='p' d='M0 0'/><path id='p' d='M0 0l1 1'/>",
+            "<path xml:id='alias' id='p' d='M0 0'/>",
+            "<path id='p' xml:id='alias' d='M0 0'/>",
+        ] {
+            let source = format!(
+                "<svg width='16' height='16'><defs>{definitions}</defs><use href='#p'/></svg>"
+            );
+            assert!(preflight(&source, &AtomicBool::new(false)).is_err());
+        }
+        // A single xml:id is included in usvg's local-name ID map as well.
+        let source = "<svg width='16' height='16'><defs><path xml:id='p' d='M0 0l1 1'/></defs><use href='#p'/></svg>";
+        assert!(preflight(source, &AtomicBool::new(false)).is_ok());
+    }
+
+    #[test]
+    fn text_path_geometry_is_bounded_and_other_multipliers_are_rejected() {
+        let path = format!("M0 0{}", "l1 0".repeat(2048));
+        for attributes in [
+            "href='#heavy'",
+            "xlink:href='#small' href='#heavy'",
+            "href='#heavy' xlink:href='#small'",
+        ] {
+            let source = format!(
+                "<svg xmlns:xlink='{XLINK_NS}' width='16' height='16'><defs><path id='heavy' d='{path}'/><path id='small' d='M0 0l1 1'/></defs>{}</svg>",
+                format!("<text><textPath {attributes}>a</textPath></text>").repeat(64)
+            );
+            assert!(preflight(&source, &AtomicBool::new(false)).is_err());
+        }
+        let ordinary = "<svg width='32' height='16'><defs><path id='p' d='M0 12h32'/></defs><text font-size='8'><textPath href='#p'>Ciao</textPath></text></svg>";
+        assert!(preflight(ordinary, &AtomicBool::new(false)).is_ok());
+        assert!(
+            raster(ordinary)
+                .unwrap()
+                .pixels()
+                .filter(|pixel| pixel[3] > 0)
+                .count()
+                > 10
+        );
+        for body in [
+            "<defs><text id='p'>a</text></defs><text><tref href='#p'/></text>",
+            "<defs><marker id='m'><path d='M0 0l1 1'/></marker></defs><path d='M0 0l1 1l2 2' marker-mid='url(#m)'/>",
+        ] {
+            let source = format!("<svg width='16' height='16'>{body}</svg>");
+            assert!(preflight(&source, &AtomicBool::new(false)).is_err());
+        }
+    }
+
+    #[test]
+    fn inherited_attribute_and_inline_style_cost_is_bounded() {
+        let dashes = "1 ".repeat(8192);
+        let families = "a,".repeat(8192);
+        for (attributes, child) in [
+            (
+                format!("stroke='black' stroke-dasharray='{dashes}'"),
+                "<path d='M0 0h1v1z'/>",
+            ),
+            (
+                format!("style='stroke:black;stroke-dasharray:{dashes}'"),
+                "<path d='M0 0h1v1z'/>",
+            ),
+            (format!("font-family='{families}'"), "<text>a</text>"),
+            (format!("style='font:12px {families}'"), "<text>a</text>"),
+        ] {
+            let source = format!(
+                "<svg width='16' height='16'><g {attributes}>{}</g></svg>",
+                child.repeat(300)
+            );
+            assert!(source.len() < MAX_INPUT_BYTES as usize);
+            assert!(preflight(&source, &AtomicBool::new(false)).is_err());
+        }
+        let ordinary = format!(
+            "<svg width='16' height='16'><g stroke='black' stroke-dasharray='1 2'>{}</g></svg>",
+            "<path d='M0 0l1 1'/>".repeat(50)
+        );
+        assert!(preflight(&ordinary, &AtomicBool::new(false)).is_ok());
     }
 
     #[test]
