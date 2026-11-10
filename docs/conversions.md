@@ -4,9 +4,9 @@
 
 Guida alle destinazioni, alle opzioni e ai limiti di Convert Here. Per iniziare, consulta il [README](../README.md); per impostare gli strumenti esterni, consulta [Motori e preferenze](configuration.md).
 
-Questa guida include le novità della **candidata 0.8.0, non ancora pubblicata**: SVG, timeline audio/video, trascrizione locale e ulteriori motori scaricabili. Le indicazioni «in sviluppo» si riferiscono a questa candidata e non modificano lo stato delle release collegate nel README.
+**Stato al 10 novembre 2026:** [0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) pubblicata su GitHub alle **12:09:39 UTC**, commit `f1f3f95fceed52507ef715fa4ac6893acc63544a`. Store **1.0.8.0**, Submission 5 (`1152921505702365703`): **Update in certification**, non ancora approvata o pubblicata sullo Store.
 
-Il ramo di sviluppo riconosce **94 estensioni di ingresso** e mantiene **44 formati di destinazione**. In **Impostazioni → Formati di uscita** scegli le uscite da mostrare, raggruppate per audio, video, immagini, documenti e **Raw**. Il default resta **MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4**; abilita **TXT** in Raw per OCR o trascrizione. Le scelte restano salvate e il menu le rilegge senza riavviare Explorer. Se non abiliti alcuna uscita, resta accessibile **Impostazioni personalizzate…**. Il filtro riguarda soltanto le uscite visibili: non disabilita ingressi, CLI, richieste `--quick` esplicite o lavori già accodati. Le destinazioni effettive dipendono dalla categoria del file e dai codec dei motori selezionati.
+La versione 0.8.0 riconosce **94 estensioni di ingresso** e mantiene **44 formati di destinazione**. In **Impostazioni → Formati di uscita** scegli le uscite da mostrare, raggruppate per audio, video, immagini, documenti e **Raw**. Il default resta **MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4**; abilita **TXT** in Raw per OCR o trascrizione. Le scelte restano salvate e il menu le rilegge senza riavviare Explorer. Se non abiliti alcuna uscita, resta accessibile **Impostazioni personalizzate…**. Il filtro riguarda soltanto le uscite visibili: non disabilita ingressi, CLI, richieste `--quick` esplicite o lavori già accodati. Le destinazioni effettive dipendono dalla categoria del file e dai codec dei motori selezionati.
 
 | Sorgente | Destinazioni | Motore |
 | --- | --- | --- |
@@ -14,8 +14,8 @@ Il ramo di sviluppo riconosce **94 estensioni di ingresso** e mantiene **44 form
 | Video: MP4, MKV, MOV, WebM, AVI, WMV, MPEG/MPG, M4V, TS/MTS/M2TS/M2T, 3GP/3G2, FLV, ASF, VOB, OGV, M2V, MXF, F4V, DivX, MPE, MPV | MP4, MKV, MOV, WebM, AVI, GIF animato, MPEG, WMV, FLV, TS, M4V, 3GP; estrazione audio nei dodici formati sopra | FFmpeg |
 | Immagini native: PNG, JPEG/JPG, WebP, BMP, TIFF/TIF, GIF, ICO, QOI, TGA, Farbfeld (.ff), OpenEXR, HDR, PNM/PAM/PBM/PGM/PPM | PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, PDF, QOI, TGA, Farbfeld, OpenEXR, HDR, PNM; HEIC, AVIF; TXT con OCR | Rust per i formati nativi e PDF; libheif per creare HEIC/AVIF; Tesseract per TXT |
 | HEIC/HEIF, AVIF | Destinazioni immagine sopra, PDF e TXT con OCR | libheif per la lettura; Tesseract per TXT |
-| SVG statico UTF-8, in sviluppo | Formati immagine nativi e PDF dopo rasterizzazione; HEIC/AVIF o TXT con gli stessi motori opzionali delle altre immagini | resvg integrato; nessun motore esterno per raster/PDF |
-| Audio/video → testo, in sviluppo | TXT dal parlato | FFmpeg + Whisper + modello Tiny multilingue, tutti locali |
+| SVG statico UTF-8 | Formati immagine nativi e PDF dopo rasterizzazione; HEIC/AVIF o TXT con gli stessi motori opzionali delle altre immagini | resvg integrato; nessun motore esterno per raster/PDF |
+| Audio/video → testo | TXT dal parlato | FFmpeg + Whisper + modello Tiny multilingue, tutti locali |
 | PDF | PNG/JPEG, una immagine per pagina; TXT, Word DOCX e HTML dal testo incorporato o con OCR | Poppler per immagini e testo incorporato; Tesseract + Poppler per OCR; DOCX e HTML ricostruiti dall'app |
 | PDF | PDF compresso senza perdita, un PDF per pagina, unione di più PDF | Rust, senza motori esterni |
 | DOC/DOCX, ODT, RTF, TXT, PPT/PPTX, ODP | PDF | LibreOffice |
@@ -32,13 +32,13 @@ L'editor aggiunge ritaglio, scala, tela e qualità JPEG/WebP regolabile, con ant
 
 Immagini, TXT UTF-8 e testo digitato possono essere impaginati nativamente su A4/A5 con margini e orientamento. Questo percorso TXT si attiva con le opzioni pagina; il percorso TXT tradizionale e gli altri documenti Office mantengono LibreOffice. L'editor non modifica il contenuto completo di PDF o Word. [Guida editor e profili](image-editor-profiles.md).
 
-## SVG nativo — in sviluppo
+## SVG nativo
 
 Gli SVG vengono rasterizzati localmente con **resvg 0.49** prima di usare i normali encoder immagine o il percorso PDF. Non vengono esportati SVG né conservati i vettori nel PDF risultante. Il testo usa il font Ubuntu incorporato: font o funzioni non supportati possono cambiare l'aspetto rispetto all'app di origine.
 
 Sono accettati SVG UTF-8 non compressi fino a **4 MiB**, con un'immagine di massimo **40 milioni di pixel** e **32768 pixel per lato**. SVGZ, DTD, script, `foreignObject`, `marker`, `tref`, risorse esterne e immagini raster incorporate vengono rifiutati. Non vengono scaricati font, immagini o CSS. Prima della conversione il renderer limita nodi, tracciati e testo anche dopo le espansioni `use` e i riferimenti `textPath`; per prudenza, il budget di **4 MiB** per attributi e CSS considera ogni valore applicato a tutti i nodi espansi, inclusa l'ereditarietà. Il renderer limita inoltre la memoria di lavoro e rifiuta i documenti troppo complessi.
 
-## Editor audio/video — in sviluppo
+## Editor audio/video
 
 Apri **Modifica…** accanto al file. La timeline mostra la forma d'onda e, per i video, una striscia di fotogrammi della sorgente. Le anteprime precedono gli effetti; su file lunghi o non decodificabili possono non essere disponibili, lasciando utilizzabili i tempi numerici.
 
@@ -46,7 +46,7 @@ Trascina inizio/fine oppure usa **←/→** sulla timeline per passi di 0,1 seco
 
 **Salva con nome…** converte il solo file aperto, conserva gli originali e non sovrascrive una destinazione esistente. **Usa queste impostazioni** applica i parametri alle impostazioni attive; il salvataggio di un profilo conserva taglio, gain e opzioni. Non sono presenti riproduzione o montaggio multitraccia.
 
-## Trascrizione locale audio/video → TXT — in sviluppo
+## Trascrizione locale audio/video → TXT
 
 Abilita **TXT** in **Impostazioni → Formati di uscita → Raw** e scegli TXT per un audio/video. Servono **FFmpeg/ffprobe**, **Whisper CPU** e il modello **Tiny multilingue**, di **77.691.713 byte**. Runtime e modello richiedono circa **88 MB**, separati da FFmpeg. La richiesta Whisper dall'app include automaticamente FFmpeg se manca FFmpeg o ffprobe; da CLI installa separatamente i motori necessari. Non servono account, chiavi API o invio dei file a un servizio cloud.
 
@@ -64,7 +64,7 @@ HTML → PDF usa il motore di LibreOffice per documenti HTML: supporta HTML/CSS 
 
 ## Immagini HEIC e AVIF
 
-Puoi leggere HEIC/HEIF e AVIF, convertirli nei formati immagine nativi o in PDF, e crearli dalle immagini supportate. In **Impostazioni → Motori** seleziona `heif-dec.exe` per leggere e `heif-enc.exe` per creare questi formati, oppure usa il download portabile aggiunto nel ramo di sviluppo. Gli strumenti di [libheif](https://github.com/strukturag/libheif) sono facoltativi e separati dall'app: mantieni insieme eseguibili, DLL e plugin. La build deve includere i codec HEVC/AV1 necessari. Puoi regolare larghezza e qualità; dei contenitori multipagina viene usata la prima immagine, senza conservare sequenze o animazioni.
+Puoi leggere HEIC/HEIF e AVIF, convertirli nei formati immagine nativi o in PDF, e crearli dalle immagini supportate. In **Impostazioni → Motori** seleziona `heif-dec.exe` per leggere e `heif-enc.exe` per creare questi formati, oppure usa il download portabile aggiunto nella versione 0.8.0. Gli strumenti di [libheif](https://github.com/strukturag/libheif) sono facoltativi e separati dall'app: mantieni insieme eseguibili, DLL e plugin. La build deve includere i codec HEVC/AV1 necessari. Puoi regolare larghezza e qualità; dei contenitori multipagina viene usata la prima immagine, senza conservare sequenze o animazioni.
 
 Gli altri formati immagine sono nativi e non richiedono FFmpeg. HDR non conserva la trasparenza, che viene composta su bianco. OpenEXR e HDR possono conservare valori a virgola mobile; convertirli in formati ordinari può ridurne precisione e gamma dinamica. JPEG XL, RAW fotografici e DDS non sono attualmente inclusi. I codec audio/video disponibili dipendono dalla build FFmpeg selezionata.
 
@@ -72,7 +72,7 @@ Gli altri formati immagine sono nativi e non richiedono FFmpeg. HDR non conserva
 
 Per un'immagine scegli **TXT · OCR locale**. Per un PDF scegli TXT, Word DOCX o HTML e abilita **OCR locale**: il riconoscimento è disattivato per default e, quando attivo, elabora tutte le pagine invece di estrarre il testo incorporato. Sono necessari [Tesseract](https://tesseract-ocr.github.io/tessdoc/Installation.html) e i [modelli delle lingue](https://github.com/tesseract-ocr/tessdata_fast); i PDF richiedono anche `pdftoppm.exe` di Poppler. In **Impostazioni → Motori** indica `tesseract.exe` e conserva accanto la cartella `tessdata` con i modelli richiesti, per esempio `ita.traineddata` e `eng.traineddata`.
 
-Il ramo di sviluppo aggiunge **Installa Tesseract** con i modelli italiano/inglese già compresi nel download; non occorre un setup manuale. Le altre lingue restano configurabili con i rispettivi modelli locali.
+La versione 0.8.0 aggiunge **Installa Tesseract** con i modelli italiano/inglese già compresi nel download; non occorre un setup manuale. Le altre lingue restano configurabili con i rispettivi modelli locali.
 
 La lingua predefinita è `ita+eng`; puoi scegliere altri codici Tesseract installati. I DPI PDF determinano la risoluzione delle pagine da riconoscere: 300 DPI è un punto di partenza utile. Le immagini vengono orientate secondo EXIF e la trasparenza viene composta su bianco. Il riconoscimento e il testo restano sul PC. Il riconoscimento può sbagliare e va riletto; non ricostruisce l'impaginazione e non aggiunge uno strato ricercabile al PDF originale. Se non viene riconosciuto testo, l'app segnala l'errore senza creare un risultato vuoto.
 

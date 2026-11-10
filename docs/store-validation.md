@@ -1,8 +1,20 @@
-# Verifiche tecniche — aggiornamento 9 novembre 2026
+# Verifiche tecniche — aggiornamento 10 novembre 2026
 
 Queste verifiche accompagnano la preparazione Store di Convert Here, sviluppato da Salvatore Corsi. Non equivalgono alla certificazione Microsoft e non sostituiscono l'identita reale di Partner Center.
 
-## Release 0.7.0 pubblicata / Store 1.0.6.0 in certificazione
+## Stato corrente: release 0.8.0 pubblicata / Store 1.0.8.0 in certificazione
+
+La [release GitHub 0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) è pubblicata dal **10 novembre 2026, 12:09:39 UTC**, dal commit pulito **`f1f3f95fceed52507ef715fa4ac6893acc63544a`**. [Windows checks 42811925135](https://github.com/salvatorecorsi/convert-here/actions/runs/42811925135) è **SUCCESS**; suite locale **400 test app + 18 DLL = 418 passati**, con un test facoltativo ignorato.
+
+Audit standalone e Store **PASS**: portable con **98 file** identici allo stage, tre binari corrispondenti alla provenienza, EXE 0.8.0, CRT statica e **277 componenti Windows** con avvisi. MSIX 1.0.8.0 di **9.342.790 byte**, SHA-256 `a7a010371015a69b798e255b373b90f6cfddf4fed4b5611bc7cd845f00c841f9`, con **57 elementi payload / 59 voci ZIP**, GUI e DLL senza CLI, motori o modelli; identità invariata, MinVersion **10.0.19041.0**, x64 e sola capability `runFullTrust`.
+
+Dai sorgenti finali sono passati veri controlli offline all-targets per app (**75,56 s**) e DLL (**4,02 s**) con cache e target inizialmente vuoti: **465 crate**, **24.338 file vendor**, **228 file tracciati** confrontati col commit. Non è attestata una build offline completa con linking. Smoke test dei binari finali **13/13** passati.
+
+La **Submission 5**, ID **1152921505702365703**, è stata inviata intorno alle **12:10 UTC**; l'overview mostra **Update in certification**. La precedente Store **1.0.7.0 è pubblicata**; la nuova 1.0.8.0 non è ancora dichiarata approvata o pubblica. **Installazione del nuovo MSIX, prova su host Windows 10 reale e WACK non eseguiti.** [Record completo, checksum, evidenze e limiti 0.8.0](store-testing-0.8.0.md).
+
+Le sezioni seguenti conservano le verifiche e gli stati storici al momento indicato.
+
+## Storico: release 0.7.0 / Store 1.0.6.0 — 9 novembre 2026
 
 La [release GitHub 0.7.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.0) è pubblicata dal **9 novembre 2026, 19:36:38 UTC**, commit `e4b41f66ce2d99c9c7bd528aa29733a71db2330d`. [Windows checks 42683376497](https://github.com/salvatorecorsi/convert-here/actions/runs/42683376497) è **SUCCESS**. L'aggiornamento Store **1.0.6.0** è stato caricato, validato e inviato per certificazione; non è ancora approvato o pubblicato.
 

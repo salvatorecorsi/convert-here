@@ -1,6 +1,20 @@
 # Microsoft Store: stato della submission
 
-## Stato corrente: GitHub 0.7.1 pubblicata / Store 1.0.7.0 in certificazione
+## Stato corrente: GitHub 0.8.0 pubblicata / Store 1.0.8.0 in certificazione
+
+La [release GitHub 0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) è pubblicata dal **10 novembre 2026, 12:09:39 UTC**, senza stato draft e come latest, dal commit pulito **`f1f3f95fceed52507ef715fa4ac6893acc63544a`**. [Windows checks 42811925135](https://github.com/salvatorecorsi/convert-here/actions/runs/42811925135) è **SUCCESS**, job verify **9 min 49 s**. I quattro asset pubblici hanno dimensioni e digest remoti uguali a quelli locali verificati. Tag, sorgenti e artefatti finali restano fissati al commit di build; questo aggiornamento documentale non li ricostruisce o sostituisce.
+
+La **Submission 5**, ID **1152921505702365703**, è stata inviata il **10 novembre 2026 intorno alle 12:10 UTC**. L'overview mostra **Update in certification**. Non vengono dedotte ulteriori fasi della timeline non mostrate. La pubblicazione automatica appena approvato è confermata, con prezzo **gratuito** e **240 mercati**. La nuova **1.0.8.0 non è ancora dichiarata approvata o disponibile nello Store**. La precedente **Submission 4 / Store 1.0.7.0** è stata invece verificata **pubblicata** il 10 novembre.
+
+Il MSIX **1.0.8.0** è stato caricato, salvato come **Validated** e sottoposto ad audit **PASS**: **9.342.790 byte**, SHA-256 **`a7a010371015a69b798e255b373b90f6cfddf4fed4b5611bc7cd845f00c841f9`**. Sono verificati **57 elementi payload / 59 voci ZIP**, GUI 0.8.0 e DLL, **277 componenti di dipendenze**, GPL e licenze complete, identità tecnica invariata, x64, MinVersion **10.0.19041.0** e sola capability **runFullTrust**. Il manifest mantiene COM surrogate/STA, CLSID e verbo **0000ConvertHere**. Il pacchetto contiene l'installer nativo dei motori, senza CLI separata, motori, modelli o script downloader. L'audit non installa il pacchetto, non esegue il payload e non modifica registro o certificati. WACK e prova del nuovo MSIX su Windows 10 reale non sono attestati.
+
+Schede italiana e inglese **salvate e rilette**, ciascuna con **20 funzionalità e quattro PNG 2562 × 1441**, con didascalie che dichiarano l'interfaccia italiana. Privacy nelle Properties e licenza nelle due schede puntano ai file pubblici del tag **v0.8.0**, con salvataggio completato. Le Additional Testing Information finali di **3.207 caratteri** sono salvate e rilette. La voce dell'accordo Windows **8.11** risultava già accettata il 4 novembre, **Action: N/A**; nessuna nuova accettazione è stata eseguita.
+
+Audit standalone **PASS**, **98 file** portable identici allo stage e tre binari uguali a `build-info.json`. Dai sorgenti finali estratti sono passati veri `cargo check --locked --offline --all-targets` per app (**75,56 s**) e DLL (**4,02 s**), con cache e target inizialmente vuoti, **465 crate**, **24.338 file vendor** e **228 file tracciati** corrispondenti al commit ammettendo soltanto CRLF → LF. Non è una build completa con linking. Smoke test dei binari finali **13/13 PASS**, con sorgenti preservate e nessuna sovrascrittura.
+
+Materiale corrente: [scheda IT](store-listing-it.md), [scheda EN](store-listing-en.md), note [IT](release-notes-0.8.0.md) / [EN](release-notes-0.8.0.en.md), [audit, digest e prove 0.8.0](store-testing-0.8.0.md), [verifiche tecniche](store-validation.md) e [provenienza delle quattro catture](store-assets/0.8.0/README.md). Evidenze locali: `.tools/github-release-080-verified.json`, `.tools/store-080-submission-state.txt`, `.tools/store-080-submission-proof.jpg`, `.tools/store-notes-080-verified.txt`, `.tools/store-listing-080-it-verified.json` e `.tools/store-listing-080-en-verified.json`. I report degli audit e del controllo offline sono elencati nel record di test.
+
+## Storico: GitHub 0.7.1 / Store 1.0.7.0 — stato osservato il 9 novembre
 
 La [release GitHub 0.7.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.1) è pubblicata dal **9 novembre 2026, 21:08:01 UTC**, commit pulito **2c6d6968159a46baef37d8f20aef049e7be4c8c4**. [Windows checks 42698306310](https://github.com/salvatorecorsi/convert-here/actions/runs/42698306310) è **SUCCESS**. Setup, portable, sorgenti vendorizzati e checksum sono verificati anche rispetto ai digest GitHub. Dai sorgenti estratti sono passati veri cargo check offline per app e DLL con cache inizialmente vuota: **68,45 s** e **3,92 s**, senza attestare una build completa con linking.
 
@@ -110,10 +124,10 @@ Il menu usa la DLL `IExplorerCommand`, COM surrogate e `windows.fileExplorerCont
 | Publisher display name | **Salvatore Corsi**, approvato; profilo **Authorized**, account **Active** e nome pubblico confermato in Legal info. |
 | Store ID | `9NPKPPCBNBM8`; l'identificativo non attesta la pubblicazione dell'app. |
 | Titolare e contatto | **Salvatore Corsi**, **salvo@salvatorecorsi.com**. |
-| Informativa privacy | [Versione 0.7.0 pubblica](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/privacy.md); URL salvato e riletto nelle Properties. |
+| Informativa privacy | [Versione 0.8.0 pubblica](https://github.com/salvatorecorsi/convert-here/blob/v0.8.0/docs/privacy.md); URL aggiornato e salvato nelle Properties della Submission 5. |
 | Supporto | **salvo@salvatorecorsi.com** oppure [pagina contatti](https://www.salvatorecorsi.com/contatti/), gia pubblici. Per PC il campo e facoltativo, ma consigliato. |
 | Prezzo, mercati e calendario | Scelte confermate dal proprietario e salvate: **Gratuita**, **tutti i 240 mercati disponibili**, **pubblicazione appena approvata**. |
-| Licenza applicazione Store | Codice originale **GPL-3.0-only**, Copyright (C) 2026 Salvatore Corsi. [Testo integrale 0.7.0](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/LICENSE); URL singolo nelle schede IT/EN salvate e rilette. Le licenze dei terzi restano invariate. |
+| Licenza applicazione Store | Codice originale **GPL-3.0-only**, Copyright (C) 2026 Salvatore Corsi. [Testo integrale 0.8.0](https://github.com/salvatorecorsi/convert-here/blob/v0.8.0/LICENSE); URL singolo aggiornato e salvato nelle schede IT/EN della Submission 5. Le licenze dei terzi restano invariate. |
 
 Riferimenti Microsoft: [privacy e supporto](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/support-info), [termini di licenza aggiuntivi](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-additional-information#additional-license-terms).
 

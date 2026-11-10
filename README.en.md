@@ -6,15 +6,15 @@
 
 Developed by **[Salvatore Corsi](https://github.com/salvatorecorsi)**, Convert Here is a free, open source program written in Rust. Use its window, the File Explorer context menu or the command line. Conversion and OCR run on your computer without uploading your files to an online service. No account, subscription, in-app purchases or usage-based charges. No payment is required to keep using it.
 
-[Download for Windows](https://github.com/salvatorecorsi/convert-here/releases/latest) · [Microsoft Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8) · [What's new in 0.7.1](docs/release-notes-0.7.1.en.md) · [Report a problem](https://github.com/salvatorecorsi/convert-here/issues)
+[Download for Windows](https://github.com/salvatorecorsi/convert-here/releases/latest) · [Microsoft Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8) · [What's new in 0.8.0](docs/release-notes-0.8.0.en.md) · [Report a problem](https://github.com/salvatorecorsi/convert-here/issues)
 
 **Convert Here is bilingual, in Italian and English.** Download the installer or portable package and choose a language in **Settings → Language**. See [Languages](#languages).
 
-**0.7.1 is published on GitHub** as of 9 November 2026, with a workaround for the Store package's Windows 10 context menu and refreshed app captures. The menu change has not yet been verified on a real Windows 10 host. [English notes](docs/release-notes-0.7.1.en.md) / [Italian](docs/release-notes-0.7.1.md). Features from 0.7.0 remain unchanged. The **Store 1.0.7.0 update is in certification**, with automatic publication after approval; the preceding 1.0.6.0 update was already approved. [Store status](docs/store-submission.md).
+**0.8.0 is published on GitHub** as of **10 November 2026, 12:09:39 UTC**, from clean commit `f1f3f95fceed52507ef715fa4ac6893acc63544a`. [English notes](docs/release-notes-0.8.0.en.md) / [Italian](docs/release-notes-0.8.0.md). The **Store 1.0.8.0 update has been submitted and is in certification**, with automatic publication after approval. Preceding **1.0.7.0 is published in the Store**; new 1.0.8.0 is not yet declared approved or available. [Store status](docs/store-submission.md).
 
-**0.8.0 candidate, not yet published:** native SVG input, an audio/video timeline editor, local audio/video-to-TXT transcription, and in-app downloads for Tesseract, libheif and Whisper + Tiny. The relevant sections describe this candidate; package links above still point to published 0.7.1. Candidate status does not imply approval or availability of a new Store update.
+**New in 0.8.0:** native SVG input, an audio/video timeline editor, local audio/video-to-TXT transcription, and in-app downloads for Tesseract, libheif and Whisper + Tiny. Package/source audits, offline checks and [Windows checks](https://github.com/salvatorecorsi/convert-here/actions/runs/42811925135) passed. WACK and testing the newly installed MSIX on a physical Windows 10 host are not attested.
 
-The [historical captures of preceding version 0.7.1](docs/store-assets/0.7.1/README.md) do not represent the 0.8.0 candidate interface.
+The [historical captures of preceding version 0.7.1](docs/store-assets/0.7.1/README.md) remain separate from the new 0.8.0 screenshots.
 
 ![Audio and video editor with a timeline and selected clip interval, shown in Italian](docs/store-assets/0.8.0/03-timeline-it.png)
 
@@ -22,10 +22,10 @@ The [historical captures of preceding version 0.7.1](docs/store-assets/0.7.1/REA
 
 ## What you can do
 
-- **Convert multiple files together**, with 44 output formats and, in the 0.8.0 candidate, 94 recognized input extensions including SVG.
+- **Convert multiple files together**, with 44 output formats and 94 recognized input extensions including SVG.
 - **Use the right-click menu** to queue quick conversions with your saved preferences or open custom settings.
 - **Convert audio and video**, extract audio from video, create animated GIFs and adjust quality, dimensions and time range.
-- **Trim audio/video on a timeline** and adjust gain/mute; transcribe speech to TXT with local Whisper in the candidate's new features.
+- **Trim audio/video on a timeline** and adjust gain/mute; transcribe speech to TXT with local Whisper.
 - **Convert and resize images**, create PDFs from images and work with HEIC/HEIF, AVIF, OpenEXR and HDR.
 - **Compress, split and merge PDFs**, including arranging individual pages from different images and documents.
 - **Extract text from images to TXT and from PDFs to TXT, Word DOCX or HTML**, with local OCR for scans.
@@ -40,12 +40,12 @@ Lay out images, text written in **New sheet…** or UTF-8 TXT on **A4/A5** witho
 
 ## Installation
 
-The GitHub distribution requires **Windows 10 build 19041 or later, x64**. The [0.7.1 release](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.1) offers:
+The GitHub distribution requires **Windows 10 build 19041 or later, x64**. The [0.8.0 release](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) offers:
 
 | Package | How to use it |
 | --- | --- |
-| [ConvertHere-0.7.1-windows-x64-setup.exe](https://github.com/salvatorecorsi/convert-here/releases/download/v0.7.1/ConvertHere-0.7.1-windows-x64-setup.exe) | Run the setup. It installs for your user without administrator privileges; optional context-menu integration is selected by default. |
-| [ConvertHere-0.7.1-windows-x64-portable.zip](https://github.com/salvatorecorsi/convert-here/releases/download/v0.7.1/ConvertHere-0.7.1-windows-x64-portable.zip) | Extract it to a stable folder and run `the-converter.exe`. It also includes the CLI and context-menu scripts. |
+| [ConvertHere-0.8.0-windows-x64-setup.exe](https://github.com/salvatorecorsi/convert-here/releases/download/v0.8.0/ConvertHere-0.8.0-windows-x64-setup.exe) | Run the setup. It installs for your user without administrator privileges; optional context-menu integration is selected by default. |
+| [ConvertHere-0.8.0-windows-x64-portable.zip](https://github.com/salvatorecorsi/convert-here/releases/download/v0.8.0/ConvertHere-0.8.0-windows-x64-portable.zip) | Extract it to a stable folder and run `the-converter.exe`. It also includes the CLI and context-menu scripts. |
 
 Check the packages against `SHA256SUMS.txt` from the same release. The executable names remain `the-converter.exe` and `the-converter-cli.exe`; some earlier releases display the name The Converter.
 
@@ -66,7 +66,7 @@ To uninstall, use **Windows Settings → Apps → Installed apps → Convert Her
 
 Preferences are saved between sessions. Originals and existing results are preserved: the app adds a number when a name is already taken. The interactive queue uses one format shared by the selection; convert categories in separate groups if they have no common destination.
 
-The sections separate tasks: **Files** prepares conversions, **History** shows active jobs and previous results, **Settings** configures engines, outputs and appearance, and **Profiles** manages recipes. In the 0.8.0 candidate, Files, History and Profiles are on the left, with Settings on the right. History also retains results from the main window, editors and PDF Merge between sessions.
+The sections separate tasks: **Files** prepares conversions, **History** shows active jobs and previous results, and **Profiles** manages recipes on the left; **Settings** configures engines, outputs and appearance on the right. History also retains results from the main window, editors and PDF Merge between sessions.
 
 ### From the File Explorer context menu
 
@@ -97,7 +97,7 @@ Enable every format, restore the common formats or choose individual outputs. Th
 | XLS/XLSX/XLSM, ODS, CSV | CSV, Excel XLSX, PDF | LibreOffice |
 | HTML/HTM | PDF | LibreOffice |
 
-The 0.8.0 candidate also accepts **SVG** as image/PDF input, rasterized locally with resvg without external engines. It accepts self-contained static UTF-8 SVG; SVGZ, external resources and embedded raster images are unsupported. SVG is not a new output format.
+0.8.0 accepts **SVG** as image/PDF input, rasterized locally with resvg without external engines. It accepts self-contained static UTF-8 SVG; SVGZ, external resources and embedded raster images are unsupported. SVG is not a new output format.
 
 Adjust audio bitrate, sample rate, channels and normalization; video H.264/H.265 codec, quality, width, FPS and trimming; image resizing, JPEG quality and PDF DPI. The app shows the relevant controls for each format. Available audio/video codecs depend on the configured FFmpeg build.
 
@@ -131,7 +131,7 @@ OCR uses **Tesseract** with installed language models; PDFs also require **Poppl
 
 Recognized text stays on your PC. Review it for errors: OCR does not recreate the layout or add a searchable layer to the original PDF. PDF-to-DOCX/HTML exports reconstruct text and page separation without original images, tables or formatting.
 
-### Audio/video timeline and transcription — 0.8.0 candidate
+### Audio/video timeline and transcription
 
 **Edit…** beside an audio or video opens a single track with a source waveform and frame strip. Drag the start/end handles or use numeric times and the keyboard; adjust gain from **−60 to +20 dB** or mute. **Save as…** converts only that file to a new destination; **Use these settings** returns trimming and options to the active settings. You can save the recipe as a profile. Previews show the source before effects; the editor has no playback or multitrack editing.
 
@@ -156,15 +156,15 @@ Open **Settings → Conversion engines** to detect installed tools or choose the
 | **FFmpeg** | Audio, video, audio extraction and GIFs from video | Download in the app or select `ffmpeg.exe` |
 | **Poppler** | PDF images, embedded text and page preparation for OCR | Download in the app or select `pdftoppm.exe`, `pdftotext.exe` and `pdfinfo.exe` |
 | **LibreOffice** | Office documents, Excel/CSV and HTML | Local installation and `soffice.exe` path |
-| **Tesseract** | OCR | In development: a download with Italian/English; existing `tesseract.exe` and language models remain selectable |
-| **libheif** | Reading and creating HEIC/HEIF and AVIF | In development: a portable download; existing `heif-dec.exe` and `heif-enc.exe` with DLLs/plugins remain selectable |
-| **Whisper + Tiny** | Audio/video → TXT, in development | Download the CPU runtime and multilingual model; FFmpeg required |
+| **Tesseract** | OCR | Download with Italian/English; existing `tesseract.exe` and language models remain selectable |
+| **libheif** | Reading and creating HEIC/HEIF and AVIF | Portable download; existing `heif-dec.exe` and `heif-enc.exe` with DLLs/plugins remain selectable |
+| **Whisper + Tiny** | Audio/video → TXT | Download the CPU runtime and multilingual model; FFmpeg required |
 
-**Download FFmpeg and Poppler directly from the app**, including the portable edition. Before confirmation, you see the source, version, size, licenses and installation folder. In 0.7.1, both archives require about **159 MB of downloads** and about **615 MB of free space** during download and extraction. SHA-256 checksums are verified and licenses and documentation are retained.
+**Download FFmpeg and Poppler directly from the app**, including the portable edition. Before confirmation, you see the source, version, size, licenses and installation folder. In 0.8.0, both archives require about **159 MB of downloads** and about **615 MB of free space** during download and extraction. SHA-256 checksums are verified and licenses and documentation are retained.
 
 Downloading starts only after confirmation. Engines use your user folder; files to convert stay on your PC. [Historical confirmation dialog](https://github.com/salvatorecorsi/convert-here/blob/v0.7.0/docs/screenshots/en-download-engines.jpg).
 
-The 0.8.0 candidate adds portable **Tesseract 5.5.4** with `ita`/`eng`, **libheif 1.23.7**, and **Whisper + Tiny**, retaining MSYS2 UCRT64 dependencies and licenses. These are optional downloads into your personal folder, not system installers; LibreOffice remains separately configured. See the [configuration guide](docs/configuration.en.md) for paths, sources, preferences and queue recovery.
+0.8.0 adds portable **Tesseract 5.5.4** with `ita`/`eng`, **libheif 1.23.7**, and **Whisper + Tiny**, retaining MSYS2 UCRT64 dependencies and licenses. These are optional downloads into your personal folder, not system installers; LibreOffice remains separately configured. See the [configuration guide](docs/configuration.en.md) for paths, sources, preferences and queue recovery.
 
 ## Languages
 
@@ -172,13 +172,13 @@ The app and File Explorer menu support **Italian and English** from version 0.5.
 
 The installer supports Italian and English. The CLI uses stable English option names; `--language system|it|en` selects the language for that invocation without changing saved preferences. Messages from Windows and external engines may follow their own language settings.
 
-The installer and portable packages in [GitHub release 0.7.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.7.1) include the bilingual interface ready to use.
+The installer and portable packages in [GitHub release 0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) include the bilingual interface ready to use.
 
 **OCR supports the languages of the installed Tesseract models**: Italian and English are the default; the app also offers French, German, Spanish and a field for other codes. Recognition language is independent of interface language.
 
 ## Data and privacy
 
-Conversion, OCR and the transcription under development run locally. Preferences, queue records and reports are stored on the device and may contain paths and errors. There is no telemetry, advertising or app account registration. Optional downloads contact engine/model providers without uploading the content to process.
+Conversion, OCR and transcription run locally. Preferences, queue records and reports are stored on the device and may contain paths and errors. There is no telemetry, advertising or app account registration. Optional downloads contact engine/model providers without uploading the content to process.
 
 Optional engine downloads require Internet access and contact the distributors; opening HTML may load linked images or CSS, including remote resources, through LibreOffice. The app preserves originals and does not send files to a developer server. [Privacy statement (Italian and English)](docs/privacy.md).
 
@@ -218,4 +218,4 @@ The [developer guide](docs/development.en.md) describes tests, distribution buil
 
 Copyright (C) 2026 Salvatore Corsi. The original code is licensed under **GNU GPL version 3 only** (`GPL-3.0-only`), without warranty under the terms of the [complete license](LICENSE). The project continues the work of [Final Converter](https://github.com/salvatorecorsi/final-converter).
 
-Sources are public; the release includes `ConvertHere-0.7.1-source.zip` with both lockfiles, vendored Cargo dependencies and offline build instructions. Conversion does not change the rights to your content or impose the GPL on results solely through use of the program. Dependencies, fonts and engines retain their own licenses: [third-party notices](THIRD-PARTY-NOTICES.md) and [license texts](docs/release-licenses/README.md).
+Sources are public; the release includes [ConvertHere-0.8.0-source.zip](https://github.com/salvatorecorsi/convert-here/releases/download/v0.8.0/ConvertHere-0.8.0-source.zip) with both lockfiles, **465 vendored crates** and offline build instructions. Offline checks for the app and DLL passed with an initially empty cache; they do not attest a full linked build. Conversion does not change the rights to your content or impose the GPL on results solely through use of the program. Dependencies, fonts and engines retain their own licenses: [third-party notices](THIRD-PARTY-NOTICES.md) and [license texts](docs/release-licenses/README.md).

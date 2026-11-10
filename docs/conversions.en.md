@@ -4,9 +4,9 @@
 
 This guide describes Convert Here's destinations, options and limitations. Start with the [README](../README.en.md); see [Configuration and engines](configuration.en.md) to set up external tools.
 
-**0.8.0 candidate, not yet published:** native SVG, the audio/video editor, speech transcription and the additional engine downloads described below belong to this candidate. References to development describe the candidate, not the published release linked in the README.
+**Status on 10 November 2026:** [0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) published on GitHub at **12:09:39 UTC**, commit `f1f3f95fceed52507ef715fa4ac6893acc63544a`. Store **1.0.8.0**, Submission 5 (`1152921505702365703`): **Update in certification**, not yet approved or published in the Store.
 
-The development branch recognizes **94 input extensions** and retains **44 output formats**. In **Settings → Output formats**, choose which outputs appear in the app selector and Explorer menu, grouped into audio, video, images, documents and **Raw**. **MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4** remain enabled by default; enable **TXT** in Raw for OCR or transcription. Preferences are saved and the menu rereads them without restarting Explorer. **Custom settings…** remains available even when every output is hidden. The display filter only controls visible outputs: it does not disable inputs, the CLI, explicit `--quick` requests or existing queued jobs. Compatible destinations depend on the source category and the selected engines' codecs.
+Version 0.8.0 recognizes **94 input extensions** and retains **44 output formats**. In **Settings → Output formats**, choose which outputs appear in the app selector and Explorer menu, grouped into audio, video, images, documents and **Raw**. **MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4** remain enabled by default; enable **TXT** in Raw for OCR or transcription. Preferences are saved and the menu rereads them without restarting Explorer. **Custom settings…** remains available even when every output is hidden. The display filter only controls visible outputs: it does not disable inputs, the CLI, explicit `--quick` requests or existing queued jobs. Compatible destinations depend on the source category and the selected engines' codecs.
 
 ## Supported inputs and outputs
 
@@ -15,8 +15,8 @@ The development branch recognizes **94 input extensions** and retains **44 outpu
 | Audio: MP3, MPGA, WAV, FLAC, AAC, M4A/M4B, OGG/OGA, Opus, AIFF/AIF/AIFC, WMA, ALAC, APE, MKA, MP2, WebA, AC3, AU, CAF, AMR, DTS, TTA, VOC, WV, TAK, W64, RA | MP3, WAV, FLAC, AAC, OGG, Opus, AIFF, M4A (AAC), WMA, AC3, AU, CAF (ALAC) | FFmpeg |
 | Video: MP4, MKV, MOV, WebM, AVI, WMV, MPEG/MPG, M4V, TS/MTS/M2TS/M2T, 3GP/3G2, FLV, ASF, VOB, OGV, M2V, MXF, F4V, DivX, MPE, MPV | MP4, MKV, MOV, WebM, AVI, animated GIF, MPEG, WMV, FLV, TS, M4V, 3GP; audio extraction to the twelve audio formats above | FFmpeg |
 | Native images: PNG, JPEG/JPG, WebP, BMP, TIFF/TIF, GIF, ICO, QOI, TGA, Farbfeld (.ff), OpenEXR, HDR, PNM/PAM/PBM/PGM/PPM | PNG, JPEG, WebP, BMP, TIFF, GIF, ICO, PDF, QOI, TGA, Farbfeld, OpenEXR, HDR, PNM; HEIC, AVIF; TXT with OCR | Rust for native formats and PDF; libheif to create HEIC/AVIF; Tesseract for TXT |
-| Static UTF-8 SVG, in development | Native image formats and PDF after rasterization; HEIC/AVIF or TXT with the same optional engines as other images | Built-in resvg; no external engine for raster/PDF |
-| Audio/video → text, in development | TXT from speech | FFmpeg + Whisper + multilingual Tiny model, all local |
+| Static UTF-8 SVG | Native image formats and PDF after rasterization; HEIC/AVIF or TXT with the same optional engines as other images | Built-in resvg; no external engine for raster/PDF |
+| Audio/video → text | TXT from speech | FFmpeg + Whisper + multilingual Tiny model, all local |
 | HEIC/HEIF, AVIF | Image destinations above, PDF and TXT with OCR | libheif for reading; Tesseract for TXT |
 | PDF | PNG/JPEG, one image per page; TXT, Word DOCX and HTML from embedded text or OCR | Poppler for images and embedded text; Tesseract + Poppler for OCR; the app reconstructs DOCX and HTML |
 | PDF | Losslessly compressed PDF, one PDF per page, merging multiple PDFs | Rust, without external engines |
@@ -38,19 +38,19 @@ The editor adds crop, resize, canvas and adjustable JPEG/WebP quality, with prev
 
 Images, UTF-8 TXT and typed text can be laid out natively on A4/A5 with custom margins and orientation. This TXT path is enabled by page settings; traditional TXT conversion and other Office documents retain LibreOffice. The editor does not edit the full contents of PDF or Word documents. [Editor and profiles guide](image-editor-profiles.en.md).
 
-## Native SVG — in development
+## Native SVG
 
 Static SVG uses built-in **resvg 0.49** and enters the same image editor and encoders as raster images. It can be resized, converted to native image formats or laid out in PDF without FFmpeg or LibreOffice. PDF output contains a rasterized image, not editable vectors. Text uses the bundled Ubuntu-Light font; unavailable fonts can change the appearance.
 
 Input must be uncompressed UTF-8 SVG, at most **4 MiB**. Raster dimensions are limited to **40 million pixels** and **32,768 pixels per side**. SVGZ, DTDs, scripts, `foreignObject`, `marker`, `tref`, external resources and embedded raster images are rejected. Before conversion, the renderer bounds nodes, paths and text including `use` expansions and `textPath` references. The conservative **4 MiB** attribute/CSS budget treats every value as applied to every expanded node, including inheritance; rendering memory is also bounded. SVG is an input format; there is no SVG output.
 
-## Audio/video editor — in development
+## Audio/video editor
 
 Choose **Edit…** beside an audio or video file. A single timeline shows the source waveform and, for video, a strip of source frames when previews are available. Drag the in/out handles or enter seconds. With the timeline focused, **Space** selects a handle, **←/→** moves it by 0.1 seconds, **Shift** uses 1-second steps, **Alt** uses 0.01-second steps, and **Home/End** moves it to a boundary. Long or unsupported sources can lack a preview while numeric trimming remains available.
 
 Gain ranges from **−60 to +20 dB**, with mute. This is a simple volume adjustment, not a limiter; positive gain can clip. If normalization is enabled, gain is applied afterwards. **Save as…** converts the selected interval to one new file without overwriting an existing file. **Use these settings** updates the active conversion settings without automatically saving an output; **Save profile…** stores the recipe. There is no playback or multitrack editing.
 
-## Local audio/video → TXT transcription — in development
+## Local audio/video → TXT transcription
 
 Enable **TXT** under **Settings → Output formats → Raw**, then select TXT for an audio or video file. Transcription uses local **FFmpeg/ffprobe**, the **Whisper CPU runtime** and **Tiny multilingual**, whose model is **77,691,713 bytes**. The optional Whisper package and model total about **88 MB**, separate from FFmpeg. The app's Whisper download selection also adds FFmpeg when FFmpeg or ffprobe is missing; CLI installation requires the separate FFmpeg command. No account, API key or cloud transcription is used.
 
@@ -68,7 +68,7 @@ HTML-to-PDF uses LibreOffice's HTML document engine: it supports basic HTML/CSS 
 
 ## HEIC and AVIF images
 
-Read HEIC/HEIF and AVIF, convert them to native image formats or PDF, and create HEIC or AVIF from supported images. The development branch offers an optional portable libheif download in **Settings → Conversion engines**. Alternatively, select local `heif-dec.exe` for reading and `heif-enc.exe` for creating these formats. The [libheif](https://github.com/strukturag/libheif) tools are not bundled with the app: keep their executables, DLLs and plugins together. The build must include the required HEVC/AV1 decoders and encoders; missing codecs are reported by the engine. Width and quality are adjustable. Only the first image of a multi-image container is used; sequences and animations are not preserved.
+Read HEIC/HEIF and AVIF, convert them to native image formats or PDF, and create HEIC or AVIF from supported images. Version 0.8.0 offers an optional portable libheif download in **Settings → Conversion engines**. Alternatively, select local `heif-dec.exe` for reading and `heif-enc.exe` for creating these formats. The [libheif](https://github.com/strukturag/libheif) tools are not bundled with the app: keep their executables, DLLs and plugins together. The build must include the required HEVC/AV1 decoders and encoders; missing codecs are reported by the engine. Width and quality are adjustable. Only the first image of a multi-image container is used; sequences and animations are not preserved.
 
 Other image formats are native and do not require FFmpeg. HDR does not preserve transparency; transparent areas are composited on white. OpenEXR and HDR can retain floating-point values; ordinary image formats may reduce their precision and dynamic range. JPEG XL, photographic RAW and DDS are not currently included. Audio/video codec availability depends on the selected FFmpeg build.
 
@@ -76,7 +76,7 @@ Other image formats are native and do not require FFmpeg. HDR does not preserve 
 
 For an image, choose **TXT · Local OCR**. For a PDF, select TXT, Word DOCX or HTML and enable **Recognize scanned pages with local OCR**: PDF OCR is off by default. When enabled, it processes every page instead of extracting embedded text. Install [Tesseract](https://tesseract-ocr.github.io/tessdoc/Installation.html) and the [language models](https://github.com/tesseract-ocr/tessdata_fast); PDFs also require Poppler's `pdftoppm.exe`. In **Settings → Conversion engines**, select `tesseract.exe` and keep the `tessdata` folder beside it with the required models, such as `ita.traineddata` and `eng.traineddata`.
 
-The development branch also offers a single-click portable **Tesseract 5.5.4 + Italian/English models** download in Settings. It uses MSYS2 packages, without a system installer or administrator permissions. Other OCR languages still require their own installed models.
+Version 0.8.0 also offers a single-click portable **Tesseract 5.5.4 + Italian/English models** download in Settings. It uses MSYS2 packages, without a system installer or administrator permissions. Other OCR languages still require their own installed models.
 
 The default OCR language is `ita+eng`; other installed Tesseract codes can be selected. This does not change the interface language. PDF DPI sets the resolution of pages sent for recognition; 300 DPI is a useful starting point. Images are oriented using EXIF and transparency is composited on white. Recognition and the resulting text stay on your PC. Review the result for errors: OCR does not reconstruct layout or add a searchable layer to the original PDF. If no text is recognized, the app reports an error rather than creating an empty result.
 

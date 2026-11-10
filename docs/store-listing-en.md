@@ -1,6 +1,6 @@
 # Microsoft Store listing — English (en-US)
 
-**Draft for Convert Here 0.8.0 / Store 1.0.8.0 candidate**, developer and publisher **Salvatore Corsi**. Not yet published, uploaded or submitted; candidate text and new screenshots are not attested as saved in the portal. Exactly **20 features** are prepared. The historical 0.7.1 status remains in [its record](store-testing-0.7.1.md); no new Store-status check is claimed here. No physical Windows 10 host test or WACK. Do not copy this preamble into public fields.
+**Convert Here 0.8.0 / Store 1.0.8.0**, developer and publisher **Salvatore Corsi**. English listing **saved and reread** in **Submission 5, ID 1152921505702365703**, with **20 features and four PNGs**; package uploaded, saved and **Validated**. GitHub release published on 10 November 2026 at 12:09:39 UTC; Submission 5 submitted at about 12:10 UTC, status **Update in certification**. Preceding Store 1.0.7.0 was verified published on 10 November 2026; this does not attest approval of 1.0.8.0. No physical Windows 10 host test or WACK. Do not copy this preamble into public fields.
 
 ## Short description
 
@@ -104,7 +104,7 @@ Native static SVG, an audio/video timeline with trimming and gain, and local TXT
 3. Audio/video editor: timeline, selected interval and gain. Italian interface shown.
 4. Local TXT transcription with language selection and clip trimming. Italian interface shown.
 
-The [four native 0.8.0 captures](store-assets/0.8.0/README.md) are **2562 × 1441 PNGs**, without the pointer, from debug build 0.8.0 at 150% UI zoom, without later upscaling. The previous gallery remains historical. Saving the new images in the portal is not yet attested.
+The [four native 0.8.0 captures](store-assets/0.8.0/README.md) are **2562 × 1441 PNGs**, without the pointer, from debug build 0.8.0 at 150% UI zoom, without later upscaling. They are saved and reread in Submission 5's English listing; the previous gallery remains historical. They are not captures of the newly installed MSIX.
 
 ## Copyright and additional license terms
 
@@ -112,10 +112,10 @@ The [four native 0.8.0 captures](store-assets/0.8.0/README.md) are **2562 × 144
 Copyright (C) 2026 Salvatore Corsi.
 ```
 
-The project is GPL-3.0-only. Use the [current full license](../LICENSE). After tag publication, the planned public reference is `https://github.com/salvatorecorsi/convert-here/blob/v0.8.0/LICENSE`; that tag and URL are not yet attested as published. The planned source asset is `ConvertHere-0.8.0-source.zip`, with vendored dependencies and offline instructions. Third parties retain original licenses and copyright.
+The project is GPL-3.0-only. The [full text at public tag v0.8.0](https://github.com/salvatorecorsi/convert-here/blob/v0.8.0/LICENSE) is saved in the license field. Final `ConvertHere-0.8.0-source.zip`, with vendored dependencies and offline instructions, is verified and published in [GitHub release 0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0). Third parties retain original licenses and copyright.
 
 ## Submission references
 
-Data controller, developer and publisher: **Salvatore Corsi**. Support/privacy: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Candidate privacy statement](privacy.md), [engine pins and licenses](release-licenses/EXTERNAL-ENGINES.md), [0.8.0 testing](store-testing-0.8.0.en.md), [submission procedure and status](store-submission.md).
+Data controller, developer and publisher: **Salvatore Corsi**. Support/privacy: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [0.8.0 privacy statement](privacy.md), [engine pins and licenses](release-licenses/EXTERNAL-ENGINES.md), [0.8.0 testing](store-testing-0.8.0.en.md), [submission procedure and status](store-submission.md).
 
-Candidate text and screenshots are not yet attested as saved in the portal. Historical status does not imply 0.8.0 upload, certification or publication. Description: 10,000 characters maximum; short description: 1,000; exactly **20 features** within 200 characters each; release notes: 1,500. [MSIX field limits](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).
+Text, **20 features**, captions and four screenshots are saved and verified after rereading the portal; local record `.tools/store-listing-080-en-verified.json`. Privacy and license point to tag v0.8.0. Uploading and saving do not imply 1.0.8.0 certification or publication. Description: 10,000 characters maximum; short description: 1,000; features: 200 characters each; release notes: 1,500. [MSIX field limits](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).

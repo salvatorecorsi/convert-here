@@ -4,7 +4,7 @@
 
 Convert Here's CLI converts files, automates processing and installs optional engines. Run the PowerShell examples from the app folder. See the [format guide](conversions.en.md) for conversion requirements.
 
-**0.8.0 candidate, not yet published:** SVG, audio/video → TXT, the media editor and Tesseract/libheif/Whisper installation examples require this candidate described in the README. References to development describe the candidate.
+**Status on 10 November 2026:** [0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) published on GitHub at **12:09:39 UTC**, commit `f1f3f95fceed52507ef715fa4ac6893acc63544a`. Store **1.0.8.0**, Submission 5 (`1152921505702365703`): **Update in certification**, not yet approved or published in the Store.
 
 Use the dedicated console executable for output, diagnostics and reliable exit codes:
 
@@ -39,7 +39,7 @@ Use the dedicated console executable for output, diagnostics and reliable exit c
 
 `--convert` runs without a UI, continues with other files after an error and exits with a nonzero code if any conversion fails. Ctrl+C cancels processing and cleans temporary files. Paths are passed directly to processes without shell interpolation.
 
-`--install-runtime ffmpeg|poppler|tesseract|libheif|whisper` is a separate mode: it explicitly downloads a pinned, verified engine, without conversion options or input files. The last three values are additions in development. It writes into `%LOCALAPPDATA%\ConvertHere\tools`, preserves licenses and documentation and does not execute the downloaded program. Tesseract includes `ita`/`eng` models; Whisper includes Tiny multilingual. Ctrl+C cancels the operation. The optional `install-runtime-tools.ps1 -InstallDirectory <app-folder> -Engine ffmpeg` script calls the same CLI; omit `-Engine` to request **FFmpeg and Poppler**. The app folder locates the CLI; it is not the engine destination.
+`--install-runtime ffmpeg|poppler|tesseract|libheif|whisper` is a separate mode: it explicitly downloads a pinned, verified engine, without conversion options or input files. The last three values are available in version 0.8.0. It writes into `%LOCALAPPDATA%\ConvertHere\tools`, preserves licenses and documentation and does not execute the downloaded program. Tesseract includes `ita`/`eng` models; Whisper includes Tiny multilingual. Ctrl+C cancels the operation. The optional `install-runtime-tools.ps1 -InstallDirectory <app-folder> -Engine ffmpeg` script calls the same CLI; omit `-Engine` to request **FFmpeg and Poppler**. The app folder locates the CLI; it is not the engine destination.
 
 For audio/video → TXT, install **both FFmpeg and Whisper**: the CLI Whisper command does not automatically add FFmpeg. Transcription runs on the PC, without an account or API key. Without specific settings, language is detected automatically. `--language` selects the app language and `--ocr-language` selects OCR language; neither selects speech language. Set `speech.language` in JSON for the latter.
 

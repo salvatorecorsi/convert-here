@@ -4,7 +4,7 @@
 
 This guide describes Convert Here's settings. Start with the [README](../README.en.md); see the [format guide](conversions.en.md) for available conversions.
 
-**0.8.0 candidate, not yet published:** SVG, the audio/video editor, transcription and additional engine downloads described as in development belong to this candidate, not the published release linked in the README.
+**Status on 10 November 2026:** [0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) published on GitHub at **12:09:39 UTC**, commit `f1f3f95fceed52507ef715fa4ac6893acc63544a`. Store **1.0.8.0**, Submission 5 (`1152921505702365703`): **Update in certification**, not yet approved or published in the Store.
 
 ## Interface language
 
@@ -30,18 +30,18 @@ For OCR, configure `tesseract.exe` and keep `tessdata` beside it with the requir
 
 For libheif, keep `heif-dec.exe` and `heif-enc.exe` with DLLs and plugins from the same distribution. The build must include the necessary HEVC/AV1 decoders and encoders.
 
-For transcription in development, configure `whisper-cli.exe` and the `ggml-tiny.bin` model. FFmpeg and ffprobe are also required: the Whisper runtime alone does not read every audio/video container directly. Speech language and CPU threads are configured in transcription controls, separately from interface and OCR language. Automatic language detection is the default; profiles store `speech.language` and `speech.threads`.
+For transcription, configure `whisper-cli.exe` and the `ggml-tiny.bin` model. FFmpeg and ffprobe are also required: the Whisper runtime alone does not read every audio/video container directly. Speech language and CPU threads are configured in transcription controls, separately from interface and OCR language. Automatic language detection is the default; profiles store `speech.language` and `speech.threads`.
 
 ## Optional engine downloads
 
-App packages do not contain external engines or the speech model. Request only those needed in **Settings → Conversion engines**. The development branch adds Tesseract, libheif and Whisper + Tiny to FFmpeg and Poppler downloads. Confirmation displays the source, version, download size, extracted space, licenses and destination. Installation uses only the personal folder `%LOCALAPPDATA%\ConvertHere\tools`, without UAC or a system installer.
+App packages do not contain external engines or the speech model. Request only those needed in **Settings → Conversion engines**. Version 0.8.0 adds Tesseract, libheif and Whisper + Tiny to FFmpeg and Poppler downloads. Confirmation displays the source, version, download size, extracted space, licenses and destination. Installation uses only the personal folder `%LOCALAPPDATA%\ConvertHere\tools`, without UAC or a system installer.
 
 | Engine | Pinned distribution | Download |
 | --- | --- | --- |
 | FFmpeg + Poppler | [FFmpeg 9.0.2 Gyan](https://github.com/GyanD/codexffmpeg/releases/tag/9.0.2) and [Poppler 26.09.0](https://github.com/oschwartz10612/poppler-windows/releases/tag/v26.09.0-0) | 158,478,032 bytes combined; about 615 MB free during downloading/extraction |
-| Tesseract + ita/eng, in development | [Tesseract 5.5.4 from MSYS2](https://packages.msys2.org/packages/mingw-w64-ucrt-x86_64-tesseract-ocr) and OCR models | 38,276,135 bytes; about 60 MB extracted |
-| libheif, in development | [libheif 1.23.7 from MSYS2](https://packages.msys2.org/packages/mingw-w64-ucrt-x86_64-libheif) | 28,215,281 bytes; about 71.4 MB extracted |
-| Whisper + Tiny, in development | [Whisper 1.9.5.r258 from MSYS2](https://packages.msys2.org/packages/mingw-w64-ucrt-x86_64-whisper.cpp) and [Tiny multilingual](https://huggingface.co/ggerganov/whisper.cpp) | 87,939,016 bytes, including the 77,691,713-byte model; about 101.5 MB extracted |
+| Tesseract + ita/eng | [Tesseract 5.5.4 from MSYS2](https://packages.msys2.org/packages/mingw-w64-ucrt-x86_64-tesseract-ocr) and OCR models | 38,276,135 bytes; about 60 MB extracted |
+| libheif | [libheif 1.23.7 from MSYS2](https://packages.msys2.org/packages/mingw-w64-ucrt-x86_64-libheif) | 28,215,281 bytes; about 71.4 MB extracted |
+| Whisper + Tiny | [Whisper 1.9.5.r258 from MSYS2](https://packages.msys2.org/packages/mingw-w64-ucrt-x86_64-whisper.cpp) and [Tiny multilingual](https://huggingface.co/ggerganov/whisper.cpp) | 87,939,016 bytes, including the 77,691,713-byte model; about 101.5 MB extracted |
 
 The [portable package catalogue](../src/runtime_install/portable-packages.json) records pinned versions, sources and SHA-256 values for Tesseract, libheif and Whisper/Tiny. SHA-256 is checked before extraction; licenses and documentation are preserved. Downloading does not execute the tools. Portable distributions include the required dependencies; Whisper provides a generic CPU backend without requiring manual Visual C++ runtime installation.
 
@@ -62,19 +62,19 @@ The setup does not start downloads or add a Start menu shortcut for installing e
 .\scripts\install-runtime-tools.ps1 -InstallDirectory "C:\Programs\ConvertHere" -Engine ffmpeg
 ```
 
-The three additional commands belong to the development branch. The CLI installs only the requested engine: install FFmpeg separately for transcription. The script calls the same CLI; omitting `-Engine` requests **FFmpeg and Poppler**, not every engine. `-InstallDirectory` locates the app folder, not the engine destination. Distributors are contacted only when you run the command. [CLI guide](command-line.en.md).
+The three additional commands are available in version 0.8.0. The CLI installs only the requested engine: install FFmpeg separately for transcription. The script calls the same CLI; omitting `-Engine` requests **FFmpeg and Poppler**, not every engine. `-InstallDirectory` locates the app folder, not the engine destination. Distributors are contacted only when you run the command. [CLI guide](command-line.en.md).
 
 ## Visible formats and appearance
 
 In **Settings → Output formats**, choose which destinations appear in the app and Explorer menu, grouped into audio, video, images, documents and **Raw**. The initial eight outputs remain MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4. Enable **TXT** in Raw to show OCR and transcription.
 
-Choices are saved and the menu rereads them without restarting Explorer. **Custom settings…** stays available even if all outputs are disabled. The filter does not disable inputs, the CLI, explicit `--quick` requests or already queued jobs. The development branch retains 44 output formats and recognizes 94 input extensions, including SVG. **Files**, **History** and **Profiles** sit on the left of navigation; **Settings** is on the right.
+Choices are saved and the menu rereads them without restarting Explorer. **Custom settings…** stays available even if all outputs are disabled. The filter does not disable inputs, the CLI, explicit `--quick` requests or already queued jobs. Version 0.8.0 retains 44 output formats and recognizes 94 input extensions, including SVG. **Files**, **History** and **Profiles** sit on the left of navigation; **Settings** is on the right.
 
 For appearance, follow the Windows theme or select **Light** or **Dark**.
 
 ## Personal profiles
 
-The **Profiles** tab creates, edits, duplicates, renames and deletes recipes and selects a default. Store up to **32 profiles**, with **8 visible in Convert to** when their output is enabled and every selected input is compatible. Allow all compatible inputs or restrict a recipe to selected extensions; this does not change the development branch's 94 recognized input extensions. Reopen the Explorer menu after changing a profile. Already queued jobs retain their recipe. PDF Merge profiles require at least two files and open page ordering.
+The **Profiles** tab creates, edits, duplicates, renames and deletes recipes and selects a default. Store up to **32 profiles**, with **8 visible in Convert to** when their output is enabled and every selected input is compatible. Allow all compatible inputs or restrict a recipe to selected extensions; this does not change version 0.8.0's 94 recognized input extensions. Reopen the Explorer menu after changing a profile. Already queued jobs retain their recipe. PDF Merge profiles require at least two files and open page ordering.
 
 **Import JSON…**, **Export…** and **Export all…** transfer recipes. JSON contains parameters, input filters, visibility and an optional output folder, without engine paths or sample content. Import is atomic, creates new copies and never overwrites profiles. Recipes beyond the eight visible entries are imported hidden; files over 256 KiB or imports exceeding 32 total profiles are rejected. User-defined names are not translated. [Complete guide and JSON example](image-editor-profiles.en.md).
 

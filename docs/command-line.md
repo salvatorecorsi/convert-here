@@ -4,7 +4,7 @@
 
 La CLI di Convert Here permette di convertire file, automatizzare elaborazioni e installare i motori opzionali. Esegui gli esempi PowerShell dalla cartella dell'app. Per i requisiti delle singole conversioni, consulta la [guida ai formati](conversions.md).
 
-**Candidata 0.8.0, non ancora pubblicata:** gli esempi SVG, audio/video → TXT, editor audio/video e installazione Tesseract/libheif/Whisper richiedono questa candidata descritta nel README. Le indicazioni «in sviluppo» si riferiscono alla candidata.
+**Stato al 10 novembre 2026:** [0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) pubblicata su GitHub alle **12:09:39 UTC**, commit `f1f3f95fceed52507ef715fa4ac6893acc63544a`. Store **1.0.8.0**, Submission 5 (`1152921505702365703`): **Update in certification**, non ancora approvata o pubblicata sullo Store.
 
 Usa l'eseguibile console dedicato, che restituisce output, diagnostica e codici di uscita affidabili:
 
@@ -39,7 +39,7 @@ Usa l'eseguibile console dedicato, che restituisce output, diagnostica e codici 
 
 `--convert` lavora senza UI, continua sugli altri file dopo un errore e termina con codice non zero se almeno una conversione fallisce. Ctrl+C annulla il processo e pulisce i temporanei. I percorsi sono passati direttamente ai processi senza interpolazione in una shell.
 
-`--install-runtime ffmpeg|poppler|tesseract|libheif|whisper` è una modalità separata: richiede un download esplicito del motore fissato e verificato, senza opzioni di conversione o file in ingresso. Gli ultimi tre valori sono aggiunte in sviluppo. Scrive in `%LOCALAPPDATA%\ConvertHere\tools`, conserva licenze e documentazione e non esegue il programma scaricato. Tesseract include i modelli `ita`/`eng`; Whisper include Tiny multilingue. Ctrl+C annulla l'operazione. Lo script manuale `install-runtime-tools.ps1 -InstallDirectory <cartella-app> -Engine ffmpeg` richiama la stessa CLI; omettendo `-Engine` richiede **FFmpeg e Poppler**. La cartella dell'app serve a trovare la CLI, non è la destinazione dei motori.
+`--install-runtime ffmpeg|poppler|tesseract|libheif|whisper` è una modalità separata: richiede un download esplicito del motore fissato e verificato, senza opzioni di conversione o file in ingresso. Gli ultimi tre valori sono disponibili dalla versione 0.8.0. Scrive in `%LOCALAPPDATA%\ConvertHere\tools`, conserva licenze e documentazione e non esegue il programma scaricato. Tesseract include i modelli `ita`/`eng`; Whisper include Tiny multilingue. Ctrl+C annulla l'operazione. Lo script manuale `install-runtime-tools.ps1 -InstallDirectory <cartella-app> -Engine ffmpeg` richiama la stessa CLI; omettendo `-Engine` richiede **FFmpeg e Poppler**. La cartella dell'app serve a trovare la CLI, non è la destinazione dei motori.
 
 Per audio/video → TXT installa **sia FFmpeg sia Whisper**: il comando CLI Whisper non aggiunge automaticamente FFmpeg. La trascrizione avviene sul PC, senza account o chiavi API. Senza impostazioni specifiche rileva automaticamente la lingua. `--language` sceglie la lingua dell'app, `--ocr-language` quella OCR; nessuno dei due sceglie la lingua del parlato. Per quest'ultima usa `speech.language` nel JSON.
 
