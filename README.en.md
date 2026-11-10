@@ -6,19 +6,21 @@
 
 Developed by **[Salvatore Corsi](https://github.com/salvatorecorsi)**, Convert Here is a free, open source program written in Rust. Use its window, the File Explorer context menu or the command line. Conversion and OCR run on your computer without uploading your files to an online service. No account, subscription, in-app purchases or usage-based charges. No payment is required to keep using it.
 
-[Download for Windows](https://github.com/salvatorecorsi/convert-here/releases/latest) · [Microsoft Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8) · [What's new in 0.8.0](docs/release-notes-0.8.0.en.md) · [Report a problem](https://github.com/salvatorecorsi/convert-here/issues)
+[Download for Windows](https://github.com/salvatorecorsi/convert-here/releases/latest) · [Microsoft Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8) · [What's new in 0.8.1](docs/release-notes-0.8.1.en.md) · [Report a problem](https://github.com/salvatorecorsi/convert-here/issues)
 
 **Convert Here is bilingual, in Italian and English.** Download the installer or portable package and choose a language in **Settings → Language**. See [Languages](#languages).
 
-**0.8.0 is published on GitHub** as of **10 November 2026, 12:09:39 UTC**, from clean commit `f1f3f95fceed52507ef715fa4ac6893acc63544a`. [English notes](docs/release-notes-0.8.0.en.md) / [Italian](docs/release-notes-0.8.0.md). The **Store 1.0.8.0 update has been submitted and is in certification**, with automatic publication after approval. Preceding **1.0.7.0 is published in the Store**; new 1.0.8.0 is not yet declared approved or available. [Store status](docs/store-submission.md).
+**0.8.1 is published on GitHub** as of **10 November 2026, 14:42:06 CET (13:42:06 UTC)**, from clean commit `07fe5f749327b73e93a92d5101d80b9b4f5317cb`. [English notes](docs/release-notes-0.8.1.en.md) / [Italian](docs/release-notes-0.8.1.md). **Store 1.0.9.0 is in certification**, Submission 6, with publication as soon as approved. Preceding **1.0.8.0 is published in the Store**; new 1.0.9.0 is not yet declared approved or available. [Store status](docs/store-submission.md).
 
-**New in 0.8.0:** native SVG input, an audio/video timeline editor, local audio/video-to-TXT transcription, and in-app downloads for Tesseract, libheif and Whisper + Tiny. Package/source audits, offline checks and [Windows checks](https://github.com/salvatorecorsi/convert-here/actions/runs/42811925135) passed. WACK and testing the newly installed MSIX on a physical Windows 10 host are not attested.
+**New in 0.8.1:** a first-launch engine setup wizard and **Select all** beneath each output category. Choose engines, review sources, sizes and licenses, then download them one at a time. **442 tests**, **13 CLI conversions**, package/source audits and offline checks passed, as did [Windows checks](https://github.com/salvatorecorsi/convert-here/actions/runs/42825704990). WACK and a physical Windows 10 host test are not attested.
 
-The [historical captures of preceding version 0.7.1](docs/store-assets/0.7.1/README.md) remain separate from the new 0.8.0 screenshots.
+The [0.8.1 gallery](docs/store-assets/0.8.1/README.md) contains two new captures of setup and formats, plus two historical 0.8.0 editor captures reused with unchanged interfaces. Each image retains its original provenance.
 
-![Audio and video editor with a timeline and selected clip interval, shown in Italian](docs/store-assets/0.8.0/03-timeline-it.png)
+![Engine setup wizard, shown in Italian](docs/store-assets/0.8.1/01-wizard-it.png)
 
-*Native 0.8.0 build, 2562 × 1441, 150% UI zoom, without the pointer. [New capture provenance](docs/store-assets/0.8.0/README.md).*
+![Output categories with Select all checkboxes, shown in Italian](docs/store-assets/0.8.1/02-formati-it.png)
+
+*Native debug 0.8.1 captures, 2562 × 1441, 150% UI zoom, without the pointer. [Capture provenance](docs/store-assets/0.8.1/README.md).*
 
 ## What you can do
 
@@ -40,16 +42,18 @@ Lay out images, text written in **New sheet…** or UTF-8 TXT on **A4/A5** witho
 
 ## Installation
 
-The GitHub distribution requires **Windows 10 build 19041 or later, x64**. The [0.8.0 release](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) offers:
+The GitHub distribution requires **Windows 10 build 19041 or later, x64**. The [0.8.1 release](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.1) offers:
 
 | Package | How to use it |
 | --- | --- |
-| [ConvertHere-0.8.0-windows-x64-setup.exe](https://github.com/salvatorecorsi/convert-here/releases/download/v0.8.0/ConvertHere-0.8.0-windows-x64-setup.exe) | Run the setup. It installs for your user without administrator privileges; optional context-menu integration is selected by default. |
-| [ConvertHere-0.8.0-windows-x64-portable.zip](https://github.com/salvatorecorsi/convert-here/releases/download/v0.8.0/ConvertHere-0.8.0-windows-x64-portable.zip) | Extract it to a stable folder and run `the-converter.exe`. It also includes the CLI and context-menu scripts. |
+| [ConvertHere-0.8.1-windows-x64-setup.exe](https://github.com/salvatorecorsi/convert-here/releases/download/v0.8.1/ConvertHere-0.8.1-windows-x64-setup.exe) | Run the setup. It installs for your user without administrator privileges; optional context-menu integration is selected by default. |
+| [ConvertHere-0.8.1-windows-x64-portable.zip](https://github.com/salvatorecorsi/convert-here/releases/download/v0.8.1/ConvertHere-0.8.1-windows-x64-portable.zip) | Extract it to a stable folder and run `the-converter.exe`. It also includes the CLI and context-menu scripts. |
 
 Check the packages against `SHA256SUMS.txt` from the same release. The executable names remain `the-converter.exe` and `the-converter-cli.exe`; some earlier releases display the name The Converter.
 
 **Native images, images to PDF and operations on existing PDFs work immediately.** Configure the [optional engines](#optional-engines) for other conversions: the setup neither includes nor downloads them. Python, Node and Rust are not required to run the app.
+
+The first normal launch of the main window offers an **engine setup wizard**. Missing engines are preselected; review your choices and confirm the download. Engines install **one at a time**. **Skip** continues without installing; reopen the wizard from **Settings → Conversion engines → Setup wizard**. LibreOffice remains a separate installation.
 
 In the GitHub distribution, the Windows 11 menu is under **Show more options**. The GitHub distribution does not include Authenticode signing. See the [Windows integration guide](docs/windows-integration.en.md) for classic and modern menu details.
 
@@ -83,7 +87,7 @@ With multiple files that can become PDFs:
 
 Open **Settings → Output formats** and enable the destinations you use. Your choices apply to both the app selector and File Explorer, without restarting Explorer. **MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4** are enabled initially. Each selection shows only compatible destinations.
 
-Enable every format, restore the common formats or choose individual outputs. This is a display filter: all inputs remain recognized and the CLI keeps every destination. The Language section lets you choose System, Italiano or English.
+Use **Select all** beneath a category to enable or disable that category. Individual extensions remain clickable; clearing one also clears **Select all**. **Most common** restores the initial eight outputs. The filter affects visibility: all inputs remain recognized and the CLI retains all destinations.
 
 ## Formats and conversions
 
@@ -172,7 +176,7 @@ The app and File Explorer menu support **Italian and English** from version 0.5.
 
 The installer supports Italian and English. The CLI uses stable English option names; `--language system|it|en` selects the language for that invocation without changing saved preferences. Messages from Windows and external engines may follow their own language settings.
 
-The installer and portable packages in [GitHub release 0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) include the bilingual interface ready to use.
+The installer and portable packages in [GitHub release 0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.1) include the bilingual interface ready to use.
 
 **OCR supports the languages of the installed Tesseract models**: Italian and English are the default; the app also offers French, German, Spanish and a field for other codes. Recognition language is independent of interface language.
 
@@ -218,4 +222,4 @@ The [developer guide](docs/development.en.md) describes tests, distribution buil
 
 Copyright (C) 2026 Salvatore Corsi. The original code is licensed under **GNU GPL version 3 only** (`GPL-3.0-only`), without warranty under the terms of the [complete license](LICENSE). The project continues the work of [Final Converter](https://github.com/salvatorecorsi/final-converter).
 
-Sources are public; the release includes [ConvertHere-0.8.0-source.zip](https://github.com/salvatorecorsi/convert-here/releases/download/v0.8.0/ConvertHere-0.8.0-source.zip) with both lockfiles, **465 vendored crates** and offline build instructions. Offline checks for the app and DLL passed with an initially empty cache; they do not attest a full linked build. Conversion does not change the rights to your content or impose the GPL on results solely through use of the program. Dependencies, fonts and engines retain their own licenses: [third-party notices](THIRD-PARTY-NOTICES.md) and [license texts](docs/release-licenses/README.md).
+Sources are public; the release includes [ConvertHere-0.8.1-source.zip](https://github.com/salvatorecorsi/convert-here/releases/download/v0.8.1/ConvertHere-0.8.1-source.zip) with both lockfiles, **465 vendored crates** and offline build instructions. Offline checks for the app and DLL passed with an initially empty cache; they do not attest a full linked build. Conversion does not change the rights to your content or impose the GPL on results solely through use of the program. Dependencies, fonts and engines retain their own licenses: [third-party notices](THIRD-PARTY-NOTICES.md) and [license texts](docs/release-licenses/README.md).

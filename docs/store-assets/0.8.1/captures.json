@@ -66,5 +66,27 @@
       "sha256": "a27a0d83b28055e8b32d98f71187b97626bb85d8688a512ffcc70bf7b2c69762"
     }
   ],
-  "portal_status": "Not uploaded or saved for 0.8.1 at capture time; candidate only"
+  "portal_status": "Not uploaded or saved for 0.8.1 at capture time; candidate only",
+  "delivery": {
+    "source_commit": "07fe5f749327b73e93a92d5101d80b9b4f5317cb",
+    "github_release": {
+      "version": "0.8.1",
+      "url": "https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.1",
+      "published_at_utc": "2026-11-10T13:42:06Z"
+    },
+    "store": {
+      "version": "1.0.9.0",
+      "submission_number": 6,
+      "submission_id": "1152921505702367000",
+      "gallery_saved_and_reread": true,
+      "feature_count_per_language": 20,
+      "image_count_per_language": 4,
+      "caption_count_per_language": 4,
+      "observed_status": "Update in certification",
+      "observed_at_utc": "2026-11-10T13:44:28Z",
+      "publication_after_approval": "automatic",
+      "approved_or_live": false
+    },
+    "historical_capture_provenance_unchanged": true
+  }
 }

@@ -4,11 +4,13 @@
 
 This guide describes Convert Here's destinations, options and limitations. Start with the [README](../README.en.md); see [Configuration and engines](configuration.en.md) to set up external tools.
 
-**Status on 10 November 2026:** [0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) published on GitHub at **12:09:39 UTC**, commit `f1f3f95fceed52507ef715fa4ac6893acc63544a`. Store **1.0.8.0**, Submission 5 (`1152921505702365703`): **Update in certification**, not yet approved or published in the Store.
+**Status on 10 November 2026:** [0.8.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.1) published on GitHub at **14:42:06 CET (13:42:06 UTC)**, from clean commit `07fe5f749327b73e93a92d5101d80b9b4f5317cb`. Store **1.0.9.0**, Submission 6 (`1152921505702367000`): **Update in certification**, observed at **14:44 CET (13:44 UTC)**, with publication as soon as approved. Preceding Store **1.0.8.0 is published**; new 1.0.9.0 is not yet declared approved or available. [Publication status](store-submission.md).
 
-Version 0.8.0 recognizes **94 input extensions** and retains **44 output formats**. In **Settings → Output formats**, choose which outputs appear in the app selector and Explorer menu, grouped into audio, video, images, documents and **Raw**. **MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4** remain enabled by default; enable **TXT** in Raw for OCR or transcription. Preferences are saved and the menu rereads them without restarting Explorer. **Custom settings…** remains available even when every output is hidden. The display filter only controls visible outputs: it does not disable inputs, the CLI, explicit `--quick` requests or existing queued jobs. Compatible destinations depend on the source category and the selected engines' codecs.
+Version 0.8.1 recognizes **94 input extensions** and retains **44 output formats**. In **Settings → Output formats**, choose which outputs appear in the app selector and Explorer menu, grouped into audio, video, images, documents and **Raw**. **MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4** remain enabled by default; enable **TXT** in Raw for OCR or transcription. Preferences are saved and the menu rereads them without restarting Explorer. **Custom settings…** remains available even when every output is hidden. The display filter only controls visible outputs: it does not disable inputs, the CLI, explicit `--quick` requests or existing queued jobs. Compatible destinations depend on the source category and the selected engines' codecs.
 
 ## Supported inputs and outputs
+
+In each category, **Select all** toggles the whole list; individual checkboxes remain editable. The first normal launch of the main window offers engine selection, confirmation and sequential installation. You can reopen the [setup wizard](configuration.en.md#setup-wizard) in Settings.
 
 | Source | Destinations | Engine |
 | --- | --- | --- |

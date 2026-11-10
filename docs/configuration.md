@@ -4,7 +4,7 @@
 
 Questa guida descrive le impostazioni di Convert Here, inclusa la scelta fra italiano e inglese. Per iniziare, vedi il [README](../README.md); per le conversioni disponibili, la [guida ai formati](conversions.md).
 
-**Stato al 10 novembre 2026:** [0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) e Store **1.0.8.0**, Submission 5 (`1152921505702365703`), risultano pubblicate. Questa guida include le sezioni contrassegnate della **candidata 0.8.1 / Store previsto 1.0.9.0**, in preparazione: non attestano una nuova build finale, release o submission. I collegamenti ai pacchetti pubblici restano quelli della 0.8.0.
+**Stato al 10 novembre 2026:** [0.8.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.1) pubblicata su GitHub alle **14:42:06 CET (13:42:06 UTC)**, dal commit pulito `07fe5f749327b73e93a92d5101d80b9b4f5317cb`. Store **1.0.9.0**, Submission 6 (`1152921505702367000`): **Update in certification**, stato osservato alle **14:44 CET (13:44 UTC)**, con pubblicazione automatica appena approvato. La precedente Store **1.0.8.0 è pubblicata**; la nuova 1.0.9.0 non è ancora dichiarata approvata o disponibile. [Stato delle pubblicazioni](store-submission.md).
 
 ## Lingua dell'interfaccia
 
@@ -32,7 +32,7 @@ Per libheif mantieni `heif-dec.exe` e `heif-enc.exe` insieme alle DLL e ai plugi
 
 Per la trascrizione configura `whisper-cli.exe` e il modello `ggml-tiny.bin`. Servono anche FFmpeg e ffprobe: il solo runtime Whisper non legge direttamente tutti i contenitori audio/video. La lingua del parlato e i thread CPU si configurano nei controlli di trascrizione, separati dalla lingua dell'interfaccia e dall'OCR. Il default rileva automaticamente la lingua; i profili salvano `speech.language` e `speech.threads`.
 
-## Configurazione guidata — candidata 0.8.1
+## Configurazione guidata
 
 Al primo avvio normale della finestra principale **senza file o formato preimpostato**, la procedura propone i cinque motori scaricabili dall'app. I motori mancanti sono preselezionati; puoi modificare la scelta prima di confermare:
 
@@ -46,7 +46,7 @@ Al primo avvio normale della finestra principale **senza file o formato preimpos
 
 Saltando o terminando la procedura, l'app salva **`engine-setup-v1.done`** nella stessa cartella di `preferences.json`. Memorizzare questa scelta non riscrive le preferenze: il marker separato conserva lo stato anche se un'altra finestra salva impostazioni precedenti. Le installazioni riuscite aggiornano normalmente i percorsi dei motori nelle preferenze. Un errore di scrittura del marker viene segnalato; file e cartelle già esistenti vengono conservati.
 
-Puoi riaprire la procedura da **Impostazioni → Motori → Configurazione guidata**. CLI, conversioni rapide, stato della coda, PDF Merge e avvio con impostazioni personalizzate mantengono i loro percorsi senza aprirla automaticamente. Nessun download parte prima della conferma. [Note della candidata](release-notes-0.8.1.md).
+Puoi riaprire la procedura da **Impostazioni → Motori → Configurazione guidata**. CLI, conversioni rapide, stato della coda, PDF Merge e avvio con impostazioni personalizzate mantengono i loro percorsi senza aprirla automaticamente. Nessun download parte prima della conferma. [Note della 0.8.1](release-notes-0.8.1.md).
 
 ## Download facoltativi dei motori
 
@@ -84,15 +84,15 @@ I tre comandi aggiuntivi sono disponibili dalla versione 0.8.0. La CLI installa 
 
 In **Impostazioni → Formati di uscita** scegli le destinazioni da mostrare nell'app e nel menu Explorer, raggruppate per audio, video, immagini, documenti e **Raw**. Le otto uscite iniziali restano MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4. Abilita **TXT** in Raw per rendere visibili OCR e trascrizione.
 
-Nella **candidata 0.8.1**, in fondo a ogni categoria trovi **Seleziona tutti** al posto dei due pulsanti con spunta e croce. Spuntala per attivare l'intera categoria o togli la spunta per disattivarla. Le singole estensioni restano cliccabili: disattivandone una, si deseleziona anche il controllo collettivo; selezionandole tutte, torna spuntato. **Più comuni** ripristina gli otto formati iniziali.
+Nella **0.8.1**, in fondo a ogni categoria trovi **Seleziona tutti** al posto dei due pulsanti con spunta e croce. Spuntala per attivare l'intera categoria o togli la spunta per disattivarla. Le singole estensioni restano cliccabili: disattivandone una, si deseleziona anche il controllo collettivo; selezionandole tutte, torna spuntato. **Più comuni** ripristina gli otto formati iniziali.
 
-Le scelte vengono salvate e il menu le rilegge senza riavviare Esplora file. Anche disabilitando tutte le uscite resta disponibile **Impostazioni personalizzate…**. Il filtro non disabilita ingressi, CLI, richieste `--quick` esplicite o lavori già accodati. La versione 0.8.0 mantiene 44 formati di uscita e riconosce 94 estensioni di ingresso, inclusa SVG. **File**, **Cronologia** e **Profili** sono a sinistra nella navigazione; **Impostazioni** è a destra.
+Le scelte vengono salvate e il menu le rilegge senza riavviare Esplora file. Anche disabilitando tutte le uscite resta disponibile **Impostazioni personalizzate…**. Il filtro non disabilita ingressi, CLI, richieste `--quick` esplicite o lavori già accodati. La versione 0.8.1 mantiene 44 formati di uscita e riconosce 94 estensioni di ingresso, inclusa SVG. **File**, **Cronologia** e **Profili** sono a sinistra nella navigazione; **Impostazioni** è a destra.
 
 Per l'aspetto puoi seguire il tema di Windows oppure scegliere **Chiaro** o **Scuro**.
 
 ## Profili personali
 
-Nella scheda **Profili**, crea, modifica, duplica, rinomina, elimina e scegli la ricetta predefinita. Si possono salvare **32 profili** e mostrarne **8 in Converti in**, se il formato è abilitato e ogni ingresso selezionato è compatibile. Puoi ammettere tutti gli ingressi compatibili o limitare una ricetta a estensioni specifiche. Il filtro non cambia le 94 estensioni riconosciute nella versione 0.8.0. Riapri il menu Explorer dopo aver modificato un profilo; i lavori già accodati mantengono la propria ricetta. I profili PDF Merge richiedono almeno due file e aprono l'ordinamento pagine.
+Nella scheda **Profili**, crea, modifica, duplica, rinomina, elimina e scegli la ricetta predefinita. Si possono salvare **32 profili** e mostrarne **8 in Converti in**, se il formato è abilitato e ogni ingresso selezionato è compatibile. Puoi ammettere tutti gli ingressi compatibili o limitare una ricetta a estensioni specifiche. Il filtro non cambia le 94 estensioni riconosciute nella versione 0.8.1. Riapri il menu Explorer dopo aver modificato un profilo; i lavori già accodati mantengono la propria ricetta. I profili PDF Merge richiedono almeno due file e aprono l'ordinamento pagine.
 
 **Importa JSON…**, **Esporta…** ed **Esporta tutti…** trasferiscono le ricette. Il JSON comprende parametri, filtri, visibilità ed eventuale cartella di uscita, senza percorsi dei motori o contenuti di prova. L'importazione è atomica, crea nuove copie e non sovrascrive profili; oltre gli 8 visibili importa le ricette aggiuntive fuori dal menu. Un file oltre 256 KiB o un totale superiore a 32 profili viene rifiutato. Il nome scelto dall'utente non viene tradotto. [Guida completa ed esempio JSON](image-editor-profiles.md).
 

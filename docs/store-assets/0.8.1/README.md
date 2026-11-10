@@ -11,7 +11,7 @@ Gli originali della cattura sono i JPEG omonimi nella stessa cartella. La CLI **
 
 L'interfaccia mostrata è **italiana**, anche nella galleria proposta per la scheda inglese. Gli strumenti e le preferenze visibili appartengono a un ambiente di prova isolato. La schermata del wizard documenta la scelta prima del download: **non è stato premuto il pulsante Download**, quindi questa QA non attesta un download o un'installazione reale attraverso la nuova procedura. Le [verifiche 0.8.1](../../store-testing-0.8.1.md) distinguono prove automatiche e interazione nativa.
 
-## Galleria Store proposta, non ancora caricata
+## Galleria Store salvata nella Submission 6
 
 | Ordine | File | Provenienza |
 | --- | --- | --- |
@@ -20,4 +20,4 @@ L'interfaccia mostrata è **italiana**, anche nella galleria proposta per la sch
 | 3 | [03-timeline-it.png](../0.8.0/03-timeline-it.png) | Cattura storica 0.8.0 riusata: editor audio/video invariato, interfaccia italiana. |
 | 4 | [04-trascrizione-it.png](../0.8.0/04-trascrizione-it.png) | Cattura storica 0.8.0 riusata: editor di trascrizione invariato, interfaccia italiana. |
 
-I digest e la provenienza delle ultime due immagini restano nel [registro 0.8.0](../0.8.0/captures.json) e sono richiamati nel nuovo `captures.json`. Nessuna cattura attesta installazione del nuovo MSIX, prova su host Windows 10 reale o WACK. Upload, salvataggio nel portale e pubblicazione della 0.8.1 restano da registrare dopo build e verifiche finali.
+I digest e la provenienza delle ultime due immagini restano nel [registro 0.8.0](../0.8.0/captures.json) e sono richiamati nel nuovo `captures.json`. Nessuna cattura attesta installazione del nuovo MSIX, prova su host Windows 10 reale o WACK. Le schede IT/EN della **Submission 6**, ID **1152921505702367000**, contengono queste quattro PNG e didascalie salvate e rilette dal server. La release GitHub 0.8.1 è pubblicata dalle **13:42:06 UTC** del 10 novembre 2026; il pacchetto Store **1.0.9.0** è stato inviato e mostra **Update in certification** alle **13:44:28 UTC**, con pubblicazione automatica dopo approvazione. La nuova 1.0.9.0 non è ancora dichiarata approvata o pubblica; la precedente 1.0.8.0 è pubblicata. Gli artefatti finali derivano dal commit pulito **`07fe5f749327b73e93a92d5101d80b9b4f5317cb`**; questo dato non cambia la provenienza debug non committata delle catture.

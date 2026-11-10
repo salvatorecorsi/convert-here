@@ -1,6 +1,6 @@
 # Convert Here 0.8.1 — configurazione guidata dei motori
 
-**Bozza della candidata 0.8.1**, pacchetto Store previsto **1.0.9.0**. Build, artefatti, verifica finale e pubblicazione non ancora attestati. La precedente **0.8.0 / Store 1.0.8.0 è pubblicata**. Sviluppatore e publisher: **Salvatore Corsi**. [English](release-notes-0.8.1.en.md).
+**0.8.1 pubblicata su GitHub il 10 novembre 2026 alle 13:42:06 UTC**, dal commit pulito **`07fe5f749327b73e93a92d5101d80b9b4f5317cb`**. Il pacchetto **Store 1.0.9.0** è stato caricato, salvato come Validated e inviato nella **Submission 6**, ID **1152921505702367000**: stato osservato **Update in certification** alle **13:44:28 UTC**. La pubblicazione è automatica appena approvato; la nuova 1.0.9.0 non è ancora dichiarata approvata o disponibile nello Store. La precedente **0.8.0 / Store 1.0.8.0 è pubblicata**. Sviluppatore e publisher: **Salvatore Corsi**. [English](release-notes-0.8.1.en.md).
 
 In **Impostazioni → Formati di uscita**, una checkbox **Seleziona tutti** in fondo a ogni categoria sostituisce i due pulsanti con spunta e croce. Attivandola selezioni tutti i formati della categoria; disattivandola li deselezioni. Le singole estensioni restano modificabili: togliendone una, **Seleziona tutti** si disattiva. Il filtro riguarda le uscite; i formati in ingresso restano supportati. Le otto uscite predefinite restano MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4.
 
@@ -8,4 +8,8 @@ Al primo avvio della finestra principale senza file o formato preimpostato, una 
 
 Saltando o completando la procedura viene creato il marker locale **`engine-setup-v1.done`**, accanto alle preferenze. Memorizzare questa scelta non riscrive `preferences.json` e non può essere annullato da una vecchia finestra che salva impostazioni obsolete. Le installazioni riuscite conservano normalmente i percorsi dei motori nelle preferenze. La procedura può essere riaperta da **Impostazioni → Motori → Configurazione guidata**; CLI, conversioni rapide e impostazioni personalizzate non la aprono automaticamente.
 
-Nessun download parte prima della conferma. Motori, modelli, licenze e conversioni restano quelli della 0.8.0. [Guida alla configurazione](configuration.md), [verifiche da completare](store-testing-0.8.1.md).
+Nessun download parte prima della conferma. Motori, modelli, licenze e conversioni restano quelli della 0.8.0. [Guida alla configurazione](configuration.md), [verifiche e limiti](store-testing-0.8.1.md).
+
+La [release GitHub](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.1) contiene setup, portable, sorgenti con **465 crate vendorizzate** e checksum. Audit dei pacchetti **PASS**, **442 test** passati, smoke dei binari finali **13/13** e [Windows checks 42825704990](https://github.com/salvatorecorsi/convert-here/actions/runs/42825704990) **SUCCESS**. Dai sorgenti finali sono passati veri controlli offline all-targets per app (**81,23 s**) e DLL (**4,17 s**) con cache e target inizialmente vuoti; non è una build completa con linking. Schede IT/EN salvate e rilette con **20 funzionalità e quattro PNG per lingua**, due nuovi della 0.8.1 e due storici 0.8.0 dell’editor invariato.
+
+La QA nativa italiana e inglese ha verificato scelta dei motori, conferma, ritorno, Salta, riapertura e selezione dei formati. Il pulsante Download non è stato premuto in quella QA. Non sono attestati installazione del nuovo MSIX, prova su host Windows 10 reale o WACK. [Audit, digest, catture e stato Store](store-testing-0.8.1.md).

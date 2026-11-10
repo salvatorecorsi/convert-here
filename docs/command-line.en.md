@@ -4,7 +4,7 @@
 
 Convert Here's CLI converts files, automates processing and installs optional engines. Run the PowerShell examples from the app folder. See the [format guide](conversions.en.md) for conversion requirements.
 
-**Status on 10 November 2026:** [0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) published on GitHub at **12:09:39 UTC**, commit `f1f3f95fceed52507ef715fa4ac6893acc63544a`. Store **1.0.8.0**, Submission 5 (`1152921505702365703`): **Update in certification**, not yet approved or published in the Store.
+**Status on 10 November 2026:** [0.8.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.1) published on GitHub at **14:42:06 CET (13:42:06 UTC)**, from clean commit `07fe5f749327b73e93a92d5101d80b9b4f5317cb`. Store **1.0.9.0**, Submission 6 (`1152921505702367000`): **Update in certification**, observed at **14:44 CET (13:44 UTC)**, with publication as soon as approved. Preceding Store **1.0.8.0 is published**; new 1.0.9.0 is not yet declared approved or available. [Publication status](store-submission.md).
 
 Use the dedicated console executable for output, diagnostics and reliable exit codes:
 

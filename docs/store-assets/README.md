@@ -1,12 +1,25 @@
 # Materiale visivo Store
 
-## Galleria corrente 0.8.0
+## Galleria corrente 0.8.1
+
+Le schede italiana e inglese della **Submission 6**, ID **1152921505702367000**, contengono quattro PNG **2562 × 1441**, salvate e rilette dal server. Le due nuove [catture native 0.8.1](0.8.1/README.md) mostrano la checkbox collettiva e il wizard; le altre due sono catture 0.8.0 dell'editor rimasto invariato.
+
+1. [Formati con Seleziona tutti](0.8.1/02-formati-it.png), nuova 0.8.1.
+2. [Configurazione guidata dei motori](0.8.1/01-wizard-it.png), nuova 0.8.1.
+3. [Timeline audio/video](0.8.0/03-timeline-it.png), storica 0.8.0 riusata.
+4. [Trascrizione locale](0.8.0/04-trascrizione-it.png), storica 0.8.0 riusata.
+
+L'interfaccia nelle quattro immagini è **italiana**, come dichiarato anche nelle didascalie inglesi. Zoom dell'app al 150%, senza puntatore, alone, ritocchi o ingrandimenti successivi. [Dimensioni, SHA-256 e provenienza](0.8.1/captures.json) distinguono i JPEG originali, la conversione PNG e la build debug di cattura dagli artefatti finali. Il wizard mostra la scelta prima del download; Download non è stato premuto nella QA.
+
+GitHub **0.8.1** pubblicata il **10 novembre 2026 alle 13:42:06 UTC**; Store **1.0.9.0** inviata e **Update in certification** alle **13:44:28 UTC**, con pubblicazione automatica dopo approvazione. Non è attestata approvazione o disponibilità della nuova 1.0.9.0; resta pubblicata la precedente 1.0.8.0. [Verifiche e limiti](../store-testing-0.8.1.md).
+
+## Galleria precedente 0.8.0
 
 Le quattro [catture native 0.8.0](0.8.0/README.md) mostrano formati, motori, timeline e trascrizione locale. Sono PNG **2562 × 1441**, acquisiti con zoom dell'app al 150%, senza puntatore, ritocchi o ingrandimenti successivi. Il registro distingue build debug, JPEG originali e conversione PNG.
 
 ## Galleria precedente 0.7.1
 
-Le due [catture correnti](0.7.1/README.md) mostrano [Impostazioni](0.7.1/01-impostazioni-it.png) e [Profili](0.7.1/02-profili-it.png), entrambe PNG **2562 × 1430**. Sono state acquisite il 9 novembre 2026 dalla build debug nativa **0.7.0**, con interfaccia invariata nella 0.7.1 e **zoom dell'app al 150%**, senza ingrandimento successivo. La CLI release 0.7.0 ha convertito i JPEG nativi in PNG senza ridimensionamento. Il registro riporta provenienza, dimensioni, byte e SHA-256. Non sono catture di una build 0.7.1 e non attestano installazione del candidato Store, WACK o collaudo del menu Windows 10.
+Le due [catture 0.7.1](0.7.1/README.md) mostrano [Impostazioni](0.7.1/01-impostazioni-it.png) e [Profili](0.7.1/02-profili-it.png), entrambe PNG **2562 × 1430**. Sono state acquisite il 9 novembre 2026 dalla build debug nativa **0.7.0**, con interfaccia invariata nella 0.7.1 e **zoom dell'app al 150%**, senza ingrandimento successivo. La CLI release 0.7.0 ha convertito i JPEG nativi in PNG senza ridimensionamento. Il registro riporta provenienza, dimensioni, byte e SHA-256. Non sono catture di una build 0.7.1 e non attestano installazione del candidato Store, WACK o collaudo del menu Windows 10.
 
 ## Catture precedenti
 

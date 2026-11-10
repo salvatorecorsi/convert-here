@@ -2,7 +2,7 @@
 
 [Italiano](image-editor-profiles.md) · **English**
 
-The editor is available from **Convert Here 0.6.0**. The manager with input filters, JSON and advanced options is planned for **0.7.0**, currently being prepared.
+The editor is available from **Convert Here 0.6.0**. The manager with input filters, JSON and advanced options is available from **0.7.0**.
 
 ## Open the editor
 

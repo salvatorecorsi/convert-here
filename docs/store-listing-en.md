@@ -1,6 +1,6 @@
 # Microsoft Store listing — English (en-US)
 
-**Draft for Convert Here 0.8.1 / planned Store 1.0.9.0**, developer and publisher **Salvatore Corsi**. The preceding **0.8.0 / Store 1.0.8.0 is published**. Text, 20 features and the gallery below are prepared for a new submission; no final build, GitHub publication, portal upload or listing persistence of 0.8.1 is yet attested. The proposed gallery uses two new 0.8.1 captures and two historical 0.8.0 captures of the unchanged editor. No physical Windows 10 host test or WACK. Do not copy this preamble into public fields.
+**Convert Here 0.8.1 / Store 1.0.9.0**, developer and publisher **Salvatore Corsi**. English listing **saved and reread from the server** in **Submission 6**, ID **1152921505702367000**, with **20 features, four PNGs and four captions**. GitHub release published on 10 November 2026 at **13:42:06 UTC**, from clean commit `07fe5f749327b73e93a92d5101d80b9b4f5317cb`. MSIX uploaded, saved as Validated and submitted: observed state **Update in certification** at **13:44:28 UTC**, with automatic publication after approval. New 1.0.9.0 is not yet claimed approved or available; baseline **0.8.0 / Store 1.0.8.0 is published**. No new-MSIX installation, physical Windows 10 host test or WACK is attested. Do not copy this preamble into public fields.
 
 ## Short description
 
@@ -106,7 +106,7 @@ A first-launch setup wizard lets you choose engines, review sources and sizes, t
 3. Audio/video editor: timeline, interval and gain. Italian interface; reused 0.8.0 capture of the unchanged UI.
 4. Local TXT transcription with language and trimming. Italian interface; reused 0.8.0 capture of the unchanged UI.
 
-Proposed gallery order: [0.8.1 02-formati-it.png](store-assets/0.8.1/02-formati-it.png), [0.8.1 01-wizard-it.png](store-assets/0.8.1/01-wizard-it.png), [0.8.0 03-timeline-it.png](store-assets/0.8.0/03-timeline-it.png), [0.8.0 04-trascrizione-it.png](store-assets/0.8.0/04-trascrizione-it.png). All are **2562 × 1441 PNGs** from native debug builds at 150% UI zoom, without the pointer or later upscaling. The last two reuse the unchanged editor and retain their historical provenance. [0.8.1 capture record and limits](store-assets/0.8.1/README.md). Uploading and saving the new gallery are not yet attested.
+Gallery order saved and reread in Submission 6: [0.8.1 02-formati-it.png](store-assets/0.8.1/02-formati-it.png), [0.8.1 01-wizard-it.png](store-assets/0.8.1/01-wizard-it.png), [0.8.0 03-timeline-it.png](store-assets/0.8.0/03-timeline-it.png), [0.8.0 04-trascrizione-it.png](store-assets/0.8.0/04-trascrizione-it.png). All are **2562 × 1441 PNGs** from native debug builds at 150% UI zoom, without the pointer or later upscaling. The last two reuse the unchanged editor and retain their historical provenance. [0.8.1 capture record and limits](store-assets/0.8.1/README.md). The gallery is saved and reread in both listings; this does not attest approval or Store publication of new 1.0.9.0.
 
 ## Copyright and additional license terms
 
@@ -114,10 +114,10 @@ Proposed gallery order: [0.8.1 02-formati-it.png](store-assets/0.8.1/02-formati-
 Copyright (C) 2026 Salvatore Corsi.
 ```
 
-The project is GPL-3.0-only: [current full license](../LICENSE). The planned new-listing reference is `https://github.com/salvatorecorsi/convert-here/blob/v0.8.1/LICENSE`, to use after tag publication. The planned source asset is `ConvertHere-0.8.1-source.zip`, with vendored dependencies and offline instructions; it is not yet attested as built or published. Third parties retain original licenses and copyright.
+The project is GPL-3.0-only. The [full text at public tag v0.8.1](https://github.com/salvatorecorsi/convert-here/blob/v0.8.1/LICENSE) is saved and verified in the license field. `ConvertHere-0.8.1-source.zip`, with vendored dependencies and offline instructions, is verified and published in the [GitHub release](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.1). Third parties retain original licenses and copyright.
 
 ## Submission references
 
-Data controller, developer and publisher: **Salvatore Corsi**. Support/privacy: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Current privacy statement](privacy.md), [engine pins and licenses](release-licenses/EXTERNAL-ENGINES.md), [candidate 0.8.1 testing](store-testing-0.8.1.en.md), [submission procedure and status](store-submission.md).
+Data controller, developer and publisher: **Salvatore Corsi**. Support/privacy: [salvo@salvatorecorsi.com](mailto:salvo@salvatorecorsi.com). [Current privacy statement](privacy.md), [engine pins and licenses](release-licenses/EXTERNAL-ENGINES.md), [0.8.1 testing](store-testing-0.8.1.en.md), [submission procedure and status](store-submission.md).
 
-The **0.8.1 / Store 1.0.9.0 listing is a local draft**, with **20 features** and four prepared images. Previous Submission 5 persistence records do not attest saving or submitting the new version. Baseline 0.8.0 / Store 1.0.8.0 is published. Record the clean commit, final artifacts, publication, privacy/license URLs and actual portal state after verification. Description: 10,000 characters maximum; short description: 1,000; features: 200 characters each; release notes: 1,500. [MSIX field limits](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).
+**0.8.1 / Store 1.0.9.0** listing saved and reread from the server in **Submission 6**, ID **1152921505702367000**, with **20 features and four images**. Privacy and license point to public tag **v0.8.1**, with saving verified. GitHub release is published; Store submission was sent and shows **Update in certification**, with automatic publication after approval. Preceding **1.0.8.0 is published**; new Store 1.0.9.0 availability is not attested. Description: 10,000 characters maximum; short description: 1,000; features: 200 characters each; release notes: 1,500. [MSIX field limits](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/add-and-edit-store-listing-info).

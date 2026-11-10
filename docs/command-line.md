@@ -4,7 +4,7 @@
 
 La CLI di Convert Here permette di convertire file, automatizzare elaborazioni e installare i motori opzionali. Esegui gli esempi PowerShell dalla cartella dell'app. Per i requisiti delle singole conversioni, consulta la [guida ai formati](conversions.md).
 
-**Stato al 10 novembre 2026:** [0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) pubblicata su GitHub alle **12:09:39 UTC**, commit `f1f3f95fceed52507ef715fa4ac6893acc63544a`. Store **1.0.8.0**, Submission 5 (`1152921505702365703`): **Update in certification**, non ancora approvata o pubblicata sullo Store.
+**Stato al 10 novembre 2026:** [0.8.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.1) pubblicata su GitHub alle **14:42:06 CET (13:42:06 UTC)**, dal commit pulito `07fe5f749327b73e93a92d5101d80b9b4f5317cb`. Store **1.0.9.0**, Submission 6 (`1152921505702367000`): **Update in certification**, stato osservato alle **14:44 CET (13:44 UTC)**, con pubblicazione automatica appena approvato. La precedente Store **1.0.8.0 è pubblicata**; la nuova 1.0.9.0 non è ancora dichiarata approvata o disponibile. [Stato delle pubblicazioni](store-submission.md).
 
 Usa l'eseguibile console dedicato, che restituisce output, diagnostica e codici di uscita affidabili:
 

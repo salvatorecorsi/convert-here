@@ -6,19 +6,21 @@
 
 Sviluppato da **[Salvatore Corsi](https://github.com/salvatorecorsi)**, Convert Here è un programma gratuito e open source scritto in Rust. Puoi usarlo dalla sua finestra, dal menu di Esplora file o dalla riga di comando. Le conversioni e l'OCR avvengono sul computer, senza caricare i tuoi file su un servizio online. Nessun account, abbonamento, acquisto in-app o costo a consumo. Nessun pagamento richiesto per continuare a usarlo.
 
-[Scarica per Windows](https://github.com/salvatorecorsi/convert-here/releases/latest) · [Microsoft Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8) · [Novità della 0.8.0](docs/release-notes-0.8.0.md) · [Segnala un problema](https://github.com/salvatorecorsi/convert-here/issues)
+[Scarica per Windows](https://github.com/salvatorecorsi/convert-here/releases/latest) · [Microsoft Store](https://apps.microsoft.com/detail/9NPKPPCBNBM8) · [Novità della 0.8.1](docs/release-notes-0.8.1.md) · [Segnala un problema](https://github.com/salvatorecorsi/convert-here/issues)
 
 **Convert Here è bilingue, in italiano e inglese.** Scarica installer o portable e scegli la lingua in **Impostazioni → Lingua**. Vedi [Lingue](#lingue).
 
-La **0.8.0 è pubblicata su GitHub** dal **10 novembre 2026, 12:09:39 UTC**, dal commit pulito `f1f3f95fceed52507ef715fa4ac6893acc63544a`. [Note IT](docs/release-notes-0.8.0.md) / [EN](docs/release-notes-0.8.0.en.md). L'aggiornamento **Store 1.0.8.0 è stato inviato ed è in certificazione**, con pubblicazione automatica appena approvato. La precedente **1.0.7.0 è pubblicata nello Store**; la nuova 1.0.8.0 non è ancora dichiarata approvata o disponibile. [Stato Store](docs/store-submission.md).
+La **0.8.1 è pubblicata su GitHub** dal **10 novembre 2026, 14:42:06 CET (13:42:06 UTC)**, dal commit pulito `07fe5f749327b73e93a92d5101d80b9b4f5317cb`. [Note IT](docs/release-notes-0.8.1.md) / [EN](docs/release-notes-0.8.1.en.md). **Store 1.0.9.0 è in certificazione**, Submission 6, con pubblicazione automatica appena approvato. La precedente **1.0.8.0 è pubblicata nello Store**; la nuova 1.0.9.0 non è ancora dichiarata approvata o disponibile. [Stato Store](docs/store-submission.md).
 
-**Novità della 0.8.0:** ingresso SVG nativo, editor audio/video con timeline, trascrizione locale audio/video → TXT e download dall'app anche per Tesseract, libheif e Whisper + Tiny. Audit di pacchetti e sorgenti, controlli offline e [Windows checks](https://github.com/salvatorecorsi/convert-here/actions/runs/42811925135) passati. Non sono attestati WACK o prove del nuovo MSIX installato su un host Windows 10 reale.
+**Novità della 0.8.1:** configurazione guidata dei motori al primo avvio e **Seleziona tutti** in fondo a ogni categoria. Scegli i motori, controlla fonti, dimensioni e licenze, poi scaricali uno alla volta. **442 test**, **13 conversioni CLI**, audit dei pacchetti e dei sorgenti e controlli offline passati, insieme ai [Windows checks](https://github.com/salvatorecorsi/convert-here/actions/runs/42825704990). WACK e prova su host Windows 10 reale non sono attestati.
 
-Le [catture storiche della versione precedente 0.7.1](docs/store-assets/0.7.1/README.md) restano separate dalle nuove schermate 0.8.0.
+La [galleria 0.8.1](docs/store-assets/0.8.1/README.md) comprende due nuove catture di wizard e formati e due catture storiche 0.8.0 degli editor, riusate con interfaccia invariata. Ogni immagine conserva la propria provenienza.
 
-![Editor audio e video con timeline e taglio della clip](docs/store-assets/0.8.0/03-timeline-it.png)
+![Configurazione guidata dei motori](docs/store-assets/0.8.1/01-wizard-it.png)
 
-*Build nativa 0.8.0, 2562 × 1441, zoom 150%, senza puntatore. [Provenienza delle nuove schermate](docs/store-assets/0.8.0/README.md).*
+![Categorie di uscita con checkbox Seleziona tutti](docs/store-assets/0.8.1/02-formati-it.png)
+
+*Catture native della build debug 0.8.1, 2562 × 1441, zoom 150%, senza puntatore. [Provenienza delle schermate](docs/store-assets/0.8.1/README.md).*
 
 ## Cosa puoi fare
 
@@ -40,16 +42,18 @@ Impagina immagini, testo scritto in **Nuovo foglio…** o TXT UTF-8 su **A4/A5**
 
 ## Installazione
 
-La distribuzione GitHub richiede **Windows 10 build 19041 o successivo, x64**. Dalla [release 0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) puoi scegliere:
+La distribuzione GitHub richiede **Windows 10 build 19041 o successivo, x64**. Dalla [release 0.8.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.1) puoi scegliere:
 
 | Pacchetto | Come si usa |
 | --- | --- |
-| [ConvertHere-0.8.0-windows-x64-setup.exe](https://github.com/salvatorecorsi/convert-here/releases/download/v0.8.0/ConvertHere-0.8.0-windows-x64-setup.exe) | Avvia il setup. Installa per il tuo utente, senza privilegi amministrativi; l'integrazione con il menu contestuale è facoltativa e selezionata per default. |
-| [ConvertHere-0.8.0-windows-x64-portable.zip](https://github.com/salvatorecorsi/convert-here/releases/download/v0.8.0/ConvertHere-0.8.0-windows-x64-portable.zip) | Estrai in una cartella stabile e avvia `the-converter.exe`. Include anche la CLI e gli script per il menu contestuale. |
+| [ConvertHere-0.8.1-windows-x64-setup.exe](https://github.com/salvatorecorsi/convert-here/releases/download/v0.8.1/ConvertHere-0.8.1-windows-x64-setup.exe) | Avvia il setup. Installa per il tuo utente, senza privilegi amministrativi; l'integrazione con il menu contestuale è facoltativa e selezionata per default. |
+| [ConvertHere-0.8.1-windows-x64-portable.zip](https://github.com/salvatorecorsi/convert-here/releases/download/v0.8.1/ConvertHere-0.8.1-windows-x64-portable.zip) | Estrai in una cartella stabile e avvia `the-converter.exe`. Include anche la CLI e gli script per il menu contestuale. |
 
 Puoi verificare i pacchetti con `SHA256SUMS.txt` nella stessa release. I nomi tecnici degli eseguibili restano `the-converter.exe` e `the-converter-cli.exe`; alcune release precedenti mostrano il nome The Converter.
 
 **Immagini native, immagini in PDF e operazioni sui PDF esistenti funzionano subito.** Per le altre conversioni configura i [motori opzionali](#motori-opzionali): il setup non li include e non li scarica. L'app non richiede Python, Node o Rust per essere eseguita.
+
+Al primo avvio normale della finestra principale compare la **configurazione guidata dei motori**. I motori mancanti sono preselezionati; controlla la scelta e conferma il download. I motori vengono installati **uno alla volta**. **Salta** prosegue senza installare; puoi riaprire la procedura da **Impostazioni → Motori → Configurazione guidata**. LibreOffice resta un’installazione separata.
 
 Nella distribuzione GitHub il menu di Windows 11 si trova in **Mostra altre opzioni**. La distribuzione GitHub non prevede firma Authenticode. Per i dettagli sul menu classico e moderno consulta la [guida all'integrazione con Windows](docs/windows-integration.md).
 
@@ -83,7 +87,7 @@ Con più file convertibili in PDF:
 
 Apri **Impostazioni → Formati di uscita** e abilita le destinazioni che usi. Le scelte valgono sia nel selettore dell'app sia nel menu di Esplora file, senza riavviare Explorer. All'inizio sono attivi **MP3, WAV, JPG, PNG, WebP, GIF, PDF e MP4**. Ogni selezione mostra soltanto le destinazioni compatibili.
 
-Puoi attivare tutti i formati, ripristinare i più comuni o scegliere le singole uscite. Il filtro riguarda la visualizzazione: tutti gli ingressi restano riconosciuti e la CLI mantiene tutte le destinazioni.
+Usa **Seleziona tutti** in fondo a una categoria per attivarla o disattivarla. Le singole estensioni restano cliccabili: togliendone una, si deseleziona anche **Seleziona tutti**. **Più comuni** ripristina le otto uscite iniziali. Il filtro riguarda la visualizzazione: tutti gli ingressi restano riconosciuti e la CLI mantiene tutte le destinazioni.
 
 ## Formati e conversioni
 
@@ -172,7 +176,7 @@ L'**app e il menu di Esplora file supportano italiano e inglese** dalla versione
 
 Anche l'**installer è disponibile in italiano e inglese**. La CLI mantiene i nomi delle opzioni in inglese; `--language system|it|en` sceglie la lingua per la singola esecuzione senza cambiare le preferenze. I messaggi di Windows e dei motori esterni possono seguire le rispettive impostazioni.
 
-Installer e portable della [release GitHub 0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) includono l'interfaccia bilingue pronta all'uso.
+Installer e portable della [release GitHub 0.8.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.1) includono l'interfaccia bilingue pronta all'uso.
 
 L'**OCR supporta le lingue dei modelli Tesseract installati**: italiano e inglese sono la scelta predefinita; nell'app sono proposti anche francese, tedesco, spagnolo e un campo per altri codici. La lingua del riconoscimento non cambia quella dell'interfaccia.
 
@@ -218,4 +222,4 @@ La [guida per sviluppatori](docs/development.md) descrive test, build della dist
 
 Copyright (C) 2026 Salvatore Corsi. Il codice originale è distribuito con licenza **GNU GPL versione 3 soltanto** (`GPL-3.0-only`), senza garanzia nei termini della [licenza completa](LICENSE). Il progetto prosegue il lavoro di [Final Converter](https://github.com/salvatorecorsi/final-converter).
 
-I sorgenti sono pubblici; la release include [ConvertHere-0.8.0-source.zip](https://github.com/salvatorecorsi/convert-here/releases/download/v0.8.0/ConvertHere-0.8.0-source.zip) con entrambi i lockfile, **465 crate vendorizzate** e istruzioni di build offline. I controlli offline per app e DLL sono passati con cache inizialmente vuota; non attestano una build completa con linking. La conversione non cambia i diritti dei tuoi contenuti e non impone la GPL ai risultati per il solo uso del programma. Dipendenze, font e motori conservano le rispettive licenze: [avvisi di terze parti](THIRD-PARTY-NOTICES.md) e [testi delle licenze](docs/release-licenses/README.md).
+I sorgenti sono pubblici; la release include [ConvertHere-0.8.1-source.zip](https://github.com/salvatorecorsi/convert-here/releases/download/v0.8.1/ConvertHere-0.8.1-source.zip) con entrambi i lockfile, **465 crate vendorizzate** e istruzioni di build offline. I controlli offline per app e DLL sono passati con cache inizialmente vuota; non attestano una build completa con linking. La conversione non cambia i diritti dei tuoi contenuti e non impone la GPL ai risultati per il solo uso del programma. Dipendenze, font e motori conservano le rispettive licenze: [avvisi di terze parti](THIRD-PARTY-NOTICES.md) e [testi delle licenze](docs/release-licenses/README.md).

@@ -4,7 +4,7 @@
 
 This guide describes Convert Here's settings. Start with the [README](../README.en.md); see the [format guide](conversions.en.md) for available conversions.
 
-**Status on 10 November 2026:** [0.8.0](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.0) and Store **1.0.8.0**, Submission 5 (`1152921505702365703`), are published. This guide includes marked sections for the **0.8.1 candidate / planned Store 1.0.9.0**, still in preparation; they do not attest a new final build, release or submission. Public package links remain those of 0.8.0.
+**Status on 10 November 2026:** [0.8.1](https://github.com/salvatorecorsi/convert-here/releases/tag/v0.8.1) published on GitHub at **14:42:06 CET (13:42:06 UTC)**, from clean commit `07fe5f749327b73e93a92d5101d80b9b4f5317cb`. Store **1.0.9.0**, Submission 6 (`1152921505702367000`): **Update in certification**, observed at **14:44 CET (13:44 UTC)**, with publication as soon as approved. Preceding Store **1.0.8.0 is published**; new 1.0.9.0 is not yet declared approved or available. [Publication status](store-submission.md).
 
 ## Interface language
 
@@ -32,7 +32,7 @@ For libheif, keep `heif-dec.exe` and `heif-enc.exe` with DLLs and plugins from t
 
 For transcription, configure `whisper-cli.exe` and the `ggml-tiny.bin` model. FFmpeg and ffprobe are also required: the Whisper runtime alone does not read every audio/video container directly. Speech language and CPU threads are configured in transcription controls, separately from interface and OCR language. Automatic language detection is the default; profiles store `speech.language` and `speech.threads`.
 
-## Setup wizard — 0.8.1 candidate
+## Setup wizard
 
 The first normal main-window launch **without files or a preselected target** offers the five engines downloadable in the app. Missing engines are preselected; change the selection before confirming:
 
@@ -46,7 +46,7 @@ The first normal main-window launch **without files or a preselected target** of
 
 Skipping or finishing the wizard saves **`engine-setup-v1.done`** beside `preferences.json`. Recording this choice does not rewrite preferences: the separate marker retains acknowledgement if another open window saves older settings. Successful engine installations save their paths through the normal preferences flow. Marker write errors are reported; existing files and folders are preserved.
 
-Reopen the wizard from **Settings → Conversion engines → Setup wizard**. CLI, quick conversions, queue status, PDF Merge and custom-settings launches keep their existing routes without opening it automatically. Downloads begin only after confirmation. [Candidate notes](release-notes-0.8.1.en.md).
+Reopen the wizard from **Settings → Conversion engines → Setup wizard**. CLI, quick conversions, queue status, PDF Merge and custom-settings launches keep their existing routes without opening it automatically. Downloads begin only after confirmation. [0.8.1 notes](release-notes-0.8.1.en.md).
 
 ## Optional engine downloads
 
@@ -84,15 +84,15 @@ The three additional commands are available in version 0.8.0. The CLI installs o
 
 In **Settings → Output formats**, choose which destinations appear in the app and Explorer menu, grouped into audio, video, images, documents and **Raw**. The initial eight outputs remain MP3, WAV, JPG, PNG, WebP, GIF, PDF and MP4. Enable **TXT** in Raw to show OCR and transcription.
 
-In the **0.8.1 candidate**, **Select all** below each category replaces the check and cross buttons. Check it to enable the whole category or clear it to disable the category. Individual extensions remain clickable: clearing one also clears the collective control; selecting all of them checks it again. **Most common** restores the original eight formats.
+In **0.8.1**, **Select all** below each category replaces the check and cross buttons. Check it to enable the whole category or clear it to disable the category. Individual extensions remain clickable: clearing one also clears the collective control; selecting all of them checks it again. **Most common** restores the original eight formats.
 
-Choices are saved and the menu rereads them without restarting Explorer. **Custom settings…** stays available even if all outputs are disabled. The filter does not disable inputs, the CLI, explicit `--quick` requests or already queued jobs. Version 0.8.0 retains 44 output formats and recognizes 94 input extensions, including SVG. **Files**, **History** and **Profiles** sit on the left of navigation; **Settings** is on the right.
+Choices are saved and the menu rereads them without restarting Explorer. **Custom settings…** stays available even if all outputs are disabled. The filter does not disable inputs, the CLI, explicit `--quick` requests or already queued jobs. Version 0.8.1 retains 44 output formats and recognizes 94 input extensions, including SVG. **Files**, **History** and **Profiles** sit on the left of navigation; **Settings** is on the right.
 
 For appearance, follow the Windows theme or select **Light** or **Dark**.
 
 ## Personal profiles
 
-The **Profiles** tab creates, edits, duplicates, renames and deletes recipes and selects a default. Store up to **32 profiles**, with **8 visible in Convert to** when their output is enabled and every selected input is compatible. Allow all compatible inputs or restrict a recipe to selected extensions; this does not change version 0.8.0's 94 recognized input extensions. Reopen the Explorer menu after changing a profile. Already queued jobs retain their recipe. PDF Merge profiles require at least two files and open page ordering.
+The **Profiles** tab creates, edits, duplicates, renames and deletes recipes and selects a default. Store up to **32 profiles**, with **8 visible in Convert to** when their output is enabled and every selected input is compatible. Allow all compatible inputs or restrict a recipe to selected extensions; this does not change version 0.8.1's 94 recognized input extensions. Reopen the Explorer menu after changing a profile. Already queued jobs retain their recipe. PDF Merge profiles require at least two files and open page ordering.
 
 **Import JSON…**, **Export…** and **Export all…** transfer recipes. JSON contains parameters, input filters, visibility and an optional output folder, without engine paths or sample content. Import is atomic, creates new copies and never overwrites profiles. Recipes beyond the eight visible entries are imported hidden; files over 256 KiB or imports exceeding 32 total profiles are rejected. User-defined names are not translated. [Complete guide and JSON example](image-editor-profiles.en.md).
 
